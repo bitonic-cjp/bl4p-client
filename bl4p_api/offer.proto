@@ -1,0 +1,83 @@
+syntax = "proto3";
+
+/*
+    Copyright (C) 2018 by Bitonic B.V.
+
+    This file is part of the BL4P API.
+
+    The BL4P API is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    The BL4P API is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with the BL4P API. If not, see <http://www.gnu.org/licenses/>.
+*/
+
+message Offer {
+
+    /*
+    The max_amount values indicate maximum amount per individual transaction.
+    The offering party is likely to reject larger transactions.
+
+    After completing a transaction, the offering party may keep the offer open
+    to accept more transactions under the same conditions, so the offer does not
+    indicate the total amount available.
+
+    The limit exchange rate is implied by the max_amount values.
+    */
+
+    message Asset {
+        uint64 max_amount = 1;
+        uint64 max_amount_divisor = 2; //e.g. 100 if max_amount is in EUR cent, or 100 000 000 if max_amount is in BTC satoshi
+        string currency = 3;           //e.g. 'btc' for Bitcoin
+        string exchange = 4;           //e.g. 'ln' for Lightning, or an exchange API URL
+    }
+
+    Asset bid = 1; //what is offered
+    Asset ask = 2; //what must be paid
+
+    //Transaction destination (e.g. Lightning node ID)
+    string address = 3;
+
+    //The ID of this offer at the offerer.
+    //(offerer, ID) should be globally unique at any point in time,
+    //but different offerers may use the same ID simultaneously, and
+    //the same offerer may re-use the same ID after the old offer with that ID
+    //was closed.
+    uint32 ID = 4;
+
+    //Transaction conditions
+    message Condition {
+        enum Key {
+            UNKNOWN = 0;
+
+            //For LN funds:
+            CLTV_EXPIRY_DELTA = 1; //recipient incoming CLTV w.r.t. current block height
+
+            //For custodial funds:
+            SENDER_TIMEOUT = 2;    //time-delta in milliseconds after which funds cannot be sent, and the transaction will be canceled.
+            LOCKED_TIMEOUT = 3;    //time-delta in seconds after which sent-out-but-not-yet-claimed funds are returned to sender
+
+            //Note: others might be added in the future.
+        }
+        Key key = 1;
+
+        /*
+        If a certain minimum or maximum is not needed, it can be set to the most
+        extreme value, e.g. INT64_MIN or INT64_MAX.
+        If an exact value is required, set both the minimum and maximum to that
+        value.
+        */
+        sint64 min_value = 2;
+        sint64 max_value = 3;
+    }
+
+    repeated Condition conditions = 5;
+}
+
