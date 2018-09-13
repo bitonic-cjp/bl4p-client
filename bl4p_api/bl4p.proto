@@ -1,0 +1,220 @@
+syntax = "proto3";
+
+/*
+    Copyright (C) 2018 by Bitonic B.V.
+
+    This file is part of the BL4P API.
+
+    The BL4P API is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    The BL4P API is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with the BL4P API. If not, see <http://www.gnu.org/licenses/>.
+*/
+
+/*
+# Connecting
+
+    A single API endpoint is used for both:
+    - public information (e.g. listening to engine events, getting asset definitions)
+    - account operations (e.g. listing account mutations, managing orders)
+
+    Account operations are only available if the connection is /authorized/ (explained below)
+    using an API key generated for an account.
+
+    Client software should make a WebSocket connection to:
+
+        wss://bl3p.eu
+
+    (The client should upgrade the HTTP connection to WebSocket right away, no other HTTP requests
+    are supported.)
+
+# Authenticating
+
+    If the client wishes to use account operations, the upgrade request sent as part of the
+    Websocket handshake must include an `Authorization` HTTP header with a value of the form:
+
+        <keyid>:<pass>
+
+    Here, <keyid> and <pass> are the id and password corresponding to one of your API keys.
+
+    For example, if one of your keys has id `401069d8d3737bc94c9ad00aa5fd8725` and
+    pass `810a5bdaafc6dd30b1d9979215935871`, then the `Authorization` header should look like:
+
+        Authorization: 401069d8d3737bc94c9ad00aa5fd8725:810a5bdaafc6dd30b1d9979215935871
+
+# Message framing and encoding
+
+    Websocket messages in both directions start with a 32-bit little-endian unsigned integer specifying
+    a Protobuf message type. The remainder of the message is a Protobuf-encoded message of the
+    specified type.
+
+# Requests and responses
+
+    Most requests produce a single response, which is either of the result type
+    corresponding to the request type, or an error message.
+
+    Responses include the request id specified in the corresponding request.
+
+    Requests are handled asynchronously, and responses may be received in any order.
+*/
+
+import "offer.proto";
+
+enum MessageType {
+    Msg_Error = 0;
+
+    // The range 0x1000 to 0x2000 is reserved for Bl4p.
+    Msg_BL4P_Start           = 0x1000;
+    Msg_BL4P_StartResult     = 0x1001;
+    Msg_BL4P_Send            = 0x1002;
+    Msg_BL4P_SendResult      = 0x1003;
+    Msg_BL4P_Receive         = 0x1004;
+    Msg_BL4P_ReceiveResult   = 0x1005;
+    Msg_BL4P_GetStatus       = 0x1006;
+    Msg_BL4P_GetStatusResult = 0x1007;
+
+    Msg_BL4P_AddOffer          = 0x1100;
+    Msg_BL4P_AddOfferResult    = 0x1101;
+    Msg_BL4P_ListOffers        = 0x1102;
+    Msg_BL4P_ListOffersResult  = 0x1103;
+    Msg_BL4P_RemoveOffer       = 0x1104;
+    Msg_BL4P_RemoveOfferResult = 0x1105;
+    Msg_BL4P_FindOffers        = 0x1106;
+    Msg_BL4P_FindOffersResult  = 0x1107;
+};
+
+// TODO: ditch the underscore, and find a better alternative to solve scoping issue.
+enum ErrorReason {
+    _MalformedRequest = 0;
+
+    _NoSuchEngine = 1;
+    _NoSuchOrder = 2;
+    _InvalidAccount = 3;
+    _InvalidFilter = 4;
+    _InvalidPair = 5;
+    _InvalidSide = 6;
+
+    _BalanceInsufficient = 7;
+    _InvalidAmount = 8;
+    _RequestTimeout = 9;
+    _RequestQueueFull = 10;
+    _Unauthorized = 11;
+    _Unknown = 12;
+}
+
+enum BL4P_TransactionStatus {
+    _waiting_for_sender = 0;
+    _waiting_for_receiver = 1;
+    _sender_timeout = 2;
+    _receiver_timeout = 3;
+    _completed = 4;
+}
+
+message BL4P_Amount {
+    uint64 amount = 1;
+}
+
+message BL4P_CryptoData {
+	bytes data = 1; //Must be fixed-length 256-bit
+}
+
+message Error {
+    uint64 request = 1;
+    ErrorReason reason = 2;
+}
+
+message BL4P_Start {
+    uint64 request = 1;
+    BL4P_Amount amount = 2;
+    uint32 sender_timeout_delta_ms = 3;
+    bool receiver_pays_fee = 4;
+}
+
+message BL4P_StartResult {
+    uint64 request = 1;
+    BL4P_Amount sender_amount = 2;
+    BL4P_Amount receiver_amount = 3;
+    BL4P_CryptoData payment_hash = 4;
+}
+
+message BL4P_Send {
+    uint64 request = 1;
+    BL4P_Amount sender_amount = 2;
+    BL4P_CryptoData payment_hash = 3;
+}
+
+message BL4P_SendResult {
+    uint64 request = 1;
+    BL4P_CryptoData payment_preimage = 2;
+}
+
+message BL4P_Receive {
+    uint64 request = 1;
+    BL4P_CryptoData payment_preimage = 2;
+}
+
+message BL4P_ReceiveResult {
+    uint64 request = 1;
+}
+
+message BL4P_GetStatus {
+    uint64 request = 1;
+    BL4P_CryptoData payment_hash = 2;
+}
+
+message BL4P_GetStatusResult {
+    uint64 request = 1;
+    BL4P_TransactionStatus status = 2;
+}
+
+message BL4P_AddOffer {
+    uint64 request = 1;
+    Offer offer = 2;
+}
+
+message BL4P_AddOfferResult {
+    uint64 request = 1;
+    uint64 offerID = 2;
+}
+
+message BL4P_ListOffers {
+    uint64 request = 1;
+}
+
+message BL4P_ListOffersResult {
+    uint64 request = 1;
+
+    message Item {
+        uint64 offerID = 1;
+        Offer offer = 2;
+    }
+    repeated Item offers = 2;
+}
+
+message BL4P_RemoveOffer {
+    uint64 request = 1;
+    uint64 offerID = 2;
+}
+
+message BL4P_RemoveOfferResult {
+    uint64 request = 1;
+}
+
+message BL4P_FindOffers {
+    uint64 request = 1;
+    Offer query = 2;
+}
+
+message BL4P_FindOffersResult {
+    uint64 request = 1;
+    repeated Offer offers = 2;
+}
+
