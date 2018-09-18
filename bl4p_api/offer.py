@@ -19,6 +19,11 @@ from . import offer_pb2
 
 
 
+CONDITION_NO_MIN = -(2**63)  #64-bit 2-complement signed
+CONDITION_NO_MAX = 2**63 - 1 #64-bit 2-complement signed
+
+
+
 def Asset(max_amount, max_amount_divisor, currency, exchange):
 	ret = offer_pb2.Offer.Asset()
 	ret.max_amount = max_amount
