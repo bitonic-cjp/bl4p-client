@@ -28,3 +28,7 @@ class BL4PClient:
 	def close(self):
 		self.connection.close()
 
+
+	def addOrder(self, newOrder):
+		self.orders.append(newOrder)
+
