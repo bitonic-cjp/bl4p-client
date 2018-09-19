@@ -20,7 +20,7 @@ import decimal
 import sys
 
 import bl4p_client
-from order import BuyOrder, SellOrder
+from order import BuyOrder, SellOrder, EUR, BTC
 
 
 
@@ -69,15 +69,34 @@ def addOrder():
 	if typeName not in ['buy', 'sell']:
 		raise Exception('Invalid answer')
 
-	limitRate = input('Limit exchange rate (EUR/BTC)? ')
-	limitRate = decimal.Decimal(limitRate)
+	limitRate = input('Limit exchange rate (eur/btc)? ')
+	limitRate = decimal.Decimal(limitRate) * EUR / BTC
 
 	if typeName == 'buy':
 		order = BuyOrder(limitRate)
 	elif typeName == 'sell':
 		order = SellOrder(limitRate)
 
-	#TODO: modify order settings
+	while True:
+		settings = order.listSettings()
+		settings = list(settings.items())
+		settings.sort(key = lambda x: x[0])
+		maxLen = max(map(lambda x: len(x[0]), settings))
+		for i in range(len(settings)):
+			printedName = settings[i][0].ljust(maxLen, ' ')
+			print('%d: %s: %s' % (i+1, printedName, settings[i][1]))
+		print('%d: OK' % (len(settings) + 1))
+		print('%d: Cancel' % (len(settings) + 2))
+		choice = input('Your choice: ')
+		choice = int(choice)
+		if choice == len(settings) + 1:
+			break
+		elif choice == len(settings) + 2:
+			return
+		else:
+			name = settings[choice-1][0]
+			value = input(name + ': ')
+			order.setSetting(name, value)
 
 	client.addOrder(order)
 

@@ -15,6 +15,7 @@
 #    You should have received a copy of the GNU General Public License
 #    along with BL4P client. If not, see <http://www.gnu.org/licenses/>.
 
+import decimal
 import copy
 from fractions import Fraction
 
@@ -47,6 +48,7 @@ class Order(offer.Offer):
 
 	def __init__(self,
 			limitRate, #bid / ask, so EUR/BTC for buy, BTC/EUR for sell
+			settings,
 			**kwargs):
 
 		offer.Offer.__init__(self, **kwargs)
@@ -56,7 +58,69 @@ class Order(offer.Offer):
 		self.perTxMaxAmount = 0
 		self.perTxMaxAmountSide = BID
 
+		self.settings = settings
 		self.updateOfferMaxAmounts()
+
+
+	def getCondition(self, condition, index):
+		return self.conditions[condition][index]
+
+
+	def setCondition(self, condition, index, value):
+		pass #TODO
+
+
+	def getTotalAmount(self):
+		asset = self.bid if self.totalAmountSide == BID else self.ask
+		return '%s %s' % (
+			str(decimal.Decimal(self.totalAmount) / asset.max_amount_divisor),
+			asset.currency
+			)
+
+
+	def setTotalAmount(self, value):
+		pass #TODO
+
+
+	def getPerTxMaxAmount(self):
+		asset = self.bid if self.perTxMaxAmountSide == BID else self.ask
+		return '%s %s' % (
+			str(decimal.Decimal(self.perTxMaxAmount) / asset.max_amount_divisor),
+			asset.currency
+			)
+
+
+	def setPerTxMaxAmount(self, value):
+		pass #TODO
+
+
+	def getLimitRate(self):
+		return '%s %s/%s' % (
+			str(decimal.Decimal(self.limitRate) * \
+				self.ask.max_amount_divisor /
+				self.bid.max_amount_divisor),
+			self.bid.currency, self.ask.currency
+			)
+
+
+	def setLimitRate(self, value):
+		pass #TODO
+
+
+	def listSettings(self):
+		ret = {}
+		for k, v in self.settings.items():
+			getter = v[0]
+			extraArgs = v[2:]
+			ret[k] = getter(*extraArgs)
+		return ret
+
+
+	def setSetting(self, name, value):
+		definition = self.settings[name]
+		setter = definition[1]
+		extraArgs = definition[2:]
+		setter(*extraArgs, value)
 
 
 	def updateOfferMaxAmounts(self):
@@ -88,6 +152,14 @@ class BuyOrder(Order):
 	def __init__(self, limitRate):
 		Order.__init__(self,
 			limitRate=limitRate,
+			settings=\
+			{
+			'limitRate'       : (self.getLimitRate, self.setLimitRate),
+			'totalAmount'     : (self.getTotalAmount, self.setTotalAmount),
+			'perTxMaxAmount'  : (self.getPerTxMaxAmount, self.setPerTxMaxAmount),
+			'minCLTV'         : (self.getCondition, self.setCondition, offer.Condition.CLTV_EXPIRY_DELTA, 0),
+			'maxLockedTimeout': (self.getCondition, self.setCondition, offer.Condition.LOCKED_TIMEOUT, 1),
+			},
 
 			bid=offer.Asset(
 				max_amount=0, max_amount_divisor=EUR, currency='eur', exchange='bl3p.eu'
@@ -114,6 +186,14 @@ class SellOrder(Order):
 	def __init__(self, limitRate):
 		Order.__init__(self,
 			limitRate=1/limitRate,
+			settings=\
+			{
+			'limitRate'       : (self.getLimitRate, self.setLimitRate),
+			'totalAmount'     : (self.getTotalAmount, self.setTotalAmount),
+			'perTxMaxAmount'  : (self.getPerTxMaxAmount, self.setPerTxMaxAmount),
+			'maxCLTV'         : (self.getCondition, self.setCondition, offer.Condition.CLTV_EXPIRY_DELTA, 1),
+			'minLockedTimeout': (self.getCondition, self.setCondition, offer.Condition.LOCKED_TIMEOUT, 0),
+			},
 
 			bid=offer.Asset(
 				max_amount=0, max_amount_divisor=BTC, currency='btc', exchange='ln'
@@ -130,4 +210,17 @@ class SellOrder(Order):
 			#TODO: We MUST NEVER make Lightning routes with a longer time than the lock timeout
 			locked_timeout = (3600*24, offer.CONDITION_NO_MAX),
 			)
+
+
+	def getLimitRate(self):
+		return '%s %s/%s' % (
+			str(1 / decimal.Decimal(self.limitRate) * \
+				self.bid.max_amount_divisor /
+				self.ask.max_amount_divisor),
+			self.ask.currency, self.bid.currency
+			)
+
+
+	def setLimitRate(self, value):
+		pass #TODO
 

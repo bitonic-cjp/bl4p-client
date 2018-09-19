@@ -22,6 +22,8 @@ from . import offer_pb2
 CONDITION_NO_MIN = -(2**63)  #64-bit 2-complement signed
 CONDITION_NO_MAX = 2**63 - 1 #64-bit 2-complement signed
 
+Condition = offer_pb2.Offer.Condition
+
 
 
 def Asset(max_amount, max_amount_divisor, currency, exchange):
@@ -56,7 +58,6 @@ class Offer:
 		self.ask = ask
 		self.address = address
 		self.conditions = {}
-		Condition = offer_pb2.Offer.Condition
 		if cltv_expiry_delta is not None:
 			self.conditions[Condition.CLTV_EXPIRY_DELTA] = cltv_expiry_delta
 		if locked_timeout is not None:
@@ -73,7 +74,6 @@ class Offer:
 		ret.ask.CopyFrom(self.ask)
 		ret.address = self.address
 
-		Condition = offer_pb2.Offer.Condition
 		for key, minmax in self.conditions.items():
 			condition = ret.conditions.add()
 			condition.key = key
