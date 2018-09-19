@@ -67,7 +67,11 @@ class Order(offer.Offer):
 
 
 	def setCondition(self, condition, index, value):
-		pass #TODO
+		old = self.conditions[condition]
+		self.conditions[condition] = \
+			(value, old[1]) \
+			if index == 0 else \
+			(old[0], value)
 
 
 	def getTotalAmount(self):
@@ -91,19 +95,6 @@ class Order(offer.Offer):
 
 
 	def setPerTxMaxAmount(self, value):
-		pass #TODO
-
-
-	def getLimitRate(self):
-		return '%s %s/%s' % (
-			str(decimal.Decimal(self.limitRate) * \
-				self.ask.max_amount_divisor /
-				self.bid.max_amount_divisor),
-			self.bid.currency, self.ask.currency
-			)
-
-
-	def setLimitRate(self, value):
 		pass #TODO
 
 
@@ -177,6 +168,21 @@ class BuyOrder(Order):
 			)
 
 
+	def getLimitRate(self):
+		return '%s %s/%s' % (
+			str(decimal.Decimal(self.limitRate) * \
+				self.ask.max_amount_divisor /
+				self.bid.max_amount_divisor),
+			self.bid.currency, self.ask.currency
+			)
+
+
+	def setLimitRate(self, value):
+		self.limitRate = decimal.Decimal(value) * \
+			self.bid.max_amount_divisor / self.ask.max_amount_divisor
+		self.updateOfferMaxAmounts()
+
+
 
 class SellOrder(Order):
 	'''
@@ -222,5 +228,7 @@ class SellOrder(Order):
 
 
 	def setLimitRate(self, value):
-		pass #TODO
+		self.limitRate = (1 / decimal.Decimal(value)) * \
+			self.bid.max_amount_divisor / self.ask.max_amount_divisor
+		self.updateOfferMaxAmounts()
 
