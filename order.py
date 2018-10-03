@@ -17,16 +17,15 @@
 
 import decimal
 import copy
-from fractions import Fraction
 
 from bl4p_api import offer
 
+import units
 
 
-#Some common units:
+
+#The divisors we use:
 BTC = 100000000000 #in mSatoshi
-mBTC = BTC // 1000
-
 EUR = 100000       #in mCent
 
 #Some settings (TODO: make configurable):
@@ -76,9 +75,9 @@ class Order(offer.Offer):
 
 	def getTotalAmount(self):
 		asset = self.bid if self.totalAmountSide == BID else self.ask
-		return '%s %s' % (
-			str(decimal.Decimal(self.totalAmount) / asset.max_amount_divisor),
-			asset.currency
+		return units.UnitValue(
+			decimal.Decimal(self.totalAmount) / asset.max_amount_divisor,
+			units.Unit([asset.currency])
 			)
 
 
@@ -88,9 +87,9 @@ class Order(offer.Offer):
 
 	def getPerTxMaxAmount(self):
 		asset = self.bid if self.perTxMaxAmountSide == BID else self.ask
-		return '%s %s' % (
-			str(decimal.Decimal(self.perTxMaxAmount) / asset.max_amount_divisor),
-			asset.currency
+		return units.UnitValue(
+			decimal.Decimal(self.perTxMaxAmount) / asset.max_amount_divisor,
+			units.Unit([asset.currency])
 			)
 
 
@@ -141,6 +140,7 @@ class BuyOrder(Order):
 	'''
 
 	def __init__(self, limitRate):
+		limitRate = limitRate.asUnit(units.Unit(['eur'], ['btc'])).value * EUR / BTC
 		Order.__init__(self,
 			limitRate=limitRate,
 			settings=\
@@ -169,11 +169,11 @@ class BuyOrder(Order):
 
 
 	def getLimitRate(self):
-		return '%s %s/%s' % (
-			str(decimal.Decimal(self.limitRate) * \
+		return units.UnitValue(
+			decimal.Decimal(self.limitRate) * \
 				self.ask.max_amount_divisor /
-				self.bid.max_amount_divisor),
-			self.bid.currency, self.ask.currency
+				self.bid.max_amount_divisor,
+			units.Unit([self.bid.currency], [self.ask.currency])
 			)
 
 
@@ -190,6 +190,7 @@ class SellOrder(Order):
 	'''
 
 	def __init__(self, limitRate):
+		limitRate = limitRate.asUnit(units.Unit(['eur'], ['btc'])).value * EUR/BTC
 		Order.__init__(self,
 			limitRate=1/limitRate,
 			settings=\
@@ -219,11 +220,11 @@ class SellOrder(Order):
 
 
 	def getLimitRate(self):
-		return '%s %s/%s' % (
-			str(1 / decimal.Decimal(self.limitRate) * \
+		return units.UnitValue(
+			1 / decimal.Decimal(self.limitRate) * \
 				self.bid.max_amount_divisor /
-				self.ask.max_amount_divisor),
-			self.ask.currency, self.bid.currency
+				self.ask.max_amount_divisor,
+			units.Unit([self.ask.currency], [self.bid.currency])
 			)
 
 

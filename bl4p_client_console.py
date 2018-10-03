@@ -18,9 +18,11 @@
 
 import decimal
 import sys
+import traceback
 
 import bl4p_client
 from order import BuyOrder, SellOrder, EUR, BTC
+import units
 
 
 
@@ -69,8 +71,8 @@ def addOrder():
 	if typeName not in ['buy', 'sell']:
 		raise Exception('Invalid answer')
 
-	limitRate = input('Limit exchange rate (eur/btc)? ')
-	limitRate = decimal.Decimal(limitRate) * EUR / BTC
+	limitRate = input('Limit exchange rate? ')
+	limitRate = units.UnitValue.fromStr(limitRate, decimal.Decimal)
 
 	if typeName == 'buy':
 		order = BuyOrder(limitRate)
@@ -89,7 +91,9 @@ def addOrder():
 		print('%d: Cancel' % (len(settings) + 2))
 		choice = input('Your choice: ')
 		choice = int(choice)
-		if choice == len(settings) + 1:
+		if choice < 1 or choice > len(settings) + 2:
+			print('Invalid choice. Choose from:')
+		elif choice == len(settings) + 1:
 			break
 		elif choice == len(settings) + 2:
 			return
@@ -139,4 +143,5 @@ while True:
 		handleCommand(cmd)
 	except Exception as e:
 		print(str(e))
+		print(traceback.format_exc())
 
