@@ -105,13 +105,15 @@ class Unit:
 
 class UnitValue:
 	@staticmethod
-	def fromStr(s, numericType):
+	def fromStr(s, numericType, defaultUnit=None):
 		lastDigit = None
 		for i in range(len(s)):
 			if s[i].isdigit():
 				lastDigit = i
 		value = numericType(s[:lastDigit+1])
 		unit = Unit.fromStr(s[lastDigit+1:])
+		if defaultUnit is not None and not unit.numerator and not unit.denominator:
+			unit = defaultUnit
 		return UnitValue(value, unit)
 
 

@@ -30,6 +30,15 @@ client = bl4p_client.BL4PClient()
 
 
 
+def inputUnitValue(name, defaultUnit):
+	text = input(name + '? ')
+	return units.UnitValue.fromStr(
+		text,
+		decimal.Decimal,
+		defaultUnit=defaultUnit
+		)
+
+
 def stop():
 	'Terminate application.'
 	client.close()
@@ -71,8 +80,10 @@ def addOrder():
 	if typeName not in ['buy', 'sell']:
 		raise Exception('Invalid answer')
 
-	limitRate = input('Limit exchange rate? ')
-	limitRate = units.UnitValue.fromStr(limitRate, decimal.Decimal)
+	limitRate = inputUnitValue(
+		'Limit exchange rate',
+		defaultUnit=units.Unit(['eur'], ['btc'])
+		)
 
 	if typeName == 'buy':
 		order = BuyOrder(limitRate)
@@ -81,25 +92,30 @@ def addOrder():
 
 	while True:
 		settings = order.listSettings()
-		settings = list(settings.items())
-		settings.sort(key = lambda x: x[0])
-		maxLen = max(map(lambda x: len(x[0]), settings))
-		for i in range(len(settings)):
-			printedName = settings[i][0].ljust(maxLen, ' ')
-			print('%d: %s: %s' % (i+1, printedName, settings[i][1]))
-		print('%d: OK' % (len(settings) + 1))
-		print('%d: Cancel' % (len(settings) + 2))
+		numSettings = len(settings)
+		settingsList = list(settings.items())
+		settingsList.sort(key = lambda x: x[0])
+		maxLen = max(map(lambda x: len(x[0]), settingsList))
+		for i in range(numSettings):
+			printedName = settingsList[i][0].ljust(maxLen, ' ')
+			print('%d: %s: %s' % (i+1, printedName, settingsList[i][1]))
+		print('%d: OK' % (numSettings + 1))
+		print('%d: Cancel' % (numSettings + 2))
 		choice = input('Your choice: ')
 		choice = int(choice)
-		if choice < 1 or choice > len(settings) + 2:
+		if choice < 1 or choice > numSettings + 2:
 			print('Invalid choice. Choose from:')
-		elif choice == len(settings) + 1:
+		elif choice == numSettings + 1:
 			break
-		elif choice == len(settings) + 2:
+		elif choice == numSettings + 2:
 			return
 		else:
-			name = settings[choice-1][0]
-			value = input(name + ': ')
+			name = settingsList[choice-1][0]
+			currentUnit = settings[name].unit
+			value = inputUnitValue(
+				name,
+				defaultUnit=currentUnit
+				)
 			order.setSetting(name, value)
 
 	client.addOrder(order)

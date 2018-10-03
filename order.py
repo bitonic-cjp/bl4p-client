@@ -37,6 +37,13 @@ BID = True
 ASK = False
 
 
+conditionUnits = \
+{
+offer.Condition.CLTV_EXPIRY_DELTA: units.Unit([]),
+offer.Condition.LOCKED_TIMEOUT:    units.Unit(['second']),
+}
+
+
 
 class Order(offer.Offer):
 	'''
@@ -62,10 +69,12 @@ class Order(offer.Offer):
 
 
 	def getCondition(self, condition, index):
-		return self.conditions[condition][index]
+		value = self.conditions[condition][index]
+		return units.UnitValue(value, conditionUnits[condition])
 
 
 	def setCondition(self, condition, index, value):
+		value = value.asUnit(conditionUnits[condition]).value
 		old = self.conditions[condition]
 		self.conditions[condition] = \
 			(value, old[1]) \
@@ -178,7 +187,7 @@ class BuyOrder(Order):
 
 
 	def setLimitRate(self, value):
-		self.limitRate = decimal.Decimal(value) * \
+		self.limitRate = value.asUnit(units.Unit(['eur'], ['btc'])).value * \
 			self.bid.max_amount_divisor / self.ask.max_amount_divisor
 		self.updateOfferMaxAmounts()
 
@@ -229,7 +238,7 @@ class SellOrder(Order):
 
 
 	def setLimitRate(self, value):
-		self.limitRate = (1 / decimal.Decimal(value)) * \
+		self.limitRate = (1 / value.asUnit(units.Unit(['eur'], ['btc'])).value) * \
 			self.bid.max_amount_divisor / self.ask.max_amount_divisor
 		self.updateOfferMaxAmounts()
 
