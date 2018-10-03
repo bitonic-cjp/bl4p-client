@@ -77,12 +77,17 @@ class Unit:
 
 
 	def __str__(self):
-		numerator   = '*'.join([q for q in self.numerator  ]) if self.numerator   else '1'
-		denominator = '*'.join([q for q in self.denominator]) if self.denominator else None
+		numerator   = '*'.join([q for q in self.numerator  ])
+		denominator = '*'.join([q for q in self.denominator])
 
-		if denominator:
-			return numerator + ' / ' + denominator
-		return numerator
+		if not numerator and not denominator:
+			return ''
+		elif not numerator:
+			return '1 / ' + denominator
+		elif not denominator:
+			return numerator
+		#else:
+		return numerator + ' / ' + denominator
 
 
 	def getMultiplier(self):
