@@ -48,12 +48,13 @@ class Order(offer.Offer):
 
 	def __init__(self,
 			limitRate, #bid / ask, so EUR/BTC for buy, BTC/EUR for sell
+			totalBidAmount, #bid amount, so EUR for buy, BTC for sell
 			settings,
 			**kwargs):
 
 		offer.Offer.__init__(self, **kwargs)
 		self.limitRate = limitRate
-		self.totalBidAmount = 0
+		self.totalBidAmount = totalBidAmount
 		self.perTxMaxAmount = 0
 		self.perTxMaxAmountSide = BID
 
@@ -81,7 +82,8 @@ class Order(offer.Offer):
 
 
 	def setTotalBidAmount(self, value):
-		pass #TODO
+		self.totalBidAmount = decimal.Decimal(value) * self.bid.max_amount_divisor
+		self.updateOfferMaxAmounts()
 
 
 	def getPerTxMaxAmount(self):
@@ -93,7 +95,8 @@ class Order(offer.Offer):
 
 
 	def setPerTxMaxAmount(self, value):
-		pass #TODO
+		self.perTxMaxAmount, self.perTxMaxAmountSide = value
+		self.updateOfferMaxAmounts()
 
 
 	def listSettings(self):
@@ -134,9 +137,14 @@ class BuyOrder(Order):
 	Buy BTC on LN, sell EUR on BL4P
 	'''
 
-	def __init__(self, limitRate):
+	def __init__(self,
+		limitRate,     # EUR / BTC
+		totalBidAmount # EUR
+		):
+
 		Order.__init__(self,
 			limitRate=limitRate,
+			totalBidAmount=totalBidAmount,
 			settings=\
 			{
 			'limitRate'       : (self.getLimitRate, self.setLimitRate),
@@ -183,9 +191,14 @@ class SellOrder(Order):
 	Sell BTC on LN, buy EUR on BL4P
 	'''
 
-	def __init__(self, limitRate):
+	def __init__(self,
+		limitRate,     # EUR / BTC
+		totalBidAmount # BTC
+		):
+
 		Order.__init__(self,
 			limitRate=1/limitRate,
+			totalBidAmount=totalBidAmount,
 			settings=\
 			{
 			'limitRate'       : (self.getLimitRate, self.setLimitRate),

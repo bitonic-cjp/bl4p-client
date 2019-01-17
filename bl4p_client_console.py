@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-#    Copyright (C) 2018 by Bitonic B.V.
+#    Copyright (C) 2018-2019 by Bitonic B.V.
 #
 #    This file is part of BL4P client.
 #
@@ -73,9 +73,13 @@ def addOrder():
 	limitRate = decimal.Decimal(limitRate) * EUR / BTC
 
 	if typeName == 'buy':
-		order = BuyOrder(limitRate)
+		totalBidAmount = input('Maximum amount (eur)? ')
+		totalBidAmount = decimal.Decimal(totalBidAmount) * EUR
+		order = BuyOrder(limitRate, totalBidAmount)
 	elif typeName == 'sell':
-		order = SellOrder(limitRate)
+		totalBidAmount = input('Maximum amount (btc)? ')
+		totalBidAmount = decimal.Decimal(totalBidAmount) * BTC
+		order = SellOrder(limitRate, totalBidAmount)
 
 	while True:
 		settings = order.listSettings()
@@ -129,7 +133,7 @@ def handleCommand(cmd):
 
 
 print('''
-BL4P Client Copyright (C) 2018
+BL4P Client Copyright (C) 2018-2019 Bitonic B.V.
 Enter 'help' for a list of commands. Enter 'license' for licensing information.
 ''')
 
