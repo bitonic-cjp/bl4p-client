@@ -1,4 +1,4 @@
-#    Copyright (C) 2018 by Bitonic B.V.
+#    Copyright (C) 2018-2019 by Bitonic B.V.
 #
 #    This file is part of BL4P client.
 #
@@ -53,8 +53,7 @@ class Order(offer.Offer):
 
 		offer.Offer.__init__(self, **kwargs)
 		self.limitRate = limitRate
-		self.totalAmount = 0
-		self.totalAmountSide = BID
+		self.totalBidAmount = 0
 		self.perTxMaxAmount = 0
 		self.perTxMaxAmountSide = BID
 
@@ -74,15 +73,14 @@ class Order(offer.Offer):
 			(old[0], value)
 
 
-	def getTotalAmount(self):
-		asset = self.bid if self.totalAmountSide == BID else self.ask
+	def getTotalBidAmount(self):
 		return '%s %s' % (
-			str(decimal.Decimal(self.totalAmount) / asset.max_amount_divisor),
-			asset.currency
+			str(decimal.Decimal(self.totalBidAmount) / self.bid.max_amount_divisor),
+			self.bid.currency
 			)
 
 
-	def setTotalAmount(self, value):
+	def setTotalBidAmount(self, value):
 		pass #TODO
 
 
@@ -115,12 +113,8 @@ class Order(offer.Offer):
 
 
 	def updateOfferMaxAmounts(self):
-		if self.totalAmountSide == BID:
-			offerAskAmount = self.totalAmount / self.limitRate
-			offerBidAmount = self.totalAmount
-		else:
-			offerAskAmount = self.totalAmount
-			offerBidAmount = self.totalAmount * self.limitRate
+		offerAskAmount = self.totalBidAmount / self.limitRate
+		offerBidAmount = self.totalBidAmount
 
 		if self.perTxMaxAmountSide == BID and self.perTxMaxAmount < offerBidAmount:
 			offerAskAmount = self.perTxMaxAmount / self.limitRate
@@ -146,7 +140,7 @@ class BuyOrder(Order):
 			settings=\
 			{
 			'limitRate'       : (self.getLimitRate, self.setLimitRate),
-			'totalAmount'     : (self.getTotalAmount, self.setTotalAmount),
+			'totalBidAmount'  : (self.getTotalBidAmount, self.setTotalBidAmount),
 			'perTxMaxAmount'  : (self.getPerTxMaxAmount, self.setPerTxMaxAmount),
 			'minCLTV'         : (self.getCondition, self.setCondition, offer.Condition.CLTV_EXPIRY_DELTA, 0),
 			'maxLockedTimeout': (self.getCondition, self.setCondition, offer.Condition.LOCKED_TIMEOUT, 1),
@@ -195,7 +189,7 @@ class SellOrder(Order):
 			settings=\
 			{
 			'limitRate'       : (self.getLimitRate, self.setLimitRate),
-			'totalAmount'     : (self.getTotalAmount, self.setTotalAmount),
+			'totalBidAmount'  : (self.getTotalBidAmount, self.setTotalBidAmount),
 			'perTxMaxAmount'  : (self.getPerTxMaxAmount, self.setPerTxMaxAmount),
 			'maxCLTV'         : (self.getCondition, self.setCondition, offer.Condition.CLTV_EXPIRY_DELTA, 1),
 			'minLockedTimeout': (self.getCondition, self.setCondition, offer.Condition.LOCKED_TIMEOUT, 0),
