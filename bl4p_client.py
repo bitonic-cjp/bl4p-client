@@ -1,4 +1,4 @@
-#    Copyright (C) 2018 by Bitonic B.V.
+#    Copyright (C) 2018-2019 by Bitonic B.V.
 #
 #    This file is part of BL4P client.
 #
@@ -22,7 +22,8 @@ from bl4p_api import client as bl4p
 class BL4PClient:
 	def __init__(self):
 		self.connection = bl4p.Bl4pApi('ws://localhost:8000/', '3', '3')
-		self.orders = []
+
+		self.orders = [] #Every item is (offerID, order)
 
 
 	def close(self):
@@ -30,5 +31,21 @@ class BL4PClient:
 
 
 	def addOrder(self, newOrder):
-		self.orders.append(newOrder)
+		self.orders.append((None, newOrder))
+		self.syncOffers()
+
+
+	def syncOffers(self):
+		#sync from local orders to remote offers
+
+		offersOnServer = self.connection.listOffers()
+		#TODO: remove offers we don't have here
+		#TODO: maybe replace offers for changed orders
+
+		#Add new offers:
+		for i in range(len(self.orders)):
+			ID, order = self.orders[i]
+			if ID is None:
+				ID = self.connection.addOffer(order)
+				self.orders[i] = ID, order
 
