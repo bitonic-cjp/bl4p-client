@@ -25,12 +25,12 @@ from order import BuyOrder, SellOrder, EUR, BTC
 
 
 client = bl4p_client.BL4PClient()
-
+client.start()
 
 
 def stop():
 	'Terminate application.'
-	client.close()
+	client.stop()
 	sys.exit()
 
 
