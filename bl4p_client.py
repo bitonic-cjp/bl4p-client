@@ -20,6 +20,9 @@ import time
 
 from bl4p_api import client as bl4p
 
+import order
+from transaction import BuyTransaction, SellTransaction
+
 
 
 def runInThread(implementationFunc):
@@ -82,10 +85,12 @@ class BL4PClient(threading.Thread):
 
 		self.connection = bl4p.Bl4pApi('ws://localhost:8000/', '3', '3')
 
-		#TODO: persistent storage of orders
+		#TODO: persistent storage of orders and transactions
 		self.orders = {}         #localID -> order
 		self.remoteOfferIDs = {} #localID -> remoteID
-		self.nextLocalID = 0
+		self.nextLocalOrderID = 0
+		self.transactions = {}   #localID -> transaction
+		self.nextLocalTransactionID = 0
 
 		self.__stop = False
 		while True:
@@ -116,8 +121,8 @@ class BL4PClient(threading.Thread):
 
 	@runInThread
 	def addOrder(self, newOrder):
-		ID = self.nextLocalID
-		self.nextLocalID += 1
+		ID = self.nextLocalOrderID
+		self.nextLocalOrderID += 1
 		self.orders[ID] = newOrder
 
 
@@ -129,12 +134,55 @@ class BL4PClient(threading.Thread):
 		#TODO: maybe replace offers for changed orders
 
 		#Add new offers:
-		for localID, order in self.orders.items():
-						
+		for localID, ownOrder in self.orders.items():
+			#For all idle orders (new and existing), try to find matches:
+			if ownOrder.status == order.STATUS_IDLE:
+				self.searchInMarket(localID)
+
 			#Place the offer on the market if it's not already there
 			if localID not in self.remoteOfferIDs:
 				self.remoteOfferIDs[localID] = \
-					self.connection.addOffer(order)
+					self.connection.addOffer(ownOrder)
 				#print('Local ID:', localID)
 				#print('Remote ID:', self.remoteOfferIDs[localID])
+
+
+	def searchInMarket(self, localID):
+		ownOrder = self.orders[localID]
+		counterOffers = self.connection.findOffers(ownOrder)
+
+		#TODO: check if offers actually match
+		#TODO: filter counterOffers on acceptability
+		#TODO: sort counterOffers (e.g. on exchange rate)
+
+		if not counterOffers:
+			return
+
+		#Start trade on the first in the list
+		self.doTrade(localID, counterOffers[0])
+
+
+	def doTrade(self, localID, counterOffer):
+		ownOrder = self.orders[localID]
+
+		print('Doing trade for local order ID', localID)
+		print('  local order: ', str(ownOrder))
+		print('  counter offer: ', str(counterOffer))
+
+		if isinstance(ownOrder, order.BuyOrder):
+			tx = BuyTransaction(localID, counterOffer)
+			#TODO: fill with offer data
+		elif isinstance(ownOrder, order.SellOrder):
+			tx = SellTransaction(localID, counterOffer)
+			#TODO: fill with offer data
+		else:
+			raise Exception('Unsupported order type - cannot use it in trade')
+
+		ID = self.nextLocalTransactionID
+		self.nextLocalTransactionID += 1
+		self.transactions[ID] = tx
+
+		ownOrder.status = order.STATUS_TRADING
+
+		#TODO: initiate first steps of the tx
 
