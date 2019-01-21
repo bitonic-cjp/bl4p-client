@@ -22,7 +22,7 @@ from bl4p_api import client as bl4p
 
 
 
-def runInNodeThread(implementationFunc):
+def runInThread(implementationFunc):
 	'''
 	Function decorator, which can be used by Node methods to have them
 	called by an external thread, but have them run inside the internal
@@ -83,7 +83,9 @@ class BL4PClient(threading.Thread):
 		self.connection = bl4p.Bl4pApi('ws://localhost:8000/', '3', '3')
 
 		#TODO: persistent storage of orders
-		self.orders = [] #Every item is (offerID, order)
+		self.orders = {}         #localID -> order
+		self.remoteOfferIDs = {} #localID -> remoteID
+		self.nextLocalID = 0
 
 		self.__stop = False
 		while True:
@@ -103,16 +105,20 @@ class BL4PClient(threading.Thread):
 			if self.__stop:
 				break
 
+			#Syncing offers:
+			self.syncOffers()
+
 			#TODO: other event handling, and periodic activities
-			time.sleep(0.01)
+			time.sleep(0.1)
 
 		self.connection.close()
 
 
-	@runInNodeThread
+	@runInThread
 	def addOrder(self, newOrder):
-		self.orders.append((None, newOrder))
-		self.syncOffers()
+		ID = self.nextLocalID
+		self.nextLocalID += 1
+		self.orders[ID] = newOrder
 
 
 	def syncOffers(self):
@@ -123,9 +129,12 @@ class BL4PClient(threading.Thread):
 		#TODO: maybe replace offers for changed orders
 
 		#Add new offers:
-		for i in range(len(self.orders)):
-			ID, order = self.orders[i]
-			if ID is None:
-				ID = self.connection.addOffer(order)
-				self.orders[i] = ID, order
+		for localID, order in self.orders.items():
+						
+			#Place the offer on the market if it's not already there
+			if localID not in self.remoteOfferIDs:
+				self.remoteOfferIDs[localID] = \
+					self.connection.addOffer(order)
+				#print('Local ID:', localID)
+				#print('Remote ID:', self.remoteOfferIDs[localID])
 
