@@ -68,6 +68,14 @@ class Offer:
 		return self.__dict__ == other.__dict__
 
 
+	def __str__(self):
+		return 'Offer: bidding %f %s on %s, asking %f %s on %s' % \
+			(
+			self.bid.max_amount / self.bid.max_amount_divisor, self.bid.currency, self.bid.exchange,
+			self.ask.max_amount / self.ask.max_amount_divisor, self.ask.currency, self.ask.exchange,
+			)
+
+
 	def toPB2(self):
 		ret = offer_pb2.Offer()
 		ret.bid.CopyFrom(self.bid)
