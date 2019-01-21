@@ -61,7 +61,7 @@ class Order(offer.Offer):
 		offer.Offer.__init__(self, **kwargs)
 		self.limitRate = limitRate
 		self.totalBidAmount = totalBidAmount
-		self.perTxMaxAmount = 0
+		self.perTxMaxAmount = totalBidAmount #TODO
 		self.perTxMaxAmountSide = BID
 		self.status = STATUS_IDLE
 
@@ -135,7 +135,7 @@ class Order(offer.Offer):
 			offerBidAmount = self.perTxMaxAmount * self.limitRate
 
 		self.bid.max_amount = int(offerBidAmount)
-		self.ask.max_amount = int(offerAskAmount)
+		self.ask.max_amount = int(offerAskAmount) + 1 # + 1 should be insignificant; it's here to make sure we don't round down
 
 
 
