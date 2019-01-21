@@ -34,8 +34,14 @@ lnAddress = 'dummyLightningAddress'
 bl4pAddress = 'dummyBL4PAddress'
 
 
+#Side constants
 BID = True
 ASK = False
+
+#Order status constants
+STATUS_IDLE = 0
+STATUS_TRADING = 1
+STATUS_COMPLETED = 2
 
 
 
@@ -57,6 +63,7 @@ class Order(offer.Offer):
 		self.totalBidAmount = totalBidAmount
 		self.perTxMaxAmount = 0
 		self.perTxMaxAmountSide = BID
+		self.status = STATUS_IDLE
 
 		self.settings = settings
 		self.updateOfferMaxAmounts()
