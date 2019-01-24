@@ -67,10 +67,11 @@ class Bl4pApi:
 		return result
 
 
-	def start(self, amount, sender_timeout_delta_ms, receiver_pays_fee):
+	def start(self, amount, sender_timeout_delta_ms, locked_timeout_delta_s, receiver_pays_fee):
 		request = bl4p_pb2.BL4P_Start()
 		request.amount.amount = amount
 		request.sender_timeout_delta_ms = sender_timeout_delta_ms
+		request.locked_timeout_delta_s = locked_timeout_delta_s
 		request.receiver_pays_fee = receiver_pays_fee
 		result = self.apiCall(request)
 		return result.sender_amount.amount, result.receiver_amount.amount, result.payment_hash.data

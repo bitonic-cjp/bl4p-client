@@ -54,7 +54,8 @@ message Offer {
             CLTV_EXPIRY_DELTA = 1; //recipient incoming CLTV w.r.t. current block height
 
             //For custodial funds:
-            LOCKED_TIMEOUT = 2;    //time-delta in seconds after which sent-out-but-not-yet-claimed funds are returned to sender
+            SENDER_TIMEOUT = 2;    //time-delta in milliseconds after which funds cannot be sent, and the transaction will be canceled.
+            LOCKED_TIMEOUT = 3;    //time-delta in seconds after which sent-out-but-not-yet-claimed funds are returned to sender
 
             //Note: others might be added in the future.
         }

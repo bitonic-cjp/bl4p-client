@@ -52,7 +52,8 @@ class Offer:
 			bid, ask,
 			address,
 			cltv_expiry_delta = None, #None or (min, max)
-			locked_timeout = None,    #None or (min, max)
+			sender_timeout = None,    #None or (min, max), milliseconds
+			locked_timeout = None,    #None or (min, max), seconds
 			):
 		self.bid = bid
 		self.ask = ask
@@ -60,6 +61,8 @@ class Offer:
 		self.conditions = {}
 		if cltv_expiry_delta is not None:
 			self.conditions[Condition.CLTV_EXPIRY_DELTA] = cltv_expiry_delta
+		if sender_timeout is not None:
+			self.conditions[Condition.SENDER_TIMEOUT] = sender_timeout
 		if locked_timeout is not None:
 			self.conditions[Condition.LOCKED_TIMEOUT] = locked_timeout
 

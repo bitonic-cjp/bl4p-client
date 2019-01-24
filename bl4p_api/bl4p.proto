@@ -135,7 +135,8 @@ message BL4P_Start {
     uint64 request = 1;
     BL4P_Amount amount = 2;
     uint32 sender_timeout_delta_ms = 3;
-    bool receiver_pays_fee = 4;
+    uint32 locked_timeout_delta_s = 4;
+    bool receiver_pays_fee = 5;
 }
 
 message BL4P_StartResult {
