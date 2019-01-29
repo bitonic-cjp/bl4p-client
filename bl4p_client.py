@@ -87,6 +87,7 @@ class BL4PClient(threading.Thread):
 		'''
 
 		self.connection = bl4p.Bl4pApi('ws://localhost:8000/', '3', '3')
+		self.bl4pAmountDivisor = 10000 #TODO: query this from the server
 
 		self.__stop = False
 		while True:
@@ -148,6 +149,7 @@ class BL4PClient(threading.Thread):
 		ownOrder = self.storage.getOrder(localID)
 		counterOffers = self.connection.findOffers(ownOrder)
 
+		#TODO: filter on sensibility (e.g. max >= min for all conditions)
 		#TODO: check if offers actually match
 		#TODO: filter counterOffers on acceptability
 		#TODO: sort counterOffers (e.g. on exchange rate)
@@ -167,7 +169,9 @@ class BL4PClient(threading.Thread):
 		print('  counter offer: ', str(counterOffer))
 
 		if isinstance(ownOrder, order.BuyOrder):
-			tx = BuyTransaction(localID, counterOffer)
+			return
+			#TODO: enable buyer-initiated trade once supported
+			#tx = BuyTransaction(localID, counterOffer)
 			#TODO: fill with offer data
 		elif isinstance(ownOrder, order.SellOrder):
 			tx = SellTransaction(localID, counterOffer)
@@ -175,8 +179,9 @@ class BL4PClient(threading.Thread):
 		else:
 			raise Exception('Unsupported order type - cannot use it in trade')
 
+		#Initiate first steps of the tx
+		tx.initiate(self)
+
 		self.storage.addTransaction(tx)
 		self.storage.updateOrderStatus(localID, order.STATUS_TRADING)
-
-		#TODO: initiate first steps of the tx
 
