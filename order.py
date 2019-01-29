@@ -76,9 +76,9 @@ class Order(offer.Offer):
 	def setCondition(self, condition, index, value):
 		old = self.conditions[condition]
 		self.conditions[condition] = \
-			(value, old[1]) \
+			(int(value), old[1]) \
 			if index == 0 else \
-			(old[0], value)
+			(old[0], int(value))
 
 
 	def getTotalBidAmount(self):
@@ -158,6 +158,7 @@ class BuyOrder(Order):
 			'totalBidAmount'  : (self.getTotalBidAmount, self.setTotalBidAmount),
 			'perTxMaxAmount'  : (self.getPerTxMaxAmount, self.setPerTxMaxAmount),
 			'minCLTV'         : (self.getCondition, self.setCondition, offer.Condition.CLTV_EXPIRY_DELTA, 0),
+			'maxSenderTimeout': (self.getCondition, self.setCondition, offer.Condition.SENDER_TIMEOUT, 1),
 			'maxLockedTimeout': (self.getCondition, self.setCondition, offer.Condition.LOCKED_TIMEOUT, 1),
 			},
 
@@ -171,6 +172,9 @@ class BuyOrder(Order):
 
 			#We require a minimum CLTV time for incoming funds
 			cltv_expiry_delta = (12, offer.CONDITION_NO_MAX),
+
+			#We require a maximum sender timeout for outgoming funds
+			sender_timeout = (10, 10000), #milliseconds
 
 			#We require a maximum lock timeout for outgoing funds
 			locked_timeout = (0, 3600*24*14)
@@ -212,6 +216,7 @@ class SellOrder(Order):
 			'totalBidAmount'  : (self.getTotalBidAmount, self.setTotalBidAmount),
 			'perTxMaxAmount'  : (self.getPerTxMaxAmount, self.setPerTxMaxAmount),
 			'maxCLTV'         : (self.getCondition, self.setCondition, offer.Condition.CLTV_EXPIRY_DELTA, 1),
+			'maxSenderTimeout': (self.getCondition, self.setCondition, offer.Condition.SENDER_TIMEOUT, 1),
 			'minLockedTimeout': (self.getCondition, self.setCondition, offer.Condition.LOCKED_TIMEOUT, 0),
 			},
 
@@ -225,6 +230,9 @@ class SellOrder(Order):
 
 			#We require a maximum CLTV time for outgoing funds
 			cltv_expiry_delta = (0, 144),
+
+			#We require a maximum sender timeout for incoming funds
+			sender_timeout = (10, 10000), #milliseconds
 
 			#We require a minimum lock timeout for incoming funds
 			#TODO: We MUST NEVER make Lightning routes with a longer time than the lock timeout
