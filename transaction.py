@@ -54,12 +54,31 @@ class SellTransaction(Transaction):
 		localOffer   = client.storage.getOrder(self.localOrderID)
 		counterOffer = self.counterOffer
 
-		#Choose the largest amount accepted by both
-		amountDivisor = client.bl4pAmountDivisor
-		amount = min(
-			amountDivisor * localOffer.ask.max_amount // localOffer.ask.max_amount_divisor,
-			amountDivisor * counterOffer.bid.max_amount // counterOffer.bid.max_amount_divisor
+		#Choose the largest fiat amount accepted by both
+		fiatAmountDivisor = client.bl4pAmountDivisor
+		fiatAmount = min(
+			fiatAmountDivisor * localOffer.ask.max_amount // localOffer.ask.max_amount_divisor,
+			fiatAmountDivisor * counterOffer.bid.max_amount // counterOffer.bid.max_amount_divisor
 			)
+		assert fiatAmount > 0
+
+		#Minimum: this is what the other wants
+		#btc = eur * (btc / eur)
+		#    = eur * (ask / bid)
+		#    = eur * (ask / ask_divisor) / (bid / bid_divisor)
+		#    = (eur * ask * bid_divisor) / (bid * ask_divisor)
+		#Implementation note:
+		#The correctness of this code might depend on Python's unlimited size integers.
+		cryptoAmountDivisor = client.lightning.getDivisor()
+		minCryptoAmount = \
+			(cryptoAmountDivisor * fiatAmount        * counterOffer.ask.max_amount         * counterOffer.bid.max_amount_divisor) // \
+			(                      fiatAmountDivisor * counterOffer.ask.max_amount_divisor * counterOffer.bid.max_amount)
+		#Maximum: this is what we are prepared to pay
+		maxCryptoAmount = \
+			(cryptoAmountDivisor * fiatAmount        * localOffer.bid.max_amount         * localOffer.ask.max_amount_divisor) // \
+			(                      fiatAmountDivisor * localOffer.bid.max_amount_divisor * localOffer.ask.max_amount)
+		assert minCryptoAmount >= 0
+		assert maxCryptoAmount >= minCryptoAmount
 
 		#Choose the sender timeout limit as small as possible
 		#TODO: make sure it works even if conditions are not specified
@@ -75,21 +94,34 @@ class SellTransaction(Transaction):
 			counterOffer.conditions[offer.Condition.LOCKED_TIMEOUT][1]
 			)
 
+		#Create transaction on the exchange:
 		senderAmount, receiverAmount, paymentHash = \
 			client.connection.start(
-				amount,
+				fiatAmount,
 				sender_timeout_delta_ms,
 				locked_timeout_delta_s,
 				receiver_pays_fee=True
 				)
 
-		if senderAmount != amount:
-			raise Exception('Got incorrect sender amount back from BL4P')
+		assert senderAmount == fiatAmount
 
+		self.minCryptoAmount = minCryptoAmount
+		self.maxCryptoAmount = maxCryptoAmount
 		self.senderAmount = senderAmount
 		self.receiverAmount = receiverAmount
 		self.paymentHash = paymentHash
 		self.status = STATUS_RECEIVED_BL4P_PROMISE
 
-		#TODO: send out over Lightning
+		#Send out over Lightning:
+		assert localOffer.bid.currency == client.lightning.getCurrency()
+		assert localOffer.bid.exchange == 'ln'
+		client.lightning.startTransaction(
+			destinationNodeID=counterOffer.address,
+			paymentHash=paymentHash,
+			recipientCryptoAmount=minCryptoAmount,
+			maxSenderCryptoAmount=maxCryptoAmount,
+			fiatAmount=receiverAmount,
+			fiatCurrency=localOffer.ask.currency,
+			fiatExchange=localOffer.ask.exchange
+			)
 

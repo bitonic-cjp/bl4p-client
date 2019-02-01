@@ -20,6 +20,7 @@ import time
 
 from bl4p_api import client as bl4p
 
+import lightning
 import order
 import storage
 from transaction import BuyTransaction, SellTransaction
@@ -87,6 +88,7 @@ class BL4PClient(threading.Thread):
 		'''
 
 		self.connection = bl4p.Bl4pApi('ws://localhost:8000/', '3', '3')
+		self.lightning = lightning.Lightning()
 		self.bl4pAmountDivisor = 10000 #TODO: query this from the server
 
 		self.__stop = False
@@ -113,6 +115,7 @@ class BL4PClient(threading.Thread):
 			#TODO: other event handling, and periodic activities
 			time.sleep(0.1)
 
+		self.lightning.close()
 		self.connection.close()
 
 
@@ -164,10 +167,6 @@ class BL4PClient(threading.Thread):
 	def doTrade(self, localID, counterOffer):
 		ownOrder = self.storage.getOrder(localID)
 
-		print('Doing trade for local order ID', localID)
-		print('  local order: ', str(ownOrder))
-		print('  counter offer: ', str(counterOffer))
-
 		if isinstance(ownOrder, order.BuyOrder):
 			return
 			#TODO: enable buyer-initiated trade once supported
@@ -178,6 +177,10 @@ class BL4PClient(threading.Thread):
 			#TODO: fill with offer data
 		else:
 			raise Exception('Unsupported order type - cannot use it in trade')
+
+		print('Doing trade for local order ID', localID)
+		print('  local order: ', str(ownOrder))
+		print('  counter offer: ', str(counterOffer))
 
 		#Initiate first steps of the tx
 		tx.initiate(self)
