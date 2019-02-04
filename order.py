@@ -30,7 +30,6 @@ mBTC = BTC // 1000
 EUR = 100000       #in mCent
 
 #Some settings (TODO: make configurable):
-lnAddress = 'dummyLightningAddress'
 bl4pAddress = 'dummyBL4PAddress'
 
 
@@ -145,6 +144,7 @@ class BuyOrder(Order):
 	'''
 
 	def __init__(self,
+		client,
 		limitRate,     # EUR / BTC
 		totalBidAmount # EUR
 		):
@@ -168,7 +168,7 @@ class BuyOrder(Order):
 			ask=offer.Asset(
 				max_amount=0, max_amount_divisor=BTC, currency='btc', exchange='ln'
 				),
-			address=lnAddress,
+			address=client.getLNAddress(),
 
 			#We require a minimum CLTV time for incoming funds
 			cltv_expiry_delta = (12, offer.CONDITION_NO_MAX),
@@ -203,6 +203,7 @@ class SellOrder(Order):
 	'''
 
 	def __init__(self,
+		client,
 		limitRate,     # EUR / BTC
 		totalBidAmount # BTC
 		):
@@ -226,7 +227,7 @@ class SellOrder(Order):
 			ask=offer.Asset(
 				max_amount=0, max_amount_divisor=EUR, currency='eur', exchange='bl3p.eu'
 				),
-			address=bl4pAddress,
+			address=bl4pAddress, #TODO
 
 			#We require a maximum CLTV time for outgoing funds
 			cltv_expiry_delta = (0, 144),

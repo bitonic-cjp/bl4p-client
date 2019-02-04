@@ -75,11 +75,11 @@ def addOrder():
 	if typeName == 'buy':
 		totalBidAmount = input('Maximum amount (eur)? ')
 		totalBidAmount = decimal.Decimal(totalBidAmount) * EUR
-		order = BuyOrder(limitRate, totalBidAmount)
+		order = BuyOrder(client, limitRate, totalBidAmount)
 	elif typeName == 'sell':
 		totalBidAmount = input('Maximum amount (btc)? ')
 		totalBidAmount = decimal.Decimal(totalBidAmount) * BTC
-		order = SellOrder(limitRate, totalBidAmount)
+		order = SellOrder(client, limitRate, totalBidAmount)
 
 	while True:
 		settings = order.listSettings()

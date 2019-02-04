@@ -53,6 +53,10 @@ class Lightning:
 		self.lockedTransactions = []
 
 
+	def getAddress(self):
+		return 'dummyLightningAddress'
+
+
 	def getCurrency(self):
 		return 'btc'
 

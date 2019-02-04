@@ -124,6 +124,11 @@ class BL4PClient(threading.Thread):
 		self.storage.addOrder(newOrder)
 
 
+	@runInThread
+	def getLNAddress(self):
+		return self.lightning.getAddress()
+
+
 	def syncOffers(self):
 		#sync from local orders to remote offers
 
