@@ -79,6 +79,20 @@ class Offer:
 			)
 
 
+	def getConditionMin(self, condition):
+		try:
+			return self.conditions[condition][0]
+		except KeyError:
+			return CONDITION_NO_MIN
+
+
+	def getConditionMax(self, condition):
+		try:
+			return self.conditions[condition][1]
+		except KeyError:
+			return CONDITION_NO_MAX
+
+
 	def toPB2(self):
 		ret = offer_pb2.Offer()
 		ret.bid.CopyFrom(self.bid)
