@@ -15,6 +15,23 @@
 #    You should have received a copy of the GNU General Public License
 #    along with BL4P client. If not, see <http://www.gnu.org/licenses/>.
 
+import struct
+
+
+
+class Payload:
+	@staticmethod
+	def decode(data):
+		fiatAmount = struct.unpack('!Q', data)[0]
+		return Payload(fiatAmount)
+
+	def __init__(self, fiatAmount):
+		self.fiatAmount = fiatAmount
+
+
+	def encode(self):
+		return struct.pack('!Q', self.fiatAmount)
+
 
 
 class LightningTransaction:
@@ -51,7 +68,8 @@ class Lightning:
 		minCLTVExpiryDelta,
 		fiatAmount, fiatCurrency, fiatExchange):
 
-		payload = b'' #TODO: encode fiat parts
+		#TODO: what to do with fiatCurrency, fiatExchange??
+		payload = Payload(fiatAmount)
 
 		tx = LightningTransaction(destinationNodeID, paymentHash,
 			minCLTVExpiryDelta,
