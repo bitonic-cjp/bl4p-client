@@ -25,6 +25,21 @@ STATUS_RECEIVED_BL4P_PROMISE = 1
 
 
 
+def getMinConditionValue(offer1, offer2, condition):
+	return max(
+		offer1.getConditionMin(condition),
+		offer2.getConditionMin(condition)
+		)
+
+
+def getMaxConditionValue(offer1, offer2, condition):
+	return min(
+		offer1.getConditionMax(condition),
+		offer2.getConditionMax(condition)
+		)
+
+
+
 class Transaction:
 	def __init__(self, localOrderID, counterOffer):
 		self.localOrderID = localOrderID
@@ -81,17 +96,15 @@ class SellTransaction(Transaction):
 		assert maxCryptoAmount >= minCryptoAmount
 
 		#Choose the sender timeout limit as small as possible
-		#TODO: make sure it works even if conditions are not specified
-		sender_timeout_delta_ms = max(
-			localOffer.conditions[offer.Condition.SENDER_TIMEOUT][0],
-			counterOffer.conditions[offer.Condition.SENDER_TIMEOUT][0]
+		sender_timeout_delta_ms = getMinConditionValue(
+			localOffer, counterOffer,
+			offer.Condition.SENDER_TIMEOUT
 			)
 
 		#Choose the locked timeout limit as large as possible
-		#TODO: make sure it works even if conditions are not specified
-		locked_timeout_delta_s = min(
-			localOffer.conditions[offer.Condition.LOCKED_TIMEOUT][1],
-			counterOffer.conditions[offer.Condition.LOCKED_TIMEOUT][1]
+		locked_timeout_delta_s = getMaxConditionValue(
+			localOffer, counterOffer,
+			offer.Condition.LOCKED_TIMEOUT
 			)
 
 		#Create transaction on the exchange:
