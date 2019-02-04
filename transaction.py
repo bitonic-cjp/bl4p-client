@@ -125,15 +125,30 @@ class SellTransaction(Transaction):
 		self.paymentHash = paymentHash
 		self.status = STATUS_RECEIVED_BL4P_PROMISE
 
+		#Immediately continue with the next stage:
+		self.lockCryptoFunds(client)
+
+
+	def lockCryptoFunds(self, client):
+		localOffer   = client.storage.getOrder(self.localOrderID)
+		counterOffer = self.counterOffer
+
+		#Choose the CLTV expiry delta as small as possible
+		CLTV_expiry_delta = getMinConditionValue(
+			localOffer, counterOffer,
+			offer.Condition.CLTV_EXPIRY_DELTA
+			)
+
 		#Send out over Lightning:
 		assert localOffer.bid.currency == client.lightning.getCurrency()
 		assert localOffer.bid.exchange == 'ln'
 		client.lightning.startTransaction(
 			destinationNodeID=counterOffer.address,
-			paymentHash=paymentHash,
-			recipientCryptoAmount=minCryptoAmount,
-			maxSenderCryptoAmount=maxCryptoAmount,
-			fiatAmount=receiverAmount,
+			paymentHash=self.paymentHash,
+			recipientCryptoAmount=self.minCryptoAmount,
+			maxSenderCryptoAmount=self.maxCryptoAmount,
+			minCLTVExpiryDelta=CLTV_expiry_delta,
+			fiatAmount=self.receiverAmount,
 			fiatCurrency=localOffer.ask.currency,
 			fiatExchange=localOffer.ask.exchange
 			)

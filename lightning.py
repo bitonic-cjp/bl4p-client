@@ -17,9 +17,23 @@
 
 
 
+class LightningTransaction:
+	def __init__(self, destinationNodeID, paymentHash,
+		minCLTVExpiryDelta,
+		recipientCryptoAmount, payload
+		):
+
+		self.paymentHash = paymentHash
+		self.recipientCryptoAmount = recipientCryptoAmount
+		self.senderCryptoAmount = int(1.01 * recipientCryptoAmount) #simulated fee
+		self.CLTVExpiryDelta = minCLTVExpiryDelta
+		self.payload = payload
+
+
+
 class Lightning:
 	def __init__(self):
-		pass
+		self.lockedTransactions = []
 
 
 	def getCurrency(self):
@@ -27,16 +41,27 @@ class Lightning:
 
 
 	def getDivisor(self):
-		# mBTC:
+		# mSatoshi:
 		return 100000000000
 
 
 	def startTransaction(self,
 		destinationNodeID, paymentHash,
 		recipientCryptoAmount, maxSenderCryptoAmount,
+		minCLTVExpiryDelta,
 		fiatAmount, fiatCurrency, fiatExchange):
 
-		pass
+		payload = b'' #TODO: encode fiat parts
+
+		tx = LightningTransaction(destinationNodeID, paymentHash,
+			minCLTVExpiryDelta,
+			recipientCryptoAmount, payload
+			)
+
+		if tx.senderCryptoAmount > maxSenderCryptoAmount:
+			raise Exception('Transaction failed because of too high Lightning fees')
+
+		self.lockedTransactions.append(tx)
 
 
 	def close(self):
