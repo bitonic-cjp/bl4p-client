@@ -38,6 +38,13 @@ BID = True
 ASK = False
 
 #Order status constants
+'''
+State transitions:
+
+idle -> trading
+trading -> completed
+trading -> idle
+'''
 STATUS_IDLE = 0
 STATUS_TRADING = 1
 STATUS_COMPLETED = 2

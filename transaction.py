@@ -20,8 +20,18 @@ from bl4p_api import offer
 
 
 #status
+'''
+State transitions:
+
+Seller market taker:
+initial -> received_BL4P_promise -> locked_lightning_tx ->
+
+Buyer market maker:
+locked_lightning_tx ->
+'''
 STATUS_INITIAL = 0
 STATUS_RECEIVED_BL4P_PROMISE = 1
+STATUS_LOCKED_LIGHTNING_TX = 2
 
 
 
@@ -56,6 +66,11 @@ class BuyTransaction(Transaction):
 	def __init__(self, localOrderID, counterOffer):
 		Transaction.__init__(self, localOrderID, counterOffer)
 		print('Created buy tx')
+
+
+	def initiateFromLNTransaction(self, client, lntx):
+		print('Initiating buy tx from LN tx')
+		#TODO
 
 
 
@@ -152,4 +167,6 @@ class SellTransaction(Transaction):
 			fiatCurrency=localOffer.ask.currency,
 			fiatExchange=localOffer.ask.exchange
 			)
+
+		self.status = STATUS_LOCKED_LIGHTNING_TX
 

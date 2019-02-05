@@ -196,6 +196,19 @@ class BL4PClient(threading.Thread):
 		self.storage.updateOrderStatus(localID, order.STATUS_TRADING)
 
 
-	def handleIncomingTransaction(self, tx):
+	def handleIncomingTransaction(self, lntx):
 		print('Got incoming transaction')
+
+		for localID in self.storage.getOrderIDs():
+			ownOrder = self.storage.getOrder(localID)
+			if not isinstance(ownOrder, order.BuyOrder):
+				continue
+
+			#TODO: check if lntx conforms to our order
+
+			tx = BuyTransaction(localID, counterOffer=None)
+			tx.initiateFromLNTransaction(self, lntx)
+
+			self.storage.addTransaction(tx)
+			self.storage.updateOrderStatus(localID, order.STATUS_TRADING)
 
