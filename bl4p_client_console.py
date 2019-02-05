@@ -61,13 +61,8 @@ You should have received a copy of the GNU General Public License
 along with BL4P Client. If not, see <http://www.gnu.org/licenses/>.''')
 
 
-def addOrder():
-	'Add a limit order'
-
-	typeName = input('buy or sell? ')
-	typeName = typeName.strip().lower()
-	if typeName not in ['buy', 'sell']:
-		raise Exception('Invalid answer')
+def addOrder(typeName):
+	assert typeName in ['buy', 'sell']
 
 	limitRate = input('Limit exchange rate (eur/btc)? ')
 	limitRate = decimal.Decimal(limitRate) * EUR / BTC
@@ -105,6 +100,16 @@ def addOrder():
 	client.addOrder(order)
 
 
+def buy():
+	'Add a limit order for buying BTC'
+	addOrder('buy')
+
+
+def sell():
+	'Add a limit order for selling BTC'
+	addOrder('sell')
+
+
 
 commands = \
 {
@@ -112,7 +117,8 @@ commands = \
 'quit'    : stop,
 'help'    : help,
 'license' : license,
-'addorder': addOrder,
+'buy'     : buy,
+'sell'    : sell,
 }
 
 def handleCommand(cmd):
