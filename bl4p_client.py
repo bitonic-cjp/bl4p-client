@@ -113,7 +113,9 @@ class BL4PClient(threading.Thread):
 			self.syncOffers()
 
 			#TODO: other event handling, and periodic activities
-			time.sleep(0.1)
+			tx = self.lightning.waitForIncomingTransactions(0.1)
+			if tx is not None:
+				self.handleIncomingTransaction(tx)
 
 		self.lightning.close()
 		self.connection.close()
@@ -192,4 +194,8 @@ class BL4PClient(threading.Thread):
 
 		self.storage.addTransaction(tx)
 		self.storage.updateOrderStatus(localID, order.STATUS_TRADING)
+
+
+	def handleIncomingTransaction(self, tx):
+		print('Got incoming transaction')
 

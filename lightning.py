@@ -16,6 +16,7 @@
 #    along with BL4P client. If not, see <http://www.gnu.org/licenses/>.
 
 import struct
+import time
 
 
 
@@ -40,6 +41,7 @@ class LightningTransaction:
 		recipientCryptoAmount, payload
 		):
 
+		self.destination = destinationNodeID
 		self.paymentHash = paymentHash
 		self.recipientCryptoAmount = recipientCryptoAmount
 		self.senderCryptoAmount = int(1.01 * recipientCryptoAmount) #simulated fee
@@ -50,7 +52,8 @@ class LightningTransaction:
 
 class Lightning:
 	def __init__(self):
-		self.lockedTransactions = []
+		self.sentTransactions = []
+		self.receivedTransactions = []
 
 
 	def getAddress(self):
@@ -83,7 +86,21 @@ class Lightning:
 		if tx.senderCryptoAmount > maxSenderCryptoAmount:
 			raise Exception('Transaction failed because of too high Lightning fees')
 
-		self.lockedTransactions.append(tx)
+		self.sentTransactions.append(tx)
+
+
+	def waitForIncomingTransactions(self, timeout):
+		while self.sentTransactions:
+			tx = self.sentTransactions.pop(0)
+
+			if tx.destination != self.getAddress():
+				continue #it's not ours
+
+			self.receivedTransactions.append(tx)
+			return tx
+
+		time.sleep(timeout)
+		return None
 
 
 	def close(self):
