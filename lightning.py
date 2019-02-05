@@ -90,6 +90,7 @@ class Lightning:
 
 
 	def waitForIncomingTransactions(self, timeout):
+		#TODO: also return events for cancelations of outgoing transactions
 		while self.sentTransactions:
 			tx = self.sentTransactions.pop(0)
 
