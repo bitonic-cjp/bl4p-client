@@ -160,8 +160,8 @@ class SellTransaction(Transaction):
 		self.fiatAmount = fiatAmount
 		self.minCryptoAmount = minCryptoAmount
 		self.maxCryptoAmount = maxCryptoAmount
-		self.senderAmount = senderAmount
-		self.receiverAmount = receiverAmount
+		self.senderAmount = senderAmount     #Sender of *fiat*
+		self.receiverAmount = receiverAmount #Receiver of *fiat*
 		self.paymentHash = paymentHash
 		self.status = STATUS_RECEIVED_BL4P_PROMISE
 
@@ -188,7 +188,7 @@ class SellTransaction(Transaction):
 			recipientCryptoAmount=self.minCryptoAmount,
 			maxSenderCryptoAmount=self.maxCryptoAmount,
 			minCLTVExpiryDelta=CLTV_expiry_delta,
-			fiatAmount=self.receiverAmount,
+			fiatAmount=self.senderAmount,
 			fiatCurrency=localOffer.ask.currency,
 			fiatExchange=localOffer.ask.exchange
 			)
