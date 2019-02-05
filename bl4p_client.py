@@ -204,8 +204,6 @@ class BL4PClient(threading.Thread):
 			if not isinstance(ownOrder, order.BuyOrder):
 				continue
 
-			#TODO: check if lntx conforms to our order
-
 			tx = BuyTransaction(localID, counterOffer=None)
 			tx.initiateFromLNTransaction(self, lntx)
 

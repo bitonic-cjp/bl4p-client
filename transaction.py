@@ -27,11 +27,12 @@ Seller market taker:
 initial -> received_BL4P_promise -> locked_lightning_tx ->
 
 Buyer market maker:
-locked_lightning_tx ->
+locked_lightning_tx -> sent_bl4p_funds
 '''
 STATUS_INITIAL = 0
 STATUS_RECEIVED_BL4P_PROMISE = 1
 STATUS_LOCKED_LIGHTNING_TX = 2
+STATUS_SENT_BL4P_FUNDS = 3
 
 
 
@@ -70,7 +71,29 @@ class BuyTransaction(Transaction):
 
 	def initiateFromLNTransaction(self, client, lntx):
 		print('Initiating buy tx from LN tx')
-		#TODO
+
+		localOffer = client.storage.getOrder(self.localOrderID)
+
+		self.receiverAmount = lntx.recipientCryptoAmount
+		self.fiatAmount = lntx.payload.fiatAmount
+		self.paymentHash = lntx.paymentHash
+		self.status = STATUS_LOCKED_LIGHTNING_TX
+
+		#TODO: check if lntx conforms to our order
+
+		self.lockFiatFunds(client)
+
+
+	def lockFiatFunds(self, client):
+		self.preimage = client.connection.send(
+			self.fiatAmount, self.paymentHash)
+		#TODO: handle failure of the above
+
+		self.status = STATUS_SENT_BL4P_FUNDS
+
+		print('We got the preimage from BL4P')
+
+		#TODO: settle Lightning tx
 
 
 
@@ -130,9 +153,11 @@ class SellTransaction(Transaction):
 				locked_timeout_delta_s,
 				receiver_pays_fee=True
 				)
+		#TODO: handle failure of the above
 
 		assert senderAmount == fiatAmount
 
+		self.fiatAmount = fiatAmount
 		self.minCryptoAmount = minCryptoAmount
 		self.maxCryptoAmount = maxCryptoAmount
 		self.senderAmount = senderAmount
