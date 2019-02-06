@@ -186,8 +186,7 @@ class SellTransaction(Transaction):
 			maxSenderCryptoAmount=self.maxCryptoAmount,
 			minCLTVExpiryDelta=CLTV_expiry_delta,
 			fiatAmount=self.senderAmount,
-			fiatCurrency=localOffer.ask.currency,
-			fiatExchange=localOffer.ask.exchange
+			offerID=counterOffer.ID,
 			)
 
 		self.status = STATUS_LOCKED_LIGHTNING_TX

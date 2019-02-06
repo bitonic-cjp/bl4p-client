@@ -29,7 +29,12 @@ class Storage:
 
 	def addOrder(self, newOrder):
 		ID = self.nextLocalOrderID
+
+		#TODO: handle 32-bit overflow.
+		#In the offer structure and in the Lightning payload,
+		#only 32 bits are reserved for the ID.
 		self.nextLocalOrderID += 1
+
 		newOrder.ID = ID
 		self.orders[ID] = newOrder
 

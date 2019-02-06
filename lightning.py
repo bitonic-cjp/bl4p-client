@@ -23,15 +23,16 @@ import time
 class Payload:
 	@staticmethod
 	def decode(data):
-		fiatAmount = struct.unpack('!Q', data)[0]
-		return Payload(fiatAmount)
+		fiatAmount, offerID = struct.unpack('!QI', data)
+		return Payload(fiatAmount, offerID)
 
-	def __init__(self, fiatAmount):
+	def __init__(self, fiatAmount, offerID):
 		self.fiatAmount = fiatAmount
+		self.offerID = offerID
 
 
 	def encode(self):
-		return struct.pack('!Q', self.fiatAmount)
+		return struct.pack('!QI', self.fiatAmount, self.offerID)
 
 
 
@@ -73,10 +74,11 @@ class Lightning:
 		destinationNodeID, paymentHash,
 		recipientCryptoAmount, maxSenderCryptoAmount,
 		minCLTVExpiryDelta,
-		fiatAmount, fiatCurrency, fiatExchange):
+		fiatAmount,
+		offerID,
+		):
 
-		#TODO: what to do with fiatCurrency, fiatExchange??
-		payload = Payload(fiatAmount)
+		payload = Payload(fiatAmount, offerID)
 
 		tx = LightningTransaction(destinationNodeID, paymentHash,
 			minCLTVExpiryDelta,
