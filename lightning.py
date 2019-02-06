@@ -95,6 +95,7 @@ class Lightning:
 
 	def waitForIncomingTransactions(self, timeout):
 		#TODO: also return events for cancelations of outgoing transactions
+		#TODO: also return events for finished outgoing transactions
 		while self.sentTransactions:
 			tx = self.sentTransactions.pop(0)
 
@@ -115,7 +116,7 @@ class Lightning:
 				self.receivedTransactions.remove(tx)
 				self.finishedTransactions.append(tx)
 				return
-		raise Exception('Lightning transaction not found ')
+		raise Exception('Lightning transaction not found')
 
 
 	def close(self):
