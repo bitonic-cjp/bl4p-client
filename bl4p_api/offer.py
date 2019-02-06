@@ -39,7 +39,7 @@ def Asset(max_amount, max_amount_divisor, currency, exchange):
 class Offer:
 	@staticmethod
 	def fromPB2(pb2):
-		ret = Offer(pb2.bid, pb2.ask, pb2.address)
+		ret = Offer(pb2.bid, pb2.ask, pb2.address, pb2.ID)
 
 		for condition in pb2.conditions:
 			ret.conditions[condition.key] = \
@@ -51,6 +51,7 @@ class Offer:
 	def __init__(self,
 			bid, ask,
 			address,
+			ID,
 			cltv_expiry_delta = None, #None or (min, max)
 			sender_timeout = None,    #None or (min, max), milliseconds
 			locked_timeout = None,    #None or (min, max), seconds
@@ -58,6 +59,7 @@ class Offer:
 		self.bid = bid
 		self.ask = ask
 		self.address = address
+		self.ID = ID
 		self.conditions = {}
 		if cltv_expiry_delta is not None:
 			self.conditions[Condition.CLTV_EXPIRY_DELTA] = cltv_expiry_delta
@@ -72,8 +74,9 @@ class Offer:
 
 
 	def __str__(self):
-		return 'Offer: bidding %f %s on %s, asking %f %s on %s' % \
+		return 'Offer %d: bidding %f %s on %s, asking %f %s on %s' % \
 			(
+			self.ID,
 			self.bid.max_amount / self.bid.max_amount_divisor, self.bid.currency, self.bid.exchange,
 			self.ask.max_amount / self.ask.max_amount_divisor, self.ask.currency, self.ask.exchange,
 			)
@@ -98,6 +101,7 @@ class Offer:
 		ret.bid.CopyFrom(self.bid)
 		ret.ask.CopyFrom(self.ask)
 		ret.address = self.address
+		ret.ID = self.ID
 
 		for key, minmax in self.conditions.items():
 			condition = ret.conditions.add()

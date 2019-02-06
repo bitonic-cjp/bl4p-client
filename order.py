@@ -176,6 +176,7 @@ class BuyOrder(Order):
 				max_amount=0, max_amount_divisor=BTC, currency='btc', exchange='ln'
 				),
 			address=client.getLNAddress(),
+			ID=None, #To be filled in later
 
 			#We require a minimum CLTV time for incoming funds
 			cltv_expiry_delta = (12, offer.CONDITION_NO_MAX),
@@ -235,6 +236,7 @@ class SellOrder(Order):
 				max_amount=0, max_amount_divisor=EUR, currency='eur', exchange='bl3p.eu'
 				),
 			address=bl4pAddress, #TODO
+			ID=None, #To be filled in later
 
 			#We require a maximum CLTV time for outgoing funds
 			cltv_expiry_delta = (0, 144),

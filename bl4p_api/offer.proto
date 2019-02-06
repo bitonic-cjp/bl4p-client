@@ -45,6 +45,13 @@ message Offer {
     //Transaction destination (e.g. Lightning node ID)
     string address = 3;
 
+    //The ID of this offer at the offerer.
+    //(offerer, ID) should be globally unique at any point in time,
+    //but different offerers may use the same ID simultaneously, and
+    //the same offerer may re-use the same ID after the old offer with that ID
+    //was closed.
+    uint32 ID = 4;
+
     //Transaction conditions
     message Condition {
         enum Key {
@@ -71,6 +78,6 @@ message Offer {
         sint64 max_value = 3;
     }
 
-    repeated Condition conditions = 4;
+    repeated Condition conditions = 5;
 }
 

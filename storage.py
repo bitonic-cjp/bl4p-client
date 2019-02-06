@@ -30,6 +30,7 @@ class Storage:
 	def addOrder(self, newOrder):
 		ID = self.nextLocalOrderID
 		self.nextLocalOrderID += 1
+		newOrder.ID = ID
 		self.orders[ID] = newOrder
 
 

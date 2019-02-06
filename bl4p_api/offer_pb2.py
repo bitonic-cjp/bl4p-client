@@ -19,7 +19,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   name='offer.proto',
   package='',
   syntax='proto3',
-  serialized_pb=_b('\n\x0boffer.proto\"\xfb\x02\n\x05Offer\x12\x19\n\x03\x62id\x18\x01 \x01(\x0b\x32\x0c.Offer.Asset\x12\x19\n\x03\x61sk\x18\x02 \x01(\x0b\x32\x0c.Offer.Asset\x12\x0f\n\x07\x61\x64\x64ress\x18\x03 \x01(\t\x12$\n\nconditions\x18\x04 \x03(\x0b\x32\x10.Offer.Condition\x1a[\n\x05\x41sset\x12\x12\n\nmax_amount\x18\x01 \x01(\x04\x12\x1a\n\x12max_amount_divisor\x18\x02 \x01(\x04\x12\x10\n\x08\x63urrency\x18\x03 \x01(\t\x12\x10\n\x08\x65xchange\x18\x04 \x01(\t\x1a\xa7\x01\n\tCondition\x12!\n\x03key\x18\x01 \x01(\x0e\x32\x14.Offer.Condition.Key\x12\x11\n\tmin_value\x18\x02 \x01(\x12\x12\x11\n\tmax_value\x18\x03 \x01(\x12\"Q\n\x03Key\x12\x0b\n\x07UNKNOWN\x10\x00\x12\x15\n\x11\x43LTV_EXPIRY_DELTA\x10\x01\x12\x12\n\x0eSENDER_TIMEOUT\x10\x02\x12\x12\n\x0eLOCKED_TIMEOUT\x10\x03\x62\x06proto3')
+  serialized_pb=_b('\n\x0boffer.proto\"\x87\x03\n\x05Offer\x12\x19\n\x03\x62id\x18\x01 \x01(\x0b\x32\x0c.Offer.Asset\x12\x19\n\x03\x61sk\x18\x02 \x01(\x0b\x32\x0c.Offer.Asset\x12\x0f\n\x07\x61\x64\x64ress\x18\x03 \x01(\t\x12\n\n\x02ID\x18\x04 \x01(\r\x12$\n\nconditions\x18\x05 \x03(\x0b\x32\x10.Offer.Condition\x1a[\n\x05\x41sset\x12\x12\n\nmax_amount\x18\x01 \x01(\x04\x12\x1a\n\x12max_amount_divisor\x18\x02 \x01(\x04\x12\x10\n\x08\x63urrency\x18\x03 \x01(\t\x12\x10\n\x08\x65xchange\x18\x04 \x01(\t\x1a\xa7\x01\n\tCondition\x12!\n\x03key\x18\x01 \x01(\x0e\x32\x14.Offer.Condition.Key\x12\x11\n\tmin_value\x18\x02 \x01(\x12\x12\x11\n\tmax_value\x18\x03 \x01(\x12\"Q\n\x03Key\x12\x0b\n\x07UNKNOWN\x10\x00\x12\x15\n\x11\x43LTV_EXPIRY_DELTA\x10\x01\x12\x12\n\x0eSENDER_TIMEOUT\x10\x02\x12\x12\n\x0eLOCKED_TIMEOUT\x10\x03\x62\x06proto3')
 )
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
@@ -50,8 +50,8 @@ _OFFER_CONDITION_KEY = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   options=None,
-  serialized_start=314,
-  serialized_end=395,
+  serialized_start=326,
+  serialized_end=407,
 )
 _sym_db.RegisterEnumDescriptor(_OFFER_CONDITION_KEY)
 
@@ -103,8 +103,8 @@ _OFFER_ASSET = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=134,
-  serialized_end=225,
+  serialized_start=146,
+  serialized_end=237,
 )
 
 _OFFER_CONDITION = _descriptor.Descriptor(
@@ -148,8 +148,8 @@ _OFFER_CONDITION = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=228,
-  serialized_end=395,
+  serialized_start=240,
+  serialized_end=407,
 )
 
 _OFFER = _descriptor.Descriptor(
@@ -181,8 +181,15 @@ _OFFER = _descriptor.Descriptor(
       is_extension=False, extension_scope=None,
       options=None),
     _descriptor.FieldDescriptor(
-      name='conditions', full_name='Offer.conditions', index=3,
-      number=4, type=11, cpp_type=10, label=3,
+      name='ID', full_name='Offer.ID', index=3,
+      number=4, type=13, cpp_type=3, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='conditions', full_name='Offer.conditions', index=4,
+      number=5, type=11, cpp_type=10, label=3,
       has_default_value=False, default_value=[],
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
@@ -200,7 +207,7 @@ _OFFER = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=16,
-  serialized_end=395,
+  serialized_end=407,
 )
 
 _OFFER_ASSET.containing_type = _OFFER
