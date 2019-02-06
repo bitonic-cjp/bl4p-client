@@ -197,16 +197,29 @@ class BL4PClient(threading.Thread):
 
 
 	def handleIncomingTransaction(self, lntx):
-		print('Got incoming transaction')
+		localID = lntx.payload.offerID
+		print('Got incoming Lightning transaction for ID ', localID)
 
-		for localID in self.storage.getOrderIDs():
+		try:
 			ownOrder = self.storage.getOrder(localID)
-			if not isinstance(ownOrder, order.BuyOrder):
-				continue
+		except KeyError:
+			print('Lightning tx offerID unknown - ignoring the tx')
+			#TODO: cancel the Lightning transaction
+			return
 
-			tx = BuyTransaction(localID)
-			tx.initiateFromLNTransaction(self, lntx)
+		if not isinstance(ownOrder, order.BuyOrder):
+			print('Lightning tx offerID is not a buy tx - ignoring the tx')
+			#TODO: cancel the Lightning transaction
+			return
 
-			self.storage.addTransaction(tx)
-			self.storage.updateOrderStatus(localID, order.STATUS_TRADING)
+		if ownOrder.status != order.STATUS_IDLE:
+			print('Lightning tx offerID is not idle - ignoring the tx')
+			#TODO: cancel the Lightning transaction
+			return
+
+		tx = BuyTransaction(localID)
+		tx.initiateFromLNTransaction(self, lntx)
+
+		self.storage.addTransaction(tx)
+		self.storage.updateOrderStatus(localID, order.STATUS_TRADING)
 
