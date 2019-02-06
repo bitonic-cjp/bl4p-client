@@ -44,6 +44,7 @@ class LightningTransaction:
 
 		self.destination = destinationNodeID
 		self.paymentHash = paymentHash
+		self.paymentPreimage = None
 		self.recipientCryptoAmount = recipientCryptoAmount
 		self.senderCryptoAmount = int(1.01 * recipientCryptoAmount) #simulated fee
 		self.CLTVExpiryDelta = minCLTVExpiryDelta
@@ -55,6 +56,7 @@ class Lightning:
 	def __init__(self):
 		self.sentTransactions = []
 		self.receivedTransactions = []
+		self.finishedTransactions = []
 
 
 	def getAddress(self):
@@ -104,6 +106,16 @@ class Lightning:
 
 		time.sleep(timeout)
 		return None
+
+
+	def finishIncomingTransaction(self, paymentHash, paymentPreimage):
+		for tx in self.receivedTransactions:
+			if tx.paymentHash == paymentHash:
+				tx.paymentPreimage = paymentPreimage
+				self.receivedTransactions.remove(tx)
+				self.finishedTransactions.append(tx)
+				return
+		raise Exception('Lightning transaction not found ')
 
 
 	def close(self):

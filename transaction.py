@@ -15,7 +15,13 @@
 #    You should have received a copy of the GNU General Public License
 #    along with BL4P client. If not, see <http://www.gnu.org/licenses/>.
 
+import hashlib
+
 from bl4p_api import offer
+
+
+
+sha256 = lambda preimage: hashlib.sha256(preimage).digest()
 
 
 
@@ -33,6 +39,7 @@ STATUS_INITIAL = 0
 STATUS_RECEIVED_BL4P_PROMISE = 1
 STATUS_LOCKED_LIGHTNING_TX = 2
 STATUS_SENT_BL4P_FUNDS = 3
+STATUS_FINISHED = 4
 
 
 
@@ -75,22 +82,30 @@ class BuyTransaction(Transaction):
 		self.status = STATUS_LOCKED_LIGHTNING_TX
 
 		#TODO: check if lntx conforms to our order
+		#TODO: check if remaining order size is sufficient
 
 		self.lockFiatFunds(client)
 
 
 	def lockFiatFunds(self, client):
-		self.preimage = client.connection.send(
+		paymentPreimage = client.connection.send(
 			self.fiatAmount, self.paymentHash)
 		#TODO: handle failure of the above
 
-		#TODO: check match between preimage and hash
+		assert sha256(paymentPreimage) == self.paymentHash
 
+		self.paymentPreimage = paymentPreimage
 		self.status = STATUS_SENT_BL4P_FUNDS
 
 		print('We got the preimage from BL4P')
+		self.receiveCryptoTransaction(client)
 
-		#TODO: settle Lightning tx
+
+	def receiveCryptoTransaction(self, client):
+		client.lightning.finishIncomingTransaction(
+			self.paymentHash, self.paymentPreimage)
+
+		self.status = STATUS_FINISHED
 
 
 
