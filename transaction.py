@@ -52,20 +52,15 @@ def getMaxConditionValue(offer1, offer2, condition):
 
 
 class Transaction:
-	def __init__(self, localOrderID, counterOffer):
+	def __init__(self, localOrderID):
 		self.localOrderID = localOrderID
-		self.counterOffer = counterOffer
 		self.status = STATUS_INITIAL
-
-
-	def initiate(self, client):
-		raise Exception('Not implemented in this class')
 
 
 
 class BuyTransaction(Transaction):
-	def __init__(self, localOrderID, counterOffer):
-		Transaction.__init__(self, localOrderID, counterOffer)
+	def __init__(self, localOrderID):
+		Transaction.__init__(self, localOrderID)
 		print('Created buy tx')
 
 
@@ -89,6 +84,8 @@ class BuyTransaction(Transaction):
 			self.fiatAmount, self.paymentHash)
 		#TODO: handle failure of the above
 
+		#TODO: check match between preimage and hash
+
 		self.status = STATUS_SENT_BL4P_FUNDS
 
 		print('We got the preimage from BL4P')
@@ -98,14 +95,13 @@ class BuyTransaction(Transaction):
 
 
 class SellTransaction(Transaction):
-	def __init__(self, localOrderID, counterOffer):
-		Transaction.__init__(self, localOrderID, counterOffer)
+	def __init__(self, localOrderID):
+		Transaction.__init__(self, localOrderID)
 		print('Created sell tx')
 
 
-	def initiate(self, client):
+	def initiateFromCounterOffer(self, client, counterOffer):
 		localOffer   = client.storage.getOrder(self.localOrderID)
-		counterOffer = self.counterOffer
 
 		#Choose the largest fiat amount accepted by both
 		fiatAmountDivisor = client.bl4pAmountDivisor
@@ -157,6 +153,7 @@ class SellTransaction(Transaction):
 
 		assert senderAmount == fiatAmount
 
+		self.counterOffer = counterOffer
 		self.fiatAmount = fiatAmount
 		self.minCryptoAmount = minCryptoAmount
 		self.maxCryptoAmount = maxCryptoAmount

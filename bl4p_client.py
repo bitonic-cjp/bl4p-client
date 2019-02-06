@@ -177,10 +177,10 @@ class BL4PClient(threading.Thread):
 		if isinstance(ownOrder, order.BuyOrder):
 			return
 			#TODO: enable buyer-initiated trade once supported
-			#tx = BuyTransaction(localID, counterOffer)
+			#tx = BuyTransaction(localID)
 			#TODO: fill with offer data
 		elif isinstance(ownOrder, order.SellOrder):
-			tx = SellTransaction(localID, counterOffer)
+			tx = SellTransaction(localID)
 			#TODO: fill with offer data
 		else:
 			raise Exception('Unsupported order type - cannot use it in trade')
@@ -190,7 +190,7 @@ class BL4PClient(threading.Thread):
 		print('  counter offer: ', str(counterOffer))
 
 		#Initiate first steps of the tx
-		tx.initiate(self)
+		tx.initiateFromCounterOffer(self, counterOffer)
 
 		self.storage.addTransaction(tx)
 		self.storage.updateOrderStatus(localID, order.STATUS_TRADING)
@@ -204,7 +204,7 @@ class BL4PClient(threading.Thread):
 			if not isinstance(ownOrder, order.BuyOrder):
 				continue
 
-			tx = BuyTransaction(localID, counterOffer=None)
+			tx = BuyTransaction(localID)
 			tx.initiateFromLNTransaction(self, lntx)
 
 			self.storage.addTransaction(tx)
