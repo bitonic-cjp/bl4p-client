@@ -112,10 +112,12 @@ class BL4PClient(threading.Thread):
 			#Syncing offers:
 			self.syncOffers()
 
-			#TODO: other event handling, and periodic activities
-			tx = self.lightning.waitForIncomingTransactions(0.1)
-			if tx is not None:
+			#TODO: periodic activities
+			eventType, tx = self.lightning.waitForIncomingTransactions(0.1)
+			if eventType == lightning.EVENT_INCOMING_LOCKED:
 				self.handleIncomingTransaction(tx)
+			elif eventType == lightning.EVENT_OUTGOING_FINISHED:
+				self.handleOutgoingTransactionFinished(tx)
 
 		self.lightning.close()
 		self.connection.close()
@@ -222,4 +224,8 @@ class BL4PClient(threading.Thread):
 
 		self.storage.addTransaction(tx)
 		self.storage.updateOrderStatus(localID, order.STATUS_TRADING)
+
+
+	def handleOutgoingTransactionFinished(self, lntx):
+		print('Outgoing Lightning transaction is finished')
 

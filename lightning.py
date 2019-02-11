@@ -52,6 +52,9 @@ class LightningTransaction:
 
 
 
+EVENT_INCOMING_LOCKED   = 0
+EVENT_OUTGOING_FINISHED = 1
+
 class Lightning:
 	def __init__(self):
 		self.sentTransactions = []
@@ -94,8 +97,9 @@ class Lightning:
 
 
 	def waitForIncomingTransactions(self, timeout):
+		'returns: (eventType, tx)'
+
 		#TODO: also return events for cancelations of outgoing transactions
-		#TODO: also return events for finished outgoing transactions
 		while self.sentTransactions:
 			tx = self.sentTransactions.pop(0)
 
@@ -103,10 +107,13 @@ class Lightning:
 				continue #it's not ours
 
 			self.receivedTransactions.append(tx)
-			return tx
+			return EVENT_INCOMING_LOCKED, tx
+		while self.finishedTransactions:
+			tx = self.finishedTransactions.pop(0)
+			return EVENT_OUTGOING_FINISHED, tx
 
 		time.sleep(timeout)
-		return None
+		return (None, None)
 
 
 	def finishIncomingTransaction(self, paymentHash, paymentPreimage):
