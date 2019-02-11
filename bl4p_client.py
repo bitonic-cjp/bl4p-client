@@ -228,4 +228,11 @@ class BL4PClient(threading.Thread):
 
 	def handleOutgoingTransactionFinished(self, lntx):
 		print('Outgoing Lightning transaction is finished')
+		transactions = self.storage.getTransactions(
+			paymentHash = lntx.paymentHash,
+			txClass = SellTransaction
+			)
+		assert len(transactions) == 1
+		tx = transactions[0]
+		tx.receiveFiatFunds(self, lntx.paymentPreimage)
 

@@ -67,3 +67,12 @@ class Storage:
 		self.nextLocalTransactionID += 1
 		self.transactions[ID] = newTransaction
 
+
+	def getTransactions(self, paymentHash=None, txClass=None):
+		ret = self.transactions.values()
+		if paymentHash is not None:
+			ret = filter(lambda tx: tx.paymentHash == paymentHash, ret)
+		if txClass is not None:
+			ret = filter(lambda tx: isinstance(tx, txClass), ret)
+		return list(ret)
+

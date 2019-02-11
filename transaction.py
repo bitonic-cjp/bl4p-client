@@ -30,17 +30,17 @@ sha256 = lambda preimage: hashlib.sha256(preimage).digest()
 State transitions:
 
 Seller market taker:
-initial -> received_BL4P_promise -> locked_lightning_tx ->
+initial -> received_BL4P_promise -> locked_lightning_tx -> received_preimage -> finished
 
 Buyer market maker:
-locked_lightning_tx -> sent_bl4p_funds
+locked_lightning_tx -> sent_bl4p_funds -> finished
 '''
 STATUS_INITIAL = 0
 STATUS_RECEIVED_BL4P_PROMISE = 1
 STATUS_LOCKED_LIGHTNING_TX = 2
 STATUS_SENT_BL4P_FUNDS = 3
-STATUS_FINISHED = 4
-
+STATUS_RECEIVED_PREIMAGE = 4
+STATUS_FINISHED = 5
 
 
 def getMinConditionValue(offer1, offer2, condition):
@@ -62,6 +62,7 @@ class Transaction:
 	def __init__(self, localOrderID):
 		self.localOrderID = localOrderID
 		self.status = STATUS_INITIAL
+		self.paymentHash = None
 
 
 
@@ -205,4 +206,15 @@ class SellTransaction(Transaction):
 			)
 
 		self.status = STATUS_LOCKED_LIGHTNING_TX
+
+
+	def receiveFiatFunds(self, client, paymentPreimage):
+		self.paymentPreimage = paymentPreimage
+		self.status = STATUS_RECEIVED_PREIMAGE
+
+		client.connection.receive(paymentPreimage)
+
+		self.status = STATUS_FINISHED
+
+		print('Transaction is finished')
 
