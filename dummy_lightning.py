@@ -111,20 +111,6 @@ class Node:
 		print('Lightning: Ended RPC connection')
 
 
-	async def pluginRPC(self, command):
-		self.plugin.stdin.write(b'%s\n\n' % command)
-		await self.plugin.stdin.drain()
-		ret = await self.plugin.stdout.readline()
-		c = await self.plugin.stdout.read(1)
-		assert c == b'\n'
-		return ret
-
-
-	async def pluginNotify(self, command):
-		self.plugin.stdin.write(b'%s\n\n' % command)
-		await self.plugin.stdin.drain()
-
-
 	async def shutdown(self):
 		await self.pluginInterface.shutdown()
 		self.pluginProcess.kill()
