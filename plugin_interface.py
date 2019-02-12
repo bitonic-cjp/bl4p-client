@@ -16,6 +16,8 @@
 #    You should have received a copy of the GNU General Public License
 #    along with the BL4P Client. If not, see <http://www.gnu.org/licenses/>.
 
+import asyncio
+
 
 
 class PluginInterface:
@@ -26,12 +28,23 @@ class PluginInterface:
 	def startup(self, stdin, stdout):
 		self.stdin = stdin
 		self.stdout = stdout
+		self.task = asyncio.ensure_future(self.handleIncomingData())
 
 
-	async def run(self):
-		while True:
-			x = await self.stdin.readline()
-			x = x.strip()
-			self.stdout.write(b'Got input: %s\n' % x)
-			await self.stdout.drain()
+	async def shutdown(self):
+		self.task.cancel()
+		await self.task
+
+
+	async def handleIncomingData(self):
+		try:
+			while True:
+				x = await self.stdin.readline()
+				if not x: #EOF
+					return
+				x = x.strip()
+				self.stdout.write(b'Got input: %s\n' % x)
+				await self.stdout.drain()
+		except asyncio.CancelledError:
+			pass #We're cancelled, so just quit the function
 

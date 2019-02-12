@@ -18,6 +18,7 @@
 
 import asyncio
 import os
+import signal
 import sys
 
 import plugin_interface
@@ -58,13 +59,30 @@ class BL4PClient:
 		self.pluginInterface = plugin_interface.PluginInterface()
 
 
-	async def run(self):
+	async def startup(self):
 		stdin, stdout = await stdio()
 		self.pluginInterface.startup(stdin, stdout)
-		await self.pluginInterface.run()
 
+
+	async def shutdown(self):
+		await self.pluginInterface.shutdown()
+
+
+
+def terminateSignalHandler():
+	loop = asyncio.get_event_loop()
+	loop.stop()
 
 
 client = BL4PClient()
-asyncio.get_event_loop().run_until_complete(client.run())
+loop = asyncio.get_event_loop()
+
+loop.run_until_complete(client.startup())
+
+loop.add_signal_handler(signal.SIGINT , terminateSignalHandler)
+loop.add_signal_handler(signal.SIGTERM, terminateSignalHandler)
+loop.run_forever()
+
+loop.run_until_complete(client.shutdown())
+loop.close()
 
