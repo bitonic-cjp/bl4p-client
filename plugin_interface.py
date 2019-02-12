@@ -19,6 +19,7 @@
 import asyncio
 from enum import Enum
 import json
+import re
 import sys
 import traceback
 
@@ -32,12 +33,10 @@ class MethodType(Enum):
 
 class PluginInterface:
 	def __init__(self):
+		self.options = {}
 		self.methods = {}
-
-
-		def test(*args):
-			return args
-		self.methods['test'] = test, MethodType.RPCMETHOD
+		self.subscriptions = {}
+		self.addMethod("getmanifest", self.getManifest)
 
 
 	def startup(self, stdin, stdout):
@@ -74,6 +73,10 @@ class PluginInterface:
 			sys.stderr.write(traceback.format_exc())
 
 
+	def log(self, s):
+		pass #TODO
+
+
 	def handleMessageData(self, msg):
 		msg = msg.decode('UTF-8')
 		request = json.loads(msg)
@@ -107,11 +110,49 @@ class PluginInterface:
 			request['method'], repr(e)
 			),
 			}
-			#self.log(traceback.format_exc()) #TODO
+			self.log(traceback.format_exc())
 		result = json.dumps(result)
 		self.stdout.write(result.encode('UTF-8') + b'\n\n')
 
 
 	def handleNotification(self, notification):
 		return #TODO
+
+
+	def addMethod(self, name, func):
+		self.methods[name] = (func, MethodType.RPCMETHOD)
+
+
+	def getManifest(self):
+		methods = []
+		hooks = []
+		for name, entry in self.methods.items():
+			func, typ = entry
+			# Skip the builtin ones, they don't get reported
+			if name in ['getmanifest', 'init']:
+				continue
+
+			if typ == MethodType.HOOK:
+				hooks.append(name)
+				continue
+
+			doc = inspect.getdoc(func)
+			if not doc:
+				self.log(
+				'RPC method \'{}\' does not have a docstring.'.format(name)
+				)
+				doc = "Undocumented RPC method from a plugin."
+				doc = re.sub('\n+', ' ', doc)
+
+			methods.append({
+				'name': name,
+				'description': doc,
+				})
+
+		return {
+			'options': list(self.options.values()),
+			'rpcmethods': methods,
+			'subscriptions': list(self.subscriptions.keys()),
+			'hooks': hooks,
+			}
 
