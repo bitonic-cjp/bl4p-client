@@ -24,8 +24,8 @@ socketPath = sys.argv[1]
 sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
 sock.connect(socketPath)
 
-sock.sendall(b'{"id": 0, "method": "getmanifest", "params": []}\n')
-sock.sendall(b'{"method": "test", "params": [3, 1, 4, 1]}\n')
+sock.sendall(b'{"id": 0, "method": "getmanifest", "params": []}\n\n')
+sock.sendall(b'{"method": "test", "params": [3, 1, 4, 1]}\n\n')
 
 sock.close()
 

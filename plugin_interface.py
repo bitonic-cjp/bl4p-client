@@ -32,6 +32,8 @@ class MethodType(Enum):
 
 class PluginInterface(JSONRPC):
 	def __init__(self):
+		JSONRPC.__init__(self)
+
 		self.options = {}
 		self.methods = \
 		{
@@ -44,9 +46,17 @@ class PluginInterface(JSONRPC):
 		self.subscriptions = {'test': testHandler}
 
 
-	def handleRequest(self, name, params):
-		func, _ = self.methods[name]
-		return func(*params)
+	def handleRequest(self, ID, name, params):
+		try:
+			func, _ = self.methods[name]
+			result = func(*params)
+			self.sendResponse(ID, result)
+		except Exception as e:
+			self.log(traceback.format_exc())
+			self.sendErrorResponse(ID,
+				"Error while processing {}: {}".format(
+				request['method'], repr(e)
+				))
 
 
 	def handleNotification(self, name, params):

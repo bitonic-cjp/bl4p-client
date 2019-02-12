@@ -23,12 +23,54 @@ import socket
 import time
 import traceback
 
+from json_rpc import JSONRPC
+
+
+
+class RPCInterface(JSONRPC):
+	def __init__(self, node):
+		JSONRPC.__init__(self)
+		self.node = node
+
+
+	def handleRequest(self, ID, name, params):
+		outgoingID = self.node.pluginInterface.sendRequest(name, params)
+
+		def resultCB(result):
+			print(result)
+			self.sendResponse(ID, result)
+
+		def errorCB(error):
+			print(error)
+			self.sendErrorResponse(ID, error)
+
+		self.node.pluginResultCallbacks[outgoingID] = (resultCB, errorCB)
+
+
+	def handleNotification(self, name, params):
+		self.node.pluginInterface.sendNotification(name, params)
+
+
+
+class PluginInterface(JSONRPC):
+	def __init__(self, node):
+		JSONRPC.__init__(self)
+		self.node = node
+
+
+	def handleResult(self, ID, result):
+		resultCB, errorCB = self.node.pluginResultCallbacks[ID]
+		del self.node.pluginResultCallbacks[ID]
+		resultCB(result)
+
 
 
 class Node:
 	def __init__(self, nodeID, RPCFile):
 		self.nodeID = nodeID
 		self.RPCFile = RPCFile
+
+		self.pluginResultCallbacks = {} #ID -> (function(result), function(error))
 
 
 	async def startup(self):
@@ -41,35 +83,25 @@ class Node:
 			path=self.RPCFile
 			)
 
-		self.plugin = await asyncio.create_subprocess_exec(
+		self.pluginProcess = await asyncio.create_subprocess_exec(
 			'./bl4p_plugin.py',
 			stdin=asyncio.subprocess.PIPE,
 			stdout=asyncio.subprocess.PIPE,
 			stderr=None, #Inherited
 			)
 
+		self.pluginInterface = PluginInterface(self)
+		self.pluginInterface.startup(
+			self.pluginProcess.stdout,
+			self.pluginProcess.stdin
+			)
+
 
 	async def RPCConnection(self, reader, writer):
-		try:
-			print('Lightning: Got incoming RPC connection')
-			while True:
-				line = await reader.readline()
-				if line == b'': #EOF
-					break
-
-				if b'"id"' in line:
-					print('Lightning: Got RPC command ', line)
-					command = line.strip()
-					pluginResponse = await self.pluginRPC(command)
-					print('Lightning: Got plugin response ', pluginResponse)
-				else:
-					print('Lightning: Got RPC notification ', line)
-					command = line.strip()
-					await self.pluginNotify(command)
-
-		except:
-			print(traceback.format_exc())
-
+		print('Lightning: Got incoming RPC connection')
+		interface = RPCInterface(self)
+		interface.startup(reader, writer)
+		await interface.waitFinished()
 		print('Lightning: Ended RPC connection')
 
 
@@ -88,8 +120,9 @@ class Node:
 
 
 	async def shutdown(self):
-		self.plugin.kill()
-		await self.plugin.wait()
+		await self.pluginInterface.shutdown()
+		self.pluginProcess.kill()
+		await self.pluginProcess.wait()
 
 
 

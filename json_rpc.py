@@ -27,6 +27,7 @@ class JSONRPC:
 	def startup(self, inputStream, outputStream):
 		self.inputStream = inputStream
 		self.outputStream = outputStream
+		self.outgoingRequestID = 0
 		self.task = asyncio.ensure_future(self.handleIncomingData())
 
 
@@ -35,10 +36,14 @@ class JSONRPC:
 		await self.task
 
 
+	async def waitFinished(self):
+		await self.task
+
+
 	async def handleIncomingData(self):
 		try:
 			try:
-				self.log('Started JSON RPC')
+				#self.log('Started JSON RPC')
 				inputBuffer = b''
 				while True:
 					newData = await self.inputStream.readline()
@@ -53,6 +58,8 @@ class JSONRPC:
 						return
 			except asyncio.CancelledError:
 				pass #We're cancelled, so just quit the function
+			except BrokenPipeError:
+				pass #Pipe closed, so just quit the function
 		except:
 			self.log('Exception in JSON RPC:')
 			self.log(traceback.format_exc())
@@ -68,44 +75,65 @@ class JSONRPC:
 		sys.stderr.write(s + '\n')
 
 
+	def sendRequest(self, name, params):
+		ID = self.outgoingRequestID
+		self.outgoingRequestID += 1
+		msg = {'id': ID, 'method': name, 'params': params}
+		self.writeJSON(msg)
+		return ID
+
+
+	def sendResponse(self, ID, result):
+		response = \
+			{
+			'jsonrpc': '2.0',
+			'id': ID,
+			'result': result
+			}
+		self.writeJSON(response)
+
+
+	def sendErrorResponse(self, ID, error):
+		response = \
+			{
+			'jsonrpc': '2.0',
+			'id': ID,
+			"error": error,
+			}
+		self.writeJSON(response)
+
+
+	def sendNotification(self, name, params):
+		msg = {'method': name, 'params': params}
+		self.writeJSON(msg)
+
+
 	def handleMessageData(self, msg):
-		msg = msg.decode('UTF-8')
-		request = json.loads(msg)
+		try:
+			msg = msg.decode('UTF-8')
+			request = json.loads(msg)
 
-		# If this has an 'id'-field, it's a request and returns a
-		# result. Otherwise it's a notification and it doesn't
-		# return anything.
-		if 'id' in request:
-			try:
-				result = self.handleRequest(request['method'], request['params'])
-				response = \
-				{
-				'jsonrpc': '2.0',
-				'id': request['id'],
-				'result': result
-				}
-			except Exception as e:
-				self.log(traceback.format_exc())
-				result = \
-				{
-				'jsonrpc': '2.0',
-				'id': request['id'],
-				"error": "Error while processing {}: {}".format(
-					request['method'], repr(e)
-					),
-				}
-			self.writeJSON(result)
-		else:
-			try:
+			#self.log('Handling incoming message: ' + str(request))
+
+			if 'result' in request:
+				self.handleResult(request['id'], request['result'])
+			elif 'id' in request:
+				self.handleRequest(request['id'], request['method'], request['params'])
+			else:
 				self.handleNotification(request['method'], request['params'])
-			except Exception:
-				self.log(traceback.format_exc())
+
+		except Exception:
+			self.log(traceback.format_exc())
 
 
-	def handleRequest(self, name, params):
+	def handleRequest(self, ID, name, params):
 		pass #To be overloaded in derived classes
 
 
 	def handleNotification(self, name, params):
+		pass #To be overloaded in derived classes
+
+
+	def handleResult(self, ID, result):
 		pass #To be overloaded in derived classes
 
