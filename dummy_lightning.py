@@ -21,6 +21,7 @@ import os
 import signal
 import socket
 import time
+import traceback
 
 
 
@@ -49,18 +50,41 @@ class Node:
 
 
 	async def RPCConnection(self, reader, writer):
-		print('Lightning: Got incoming RPC connection')
-		line = await reader.readline()
-		print('Lightning: Got RPC command ', line)
-		functionName = line.strip()
-		pluginResponse = await self.pluginRPC(functionName)
-		print('Lightning: Got plugin response ', pluginResponse)
+		try:
+			print('Lightning: Got incoming RPC connection')
+			while True:
+				line = await reader.readline()
+				if line == b'': #EOF
+					break
+
+				if b'"id"' in line:
+					print('Lightning: Got RPC command ', line)
+					command = line.strip()
+					pluginResponse = await self.pluginRPC(command)
+					print('Lightning: Got plugin response ', pluginResponse)
+				else:
+					print('Lightning: Got RPC notification ', line)
+					command = line.strip()
+					await self.pluginNotify(command)
+
+		except:
+			print(traceback.format_exc())
+
+		print('Lightning: Ended RPC connection')
 
 
-	async def pluginRPC(self, functionName, *args):
-		self.plugin.stdin.write(b'%s\n\n' % functionName)
+	async def pluginRPC(self, command):
+		self.plugin.stdin.write(b'%s\n\n' % command)
 		await self.plugin.stdin.drain()
-		return await self.plugin.stdout.readline()
+		ret = await self.plugin.stdout.readline()
+		c = await self.plugin.stdout.read(1)
+		assert c == b'\n'
+		return ret
+
+
+	async def pluginNotify(self, command):
+		self.plugin.stdin.write(b'%s\n\n' % command)
+		await self.plugin.stdin.drain()
 
 
 	async def shutdown(self):

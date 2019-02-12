@@ -38,7 +38,11 @@ class PluginInterface:
 		{
 		'getmanifest': (self.getManifest, MethodType.RPCMETHOD),
 		}
-		self.subscriptions = {}
+
+		def testHandler(*args):
+			self.log('Test notification received')
+
+		self.subscriptions = {'test': testHandler}
 
 
 	def startup(self, stdin, stdout):
@@ -55,7 +59,7 @@ class PluginInterface:
 	async def handleIncomingData(self):
 		try:
 			try:
-				sys.stderr.write('Started plugin interface\n')
+				self.log('Started plugin interface')
 				inputBuffer = b''
 				while True:
 					newData = await self.stdin.readline()
@@ -71,12 +75,13 @@ class PluginInterface:
 			except asyncio.CancelledError:
 				pass #We're cancelled, so just quit the function
 		except:
-			sys.stderr.write('Exception in plugin interface:\n')
-			sys.stderr.write(traceback.format_exc())
+			self.log('Exception in plugin interface:')
+			self.log(traceback.format_exc())
 
 
 	def log(self, s):
-		pass #TODO
+		#TODO
+		sys.stderr.write(s + '\n')
 
 
 	def handleMessageData(self, msg):
@@ -117,11 +122,18 @@ class PluginInterface:
 		self.stdout.write(result.encode('UTF-8') + b'\n\n')
 
 
-	def handleNotification(self, notification):
-		return #TODO
+	def handleNotification(self, request):
+		name = request['method']
+		func = self.subscriptions[name]
+		params = request['params']
+
+		try:
+			func(*params)
+		except Exception:
+			self.log(traceback.format_exc())
 
 
-	def getManifest(self):
+	def getManifest(self, *args):
 		methods = []
 		hooks = []
 		for name, entry in self.methods.items():
