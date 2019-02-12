@@ -18,11 +18,10 @@
 
 import asyncio
 from enum import Enum
-import json
 import re
-import sys
 import traceback
 
+from json_rpc import JSONRPC
 
 
 class MethodType(Enum):
@@ -31,7 +30,7 @@ class MethodType(Enum):
 
 
 
-class PluginInterface:
+class PluginInterface(JSONRPC):
 	def __init__(self):
 		self.options = {}
 		self.methods = \
@@ -45,92 +44,14 @@ class PluginInterface:
 		self.subscriptions = {'test': testHandler}
 
 
-	def startup(self, stdin, stdout):
-		self.stdin = stdin
-		self.stdout = stdout
-		self.task = asyncio.ensure_future(self.handleIncomingData())
-
-
-	async def shutdown(self):
-		self.task.cancel()
-		await self.task
-
-
-	async def handleIncomingData(self):
-		try:
-			try:
-				self.log('Started plugin interface')
-				inputBuffer = b''
-				while True:
-					newData = await self.stdin.readline()
-					inputBuffer += newData
-					messages = inputBuffer.split(b'\n\n')
-
-					for msg in messages[:-1]:
-						self.handleMessageData(msg)
-					inputBuffer = messages[-1] #the remaining data
-
-					if not newData: #EOF
-						return
-			except asyncio.CancelledError:
-				pass #We're cancelled, so just quit the function
-		except:
-			self.log('Exception in plugin interface:')
-			self.log(traceback.format_exc())
-
-
-	def log(self, s):
-		#TODO
-		sys.stderr.write(s + '\n')
-
-
-	def handleMessageData(self, msg):
-		msg = msg.decode('UTF-8')
-		request = json.loads(msg)
-
-		# If this has an 'id'-field, it's a request and returns a
-		# result. Otherwise it's a notification and it doesn't
-		# return anything.
-		if 'id' in request:
-			self.handleRequest(request)
-		else:
-			self.handleNotification(request)
-
-
-	def handleRequest(self, request):
-		name = request['method']
-
+	def handleRequest(self, name, params):
 		func, _ = self.methods[name]
-		params = request['params']
-
-		try:
-			result = {
-			'jsonrpc': '2.0',
-			'id': request['id'],
-			'result': func(*params)
-			}
-		except Exception as e:
-			result = {
-			'jsonrpc': '2.0',
-			'id': request['id'],
-			"error": "Error while processing {}: {}".format(
-			request['method'], repr(e)
-			),
-			}
-			self.log(traceback.format_exc())
-		result = json.dumps(result)
-		self.stdout.write(result.encode('UTF-8') + b'\n\n')
+		return func(*params)
 
 
-	def handleNotification(self, request):
-		name = request['method']
+	def handleNotification(self, name, params):
 		func = self.subscriptions[name]
-		params = request['params']
-
-		try:
-			func(*params)
-		except Exception:
-			self.log(traceback.format_exc())
+		func(*params)
 
 
 	def getManifest(self, *args):
