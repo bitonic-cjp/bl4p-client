@@ -16,16 +16,13 @@
 #    You should have received a copy of the GNU General Public License
 #    along with the BL4P Client. If not, see <http://www.gnu.org/licenses/>.
 
-import socket
+import logging
 import sys
+
+from lightningd import lightning
 
 socketPath = sys.argv[1]
 
-sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-sock.connect(socketPath)
-
-sock.sendall(b'{"id": 0, "method": "getmanifest", "params": []}\n\n')
-sock.sendall(b'{"method": "test", "params": [3, 1, 4, 1]}\n\n')
-
-sock.close()
+rpc = lightning.LightningRpc(socketPath)
+print(rpc.call('getmanifest'))
 
