@@ -115,7 +115,9 @@ class JSONRPC:
 
 			#self.log('Handling incoming message: ' + str(request))
 
-			if 'result' in request:
+			if 'error' in request:
+				self.handleError(request['id'], request['error'])
+			elif 'result' in request:
 				self.handleResult(request['id'], request['result'])
 			elif 'id' in request:
 				self.handleRequest(request['id'], request['method'], request['params'])
@@ -135,5 +137,9 @@ class JSONRPC:
 
 
 	def handleResult(self, ID, result):
+		pass #To be overloaded in derived classes
+
+
+	def handleError(self, ID, error):
 		pass #To be overloaded in derived classes
 

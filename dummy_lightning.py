@@ -64,6 +64,12 @@ class PluginInterface(JSONRPC):
 		resultCB(result)
 
 
+	def handleError(self, ID, error):
+		resultCB, errorCB = self.node.pluginResultCallbacks[ID]
+		del self.node.pluginResultCallbacks[ID]
+		errorCB(error)
+
+
 
 class Node:
 	def __init__(self, nodeID, RPCFile):

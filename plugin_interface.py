@@ -55,7 +55,7 @@ class PluginInterface(JSONRPC):
 			self.log(traceback.format_exc())
 			self.sendErrorResponse(ID,
 				"Error while processing {}: {}".format(
-				request['method'], repr(e)
+				name, repr(e)
 				))
 
 
