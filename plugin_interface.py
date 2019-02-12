@@ -17,14 +17,27 @@
 #    along with the BL4P Client. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
+from enum import Enum
+import json
 import sys
 import traceback
 
 
 
+class MethodType(Enum):
+    RPCMETHOD = 0
+    HOOK = 1
+
+
+
 class PluginInterface:
 	def __init__(self):
-		pass
+		self.methods = {}
+
+
+		def test(*args):
+			return args
+		self.methods['test'] = test, MethodType.RPCMETHOD
 
 
 	def startup(self, stdin, stdout):
@@ -62,7 +75,44 @@ class PluginInterface:
 
 
 	async def handleMessageData(self, msg):
-		self.stdout.write(b'Got input: %s\n' % msg)
+		msg = msg.decode('UTF-8')
+		request = json.loads(msg)
+
+		# If this has an 'id'-field, it's a request and returns a
+		# result. Otherwise it's a notification and it doesn't
+		# return anything.
+		if 'id' in request:
+			await self.handleRequest(request)
+		else:
+			await self.handleNotification(request)
+
+
+	async def handleRequest(self, request):
+		name = request['method']
+
+		func, _ = self.methods[name]
+		params = request['params']
+
+		try:
+			result = {
+			'jsonrpc': '2.0',
+			'id': request['id'],
+			'result': func(*params)
+			}
+		except Exception as e:
+			result = {
+			'jsonrpc': '2.0',
+			'id': request['id'],
+			"error": "Error while processing {}: {}".format(
+			request['method'], repr(e)
+			),
+			}
+			#self.log(traceback.format_exc()) #TODO
+		result = json.dumps(result)
+		self.stdout.write(result.encode('UTF-8') + b'\n\n')
 		await self.stdout.drain()
 
+
+	async def handleNotification(self, notification):
+		return #TODO
 
