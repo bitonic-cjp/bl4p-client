@@ -62,7 +62,7 @@ class PluginInterface:
 					messages = inputBuffer.split(b'\n\n')
 
 					for msg in messages[:-1]:
-						await self.handleMessageData(msg)
+						self.handleMessageData(msg)
 					inputBuffer = messages[-1] #the remaining data
 
 					if not newData: #EOF
@@ -74,7 +74,7 @@ class PluginInterface:
 			sys.stderr.write(traceback.format_exc())
 
 
-	async def handleMessageData(self, msg):
+	def handleMessageData(self, msg):
 		msg = msg.decode('UTF-8')
 		request = json.loads(msg)
 
@@ -82,12 +82,12 @@ class PluginInterface:
 		# result. Otherwise it's a notification and it doesn't
 		# return anything.
 		if 'id' in request:
-			await self.handleRequest(request)
+			self.handleRequest(request)
 		else:
-			await self.handleNotification(request)
+			self.handleNotification(request)
 
 
-	async def handleRequest(self, request):
+	def handleRequest(self, request):
 		name = request['method']
 
 		func, _ = self.methods[name]
@@ -110,9 +110,8 @@ class PluginInterface:
 			#self.log(traceback.format_exc()) #TODO
 		result = json.dumps(result)
 		self.stdout.write(result.encode('UTF-8') + b'\n\n')
-		await self.stdout.drain()
 
 
-	async def handleNotification(self, notification):
+	def handleNotification(self, notification):
 		return #TODO
 
