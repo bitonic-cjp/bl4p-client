@@ -58,7 +58,7 @@ class Node:
 
 
 	async def pluginRPC(self, functionName, *args):
-		self.plugin.stdin.write(b'%s\n' % functionName)
+		self.plugin.stdin.write(b'%s\n\n' % functionName)
 		await self.plugin.stdin.drain()
 		return await self.plugin.stdout.readline()
 

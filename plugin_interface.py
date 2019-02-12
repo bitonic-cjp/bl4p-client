@@ -17,6 +17,8 @@
 #    along with the BL4P Client. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
+import sys
+import traceback
 
 
 
@@ -38,13 +40,29 @@ class PluginInterface:
 
 	async def handleIncomingData(self):
 		try:
-			while True:
-				x = await self.stdin.readline()
-				if not x: #EOF
-					return
-				x = x.strip()
-				self.stdout.write(b'Got input: %s\n' % x)
-				await self.stdout.drain()
-		except asyncio.CancelledError:
-			pass #We're cancelled, so just quit the function
+			try:
+				sys.stderr.write('Started plugin interface\n')
+				inputBuffer = b''
+				while True:
+					newData = await self.stdin.readline()
+					inputBuffer += newData
+					messages = inputBuffer.split(b'\n\n')
+
+					for msg in messages[:-1]:
+						await self.handleMessageData(msg)
+					inputBuffer = messages[-1] #the remaining data
+
+					if not newData: #EOF
+						return
+			except asyncio.CancelledError:
+				pass #We're cancelled, so just quit the function
+		except:
+			sys.stderr.write('Exception in plugin interface:\n')
+			sys.stderr.write(traceback.format_exc())
+
+
+	async def handleMessageData(self, msg):
+		self.stdout.write(b'Got input: %s\n' % msg)
+		await self.stdout.drain()
+
 
