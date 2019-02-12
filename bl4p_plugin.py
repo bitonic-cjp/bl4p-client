@@ -16,14 +16,48 @@
 #    You should have received a copy of the GNU General Public License
 #    along with the BL4P Client. If not, see <http://www.gnu.org/licenses/>.
 
+import asyncio
+import os
 import sys
 
 
-#sys.stderr.write('    Debug: Started\n')
-while True:
-	x = sys.stdin.readline()
-	#sys.stderr.write('    Debug: Got input: %s\n' % x)
-	sys.stdout.write('Got input: %s\n' % x)
-	sys.stdout.flush()
-	#sys.stderr.write('    Debug: Wrote output\n')
+async_stdio = None
+async def stdio():
+	global async_stdio
+	if async_stdio is not None:
+		return async_stdio
+
+	loop = asyncio.get_event_loop()
+
+	reader = asyncio.StreamReader(
+		limit=asyncio.streams._DEFAULT_LIMIT,
+		loop=loop
+		)
+	await loop.connect_read_pipe(
+		lambda: asyncio.StreamReaderProtocol(reader, loop=loop),
+		sys.stdin
+		)
+
+	writer_transport, writer_protocol = await loop.connect_write_pipe(
+		lambda: asyncio.streams.FlowControlMixin(loop=loop),
+		os.fdopen(sys.stdout.fileno(), 'wb')
+		)
+	writer = asyncio.streams.StreamWriter(
+		writer_transport, writer_protocol, None, loop
+		)
+
+	async_stdio = reader, writer
+	return async_stdio
+
+
+async def main():
+	stdin, stdout = await stdio()
+
+	while True:
+		x = await stdin.readline()
+		stdout.write(b'Got input: %s\n' % x)
+		await stdout.drain()
+
+
+asyncio.get_event_loop().run_until_complete(main())
 
