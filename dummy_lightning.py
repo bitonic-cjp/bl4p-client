@@ -29,18 +29,29 @@ class Node:
 		self.nodeID = nodeID
 		self.RPCFile = RPCFile
 
-		os.remove(RPCFile)
-		self.rpc = socket.socket(socket.AF_UNIX)
-		self.rpc.bind(RPCFile)
-
 
 	async def startup(self):
+		try:
+			os.remove(self.RPCFile)
+		except FileNotFoundError:
+			pass #it's ok
+		self.rpc = await asyncio.start_unix_server(
+			client_connected_cb=self.RPCConnection,
+			path=self.RPCFile
+			)
+
 		self.plugin = await asyncio.create_subprocess_exec(
 			'./bl4p_plugin.py',
 			stdin=asyncio.subprocess.PIPE,
 			stdout=asyncio.subprocess.PIPE,
 			stderr=None, #Inherited
 			)
+
+
+	async def RPCConnection(self, reader, writer):
+		print('Lightning: Got incoming RPC connection')
+		line = await reader.readline()
+		print('Lightning: Got RPC command ', line)
 
 
 	async def pluginRPC(self, functionName, *args):
@@ -82,12 +93,16 @@ def terminateSignalHandler():
 
 
 loop = asyncio.get_event_loop()
+
 loop.run_until_complete(startup())
-loop.add_signal_handler(signal.SIGINT , terminateSignalHandler)
-loop.add_signal_handler(signal.SIGTERM, terminateSignalHandler)
+
 c = loop.run_until_complete(nodes[0].pluginRPC('Test'))
 print('Response: ', c)
+
+loop.add_signal_handler(signal.SIGINT , terminateSignalHandler)
+loop.add_signal_handler(signal.SIGTERM, terminateSignalHandler)
 loop.run_forever()
+
 loop.run_until_complete(shutdown())
 loop.close()
 
