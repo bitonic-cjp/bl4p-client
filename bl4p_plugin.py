@@ -20,6 +20,8 @@ import asyncio
 import os
 import sys
 
+import plugin_interface
+
 
 async_stdio = None
 async def stdio():
@@ -50,14 +52,13 @@ async def stdio():
 	return async_stdio
 
 
+pluginInterface = plugin_interface.PluginInterface()
+
 async def main():
 	stdin, stdout = await stdio()
+	pluginInterface.startup(stdin, stdout)
+	await pluginInterface.run()
 
-	while True:
-		x = await stdin.readline()
-		x = x.strip()
-		stdout.write(b'Got input: %s\n' % x)
-		await stdout.drain()
 
 
 asyncio.get_event_loop().run_until_complete(main())
