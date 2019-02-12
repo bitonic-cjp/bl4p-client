@@ -24,9 +24,9 @@ import traceback
 
 
 class JSONRPC:
-	def startup(self, stdin, stdout):
-		self.stdin = stdin
-		self.stdout = stdout
+	def startup(self, inputStream, outputStream):
+		self.inputStream = inputStream
+		self.outputStream = outputStream
 		self.task = asyncio.ensure_future(self.handleIncomingData())
 
 
@@ -41,7 +41,7 @@ class JSONRPC:
 				self.log('Started JSON RPC')
 				inputBuffer = b''
 				while True:
-					newData = await self.stdin.readline()
+					newData = await self.inputStream.readline()
 					inputBuffer += newData
 					messages = inputBuffer.split(b'\n\n')
 
@@ -60,7 +60,7 @@ class JSONRPC:
 
 	def writeJSON(self, msg):
 		msg = json.dumps(msg)
-		self.stdout.write(msg.encode('UTF-8') + b'\n\n')
+		self.outputStream.write(msg.encode('UTF-8') + b'\n\n')
 
 
 	def log(self, s):
