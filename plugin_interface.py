@@ -34,9 +34,11 @@ class MethodType(Enum):
 class PluginInterface:
 	def __init__(self):
 		self.options = {}
-		self.methods = {}
+		self.methods = \
+		{
+		'getmanifest': (self.getManifest, MethodType.RPCMETHOD),
+		}
 		self.subscriptions = {}
-		self.addMethod("getmanifest", self.getManifest)
 
 
 	def startup(self, stdin, stdout):
@@ -117,10 +119,6 @@ class PluginInterface:
 
 	def handleNotification(self, notification):
 		return #TODO
-
-
-	def addMethod(self, name, func):
-		self.methods[name] = (func, MethodType.RPCMETHOD)
 
 
 	def getManifest(self):
