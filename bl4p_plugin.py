@@ -52,14 +52,19 @@ async def stdio():
 	return async_stdio
 
 
-pluginInterface = plugin_interface.PluginInterface()
 
-async def main():
-	stdin, stdout = await stdio()
-	pluginInterface.startup(stdin, stdout)
-	await pluginInterface.run()
+class BL4PClient:
+	def __init__(self):
+		self.pluginInterface = plugin_interface.PluginInterface()
 
 
+	async def run(self):
+		stdin, stdout = await stdio()
+		self.pluginInterface.startup(stdin, stdout)
+		await self.pluginInterface.run()
 
-asyncio.get_event_loop().run_until_complete(main())
+
+
+client = BL4PClient()
+asyncio.get_event_loop().run_until_complete(client.run())
 
