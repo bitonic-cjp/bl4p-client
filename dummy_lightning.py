@@ -52,10 +52,13 @@ class Node:
 		print('Lightning: Got incoming RPC connection')
 		line = await reader.readline()
 		print('Lightning: Got RPC command ', line)
+		functionName = line.strip()
+		pluginResponse = await self.pluginRPC(functionName)
+		print('Lightning: Got plugin response ', pluginResponse)
 
 
 	async def pluginRPC(self, functionName, *args):
-		self.plugin.stdin.write(b'Test\n')
+		self.plugin.stdin.write(b'%s\n' % functionName)
 		await self.plugin.stdin.drain()
 		return await self.plugin.stdout.readline()
 
@@ -95,9 +98,6 @@ def terminateSignalHandler():
 loop = asyncio.get_event_loop()
 
 loop.run_until_complete(startup())
-
-c = loop.run_until_complete(nodes[0].pluginRPC('Test'))
-print('Response: ', c)
 
 loop.add_signal_handler(signal.SIGINT , terminateSignalHandler)
 loop.add_signal_handler(signal.SIGTERM, terminateSignalHandler)

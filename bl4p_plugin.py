@@ -55,6 +55,7 @@ async def main():
 
 	while True:
 		x = await stdin.readline()
+		x = x.strip()
 		stdout.write(b'Got input: %s\n' % x)
 		await stdout.drain()
 
