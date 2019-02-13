@@ -25,6 +25,8 @@ import settings
 import traceback
 
 from json_rpc import JSONRPC
+import messages
+
 
 
 class MethodType(Enum):
@@ -34,8 +36,9 @@ class MethodType(Enum):
 
 
 class PluginInterface(JSONRPC):
-	def __init__(self, inputStream, outputStream):
+	def __init__(self, client, inputStream, outputStream):
 		JSONRPC.__init__(self, inputStream, outputStream)
+		self.client = client
 
 		self.options = {}
 		self.methods = \
@@ -128,10 +131,16 @@ class PluginInterface(JSONRPC):
 
 	def buy(self, limitRate, amount):
 		'Place an order for buying crypto-currency with fiat-currency'
-		pass #TODO
+		self.client.handleIncomingMessage(messages.BuyCommand(
+			limitRate=limitRate,
+			amount=amount
+			))
 
 
 	def sell(self, limitRate, amount):
 		'Place an order for selling crypto-currency for fiat-currency'
-		pass #TODO
+		self.client.handleIncomingMessage(messages.SellCommand(
+			limitRate=limitRate,
+			amount=amount
+			))
 

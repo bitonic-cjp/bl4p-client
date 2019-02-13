@@ -21,7 +21,9 @@ import os
 import signal
 import sys
 
+import backend
 import plugin_interface
+
 
 
 async_stdio = None
@@ -55,16 +57,23 @@ async def stdio():
 
 
 class BL4PClient:
+	def __init__(self):
+		self.backend = backend.Backend()
 
 
 	async def startup(self):
 		stdin, stdout = await stdio()
-		self.pluginInterface = plugin_interface.PluginInterface(stdin, stdout)
+		self.pluginInterface = plugin_interface.PluginInterface(self, stdin, stdout)
 		self.pluginInterface.startup()
 
 
 	async def shutdown(self):
 		await self.pluginInterface.shutdown()
+
+
+	def handleIncomingMessage(self, message):
+		self.backend.handleIncomingMessage(message)
+		#TODO: process queue of outgoing messages
 
 
 
