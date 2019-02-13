@@ -24,12 +24,15 @@ import traceback
 
 
 class JSONRPC:
+	def __init__(self):
+		self.inputBuffer = b''
+		self.outgoingRequestID = 0
+		self.decoder = json.JSONDecoder()
+
+
 	def startup(self, inputStream, outputStream):
 		self.inputStream = inputStream
 		self.outputStream = outputStream
-		self.outgoingRequestID = 0
-
-		self.decoder = json.JSONDecoder()
 
 		self.task = asyncio.ensure_future(self.handleIncomingData())
 
@@ -44,22 +47,55 @@ class JSONRPC:
 
 
 	async def handleIncomingData(self):
+		#self.log('Started JSON RPC')
 		try:
 			try:
-				#self.log('Started JSON RPC')
-				inputBuffer = b''
 				while True:
-					newData = await self.inputStream.read(1024)
-					inputBuffer += newData
-					inputBuffer = self.handleMessageData(inputBuffer)
-					if not newData: #EOF
-						return
+					message = await self.getNextMessage()
+					if message is None:
+						break
+					self.handleMessage(message)
 			except asyncio.CancelledError:
 				pass #We're cancelled, so just quit the function
 			except BrokenPipeError:
 				pass #Pipe closed, so just quit the function
 		except:
 			self.log('Exception in JSON RPC:')
+			self.log(traceback.format_exc())
+		#self.log('Stopped JSON RPC')
+
+
+	async def getNextMessage(self):
+		while True:
+			try:
+				#self.log('Input buffer: ' + str(self.inputBuffer))
+				request, length = self.decoder.raw_decode(self.inputBuffer.decode("UTF-8"))
+			except ValueError:
+				#probably the buffer is incomplete
+				newData = await self.inputStream.read(1024)
+				if not newData: #EOF
+					return None
+				self.inputBuffer += newData
+				continue
+
+			#self.log('Request: ' + str(request))
+			#TODO: length in chars may be different from length in bytes
+			self.inputBuffer = self.inputBuffer[length:].lstrip()
+			return request
+
+
+	def handleMessage(self, request):
+		#self.log('Handling incoming message: ' + str(request))
+		try:
+			if 'error' in request:
+				self.handleError(request['id'], request['error'])
+			elif 'result' in request:
+				self.handleResult(request['id'], request['result'])
+			elif 'id' in request:
+				self.handleRequest(request['id'], request['method'], request['params'])
+			else:
+				self.handleNotification(request['method'], request['params'])
+		except Exception:
 			self.log(traceback.format_exc())
 
 
@@ -104,31 +140,6 @@ class JSONRPC:
 	def sendNotification(self, name, params):
 		msg = {'method': name, 'params': params}
 		self.writeJSON(msg)
-
-
-	def handleMessageData(self, inputBuffer):
-		while True:
-			#self.log('HandleMessageData: ' + str(inputBuffer))
-			try:
-				request, length = self.decoder.raw_decode(inputBuffer.decode("UTF-8"))
-			except ValueError:
-				break #probably the buffer is incomplete
-			inputBuffer = inputBuffer[length:].lstrip()
-
-			try:
-				#self.log('Handling incoming message: ' + str(request))
-				if 'error' in request:
-					self.handleError(request['id'], request['error'])
-				elif 'result' in request:
-					self.handleResult(request['id'], request['result'])
-				elif 'id' in request:
-					self.handleRequest(request['id'], request['method'], request['params'])
-				else:
-					self.handleNotification(request['method'], request['params'])
-			except Exception:
-				self.log(traceback.format_exc())
-
-		return inputBuffer
 
 
 	def handleRequest(self, ID, name, params):
