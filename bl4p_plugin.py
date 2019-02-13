@@ -55,13 +55,12 @@ async def stdio():
 
 
 class BL4PClient:
-	def __init__(self):
-		self.pluginInterface = plugin_interface.PluginInterface()
 
 
 	async def startup(self):
 		stdin, stdout = await stdio()
-		self.pluginInterface.startup(stdin, stdout)
+		self.pluginInterface = plugin_interface.PluginInterface(stdin, stdout)
+		self.pluginInterface.startup()
 
 
 	async def shutdown(self):

@@ -24,16 +24,16 @@ import traceback
 
 
 class JSONRPC:
-	def __init__(self):
+	def __init__(self, inputStream, outputStream):
+		self.inputStream = inputStream
+		self.outputStream = outputStream
+
 		self.inputBuffer = b''
 		self.outgoingRequestID = 0
 		self.decoder = json.JSONDecoder()
 
 
-	def startup(self, inputStream, outputStream):
-		self.inputStream = inputStream
-		self.outputStream = outputStream
-
+	def startup(self):
 		self.task = asyncio.ensure_future(self.handleIncomingData())
 
 
@@ -47,7 +47,7 @@ class JSONRPC:
 
 
 	async def handleIncomingData(self):
-		#self.log('Started JSON RPC')
+		self.log('Started JSON RPC')
 		try:
 			try:
 				while True:
@@ -62,7 +62,7 @@ class JSONRPC:
 		except:
 			self.log('Exception in JSON RPC:')
 			self.log(traceback.format_exc())
-		#self.log('Stopped JSON RPC')
+		self.log('Stopped JSON RPC')
 
 
 	async def getNextMessage(self):
@@ -107,6 +107,17 @@ class JSONRPC:
 	def log(self, s):
 		#TODO
 		sys.stderr.write(s + '\n')
+
+
+	async def synCall(self, name, params):
+		ID = self.sendRequest(name, params)
+		while True:
+			message = await self.getNextMessage()
+			if 'result' in message and 'id' in message and message['id'] == ID:
+				break #it's ours
+			#Generic processing of messages that are not ours
+			self.handleMessage(message)
+		return message['result']
 
 
 	def sendRequest(self, name, params):

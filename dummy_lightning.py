@@ -28,8 +28,8 @@ from json_rpc import JSONRPC
 
 
 class RPCInterface(JSONRPC):
-	def __init__(self, node):
-		JSONRPC.__init__(self)
+	def __init__(self, node, inputStream, outputStream):
+		JSONRPC.__init__(self, inputStream, outputStream)
 		self.node = node
 
 
@@ -53,8 +53,8 @@ class RPCInterface(JSONRPC):
 
 
 class PluginInterface(JSONRPC):
-	def __init__(self, node):
-		JSONRPC.__init__(self)
+	def __init__(self, node, inputStream, outputStream):
+		JSONRPC.__init__(self, inputStream, outputStream)
 		self.node = node
 
 
@@ -96,17 +96,15 @@ class Node:
 			stderr=None, #Inherited
 			)
 
-		self.pluginInterface = PluginInterface(self)
-		self.pluginInterface.startup(
-			self.pluginProcess.stdout,
-			self.pluginProcess.stdin
-			)
+		self.pluginInterface = PluginInterface(self,
+			self.pluginProcess.stdout, self.pluginProcess.stdin)
+		await self.pluginInterface.startup()
 
 
 	async def RPCConnection(self, reader, writer):
 		print('Lightning: Got incoming RPC connection')
-		interface = RPCInterface(self)
-		interface.startup(reader, writer)
+		interface = RPCInterface(self, reader, writer)
+		interface.startup()
 		await interface.waitFinished()
 		print('Lightning: Ended RPC connection')
 

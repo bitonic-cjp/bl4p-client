@@ -32,8 +32,8 @@ class MethodType(Enum):
 
 
 class PluginInterface(JSONRPC):
-	def __init__(self):
-		JSONRPC.__init__(self)
+	def __init__(self, inputStream, outputStream):
+		JSONRPC.__init__(self, inputStream, outputStream)
 
 		self.options = {}
 		self.methods = \
