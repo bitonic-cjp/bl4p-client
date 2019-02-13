@@ -47,7 +47,7 @@ class JSONRPC:
 
 
 	async def handleIncomingData(self):
-		self.log('Started JSON RPC')
+		#self.log('Started JSON RPC')
 		try:
 			try:
 				while True:
@@ -62,7 +62,7 @@ class JSONRPC:
 		except:
 			self.log('Exception in JSON RPC:')
 			self.log(traceback.format_exc())
-		self.log('Stopped JSON RPC')
+		#self.log('Stopped JSON RPC')
 
 
 	async def getNextMessage(self):

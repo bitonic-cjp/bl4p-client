@@ -37,11 +37,11 @@ class RPCInterface(JSONRPC):
 		outgoingID = self.node.pluginInterface.sendRequest(name, params)
 
 		def resultCB(result):
-			print(result)
+			#print(result)
 			self.sendResponse(ID, result)
 
 		def errorCB(error):
-			print(error)
+			#print(error)
 			self.sendErrorResponse(ID, error)
 
 		self.node.pluginResultCallbacks[outgoingID] = (resultCB, errorCB)
@@ -59,9 +59,9 @@ class PluginInterface(JSONRPC):
 
 
 	async def startup(self):
-		print('PluginInterface startup')
+		#print('PluginInterface startup')
 		manifest = await self.synCall('getmanifest')
-		print(manifest)
+		#print(manifest)
 
 		await self.synCall('init',
 			[
@@ -121,11 +121,11 @@ class Node:
 
 
 	async def RPCConnection(self, reader, writer):
-		print('Lightning: Got incoming RPC connection')
+		#print('Lightning: Got incoming RPC connection')
 		interface = RPCInterface(self, reader, writer)
 		interface.startup()
 		await interface.waitFinished()
-		print('Lightning: Ended RPC connection')
+		#print('Lightning: Ended RPC connection')
 
 
 	async def shutdown(self):
@@ -144,19 +144,19 @@ nodes = \
 
 
 async def startup():
-	print('Starting nodes')
+	#print('Starting nodes')
 	for n in nodes:
 		await n.startup()
 
 
 async def shutdown():
-	print('Shutting down nodes')
+	#print('Shutting down nodes')
 	for n in nodes:
 		await n.shutdown()
 
 
 def terminateSignalHandler():
-	print('Got signal to terminate')
+	#print('Got signal to terminate')
 	loop = asyncio.get_event_loop()
 	loop.stop()
 

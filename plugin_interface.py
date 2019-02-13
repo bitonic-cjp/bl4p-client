@@ -108,12 +108,12 @@ class PluginInterface(JSONRPC):
 
 
 	def init(self, options, configuration, *args):
-		self.log('Plugin init got called')
+		#self.log('Plugin init got called')
 
 		filename = configuration['rpc-file']
 		lndir = configuration['lightning-dir']
 		self.RPCPath = os.path.join(lndir, filename)
-		self.log('RPC path is ' + self.RPCPath)
+		#self.log('RPC path is ' + self.RPCPath)
 
 
 	def getFiatCurrency(self):
