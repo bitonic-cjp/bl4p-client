@@ -16,13 +16,40 @@
 #    You should have received a copy of the GNU General Public License
 #    along with the BL4P Client. If not, see <http://www.gnu.org/licenses/>.
 
+import decimal
 import sys
+import traceback
 
 from lightningd import lightning
+
+
 
 socketPath = sys.argv[1]
 
 rpc = lightning.LightningRpc(socketPath)
+
+fiatCurrency   = rpc.call('bl4p.getfiatcurrency')
+cryptoCurrency = rpc.call('bl4p.getcryptocurrency')
+fiatName      = fiatCurrency['name']
+fiatDivisor   = fiatCurrency['divisor']
+cryptoName    = cryptoCurrency['name']
+cryptoDivisor = cryptoCurrency['divisor']
+
+
+def buy():
+	limitRate = input('Limit exchange rate (%s/%s)? ' % (fiatName, cryptoName))
+	limitRate = int(decimal.Decimal(limitRate) * fiatDivisor)
+	amount = input('Maximum amount (%s)? ' % fiatName)
+	amount = int(decimal.Decimal(amount) * fiatDivisor)
+	return rpc.call('bl4p.buy', [limitRate, amount])
+
+
+def sell():
+	limitRate = input('Limit exchange rate (%s/%s)? ' % (fiatName, cryptoName))
+	limitRate = int(decimal.Decimal(limitRate) * fiatDivisor)
+	amount = input('Maximum amount (%s)? ' % cryptoName)
+	amount = int(decimal.Decimal(amount) * cryptoDivisor)
+	return rpc.call('bl4p.sell', [limitRate, amount])
 
 
 def stop():
@@ -64,6 +91,8 @@ commands = \
 'quit'    : stop,
 'help'    : help,
 'license' : license,
+'buy'     : buy,
+'sell'    : sell,
 }
 
 def handleCommand(cmd):
@@ -80,7 +109,9 @@ def handleCommand(cmd):
 		print('No such command: "%s". Enter "help" for a list of commands.' % cmd)
 		return
 
-	cmd()
+	ret = cmd()
+	if ret is not None:
+		print(ret)
 
 
 print('''
@@ -92,6 +123,6 @@ while True:
 	cmd = input('> ')
 	try:
 		handleCommand(cmd)
-	except Exception as e:
-		print(str(e))
+	except Exception:
+		print(traceback.format_exc())
 

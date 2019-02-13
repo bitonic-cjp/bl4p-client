@@ -21,6 +21,7 @@ from enum import Enum
 import inspect
 import os
 import re
+import settings
 import traceback
 
 from json_rpc import JSONRPC
@@ -41,6 +42,11 @@ class PluginInterface(JSONRPC):
 		{
 		'getmanifest': (self.getManifest, MethodType.RPCMETHOD),
 		'init'       : (self.init       , MethodType.RPCMETHOD),
+
+		'bl4p.getfiatcurrency'  : (self.getFiatCurrency  , MethodType.RPCMETHOD),
+		'bl4p.getcryptocurrency': (self.getCryptoCurrency, MethodType.RPCMETHOD),
+		'bl4p.buy'              : (self.buy              , MethodType.RPCMETHOD),
+		'bl4p.sell'             : (self.sell             , MethodType.RPCMETHOD),
 		}
 
 		def testHandler(*args):
@@ -108,4 +114,24 @@ class PluginInterface(JSONRPC):
 		lndir = configuration['lightning-dir']
 		self.RPCPath = os.path.join(lndir, filename)
 		self.log('RPC path is ' + self.RPCPath)
+
+
+	def getFiatCurrency(self):
+		'Returns information about the fiat-currency'
+		return {'name': settings.fiatName, 'divisor': settings.fiatDivisor}
+
+
+	def getCryptoCurrency(self):
+		'Returns information about the crypto-currency'
+		return {'name': settings.cryptoName, 'divisor': settings.cryptoDivisor}
+
+
+	def buy(self, limitRate, amount):
+		'Place an order for buying crypto-currency with fiat-currency'
+		pass #TODO
+
+
+	def sell(self, limitRate, amount):
+		'Place an order for selling crypto-currency for fiat-currency'
+		pass #TODO
 
