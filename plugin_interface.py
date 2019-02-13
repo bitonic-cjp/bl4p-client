@@ -19,6 +19,7 @@
 import asyncio
 from enum import Enum
 import inspect
+import os
 import re
 import traceback
 
@@ -39,6 +40,7 @@ class PluginInterface(JSONRPC):
 		self.methods = \
 		{
 		'getmanifest': (self.getManifest, MethodType.RPCMETHOD),
+		'init'       : (self.init       , MethodType.RPCMETHOD),
 		}
 
 		def testHandler(*args):
@@ -97,4 +99,13 @@ class PluginInterface(JSONRPC):
 			'subscriptions': list(self.subscriptions.keys()),
 			'hooks': hooks,
 			}
+
+
+	def init(self, options, configuration, *args):
+		self.log('Plugin init got called')
+
+		filename = configuration['rpc-file']
+		lndir = configuration['lightning-dir']
+		self.RPCPath = os.path.join(lndir, filename)
+		self.log('RPC path is ' + self.RPCPath)
 

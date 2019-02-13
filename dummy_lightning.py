@@ -63,6 +63,15 @@ class PluginInterface(JSONRPC):
 		manifest = await self.synCall('getmanifest')
 		print(manifest)
 
+		await self.synCall('init',
+			[
+			{}, #options
+			{   #configuration
+			'lightning-dir': self.node.directory,
+			'rpc-file'     : self.node.RPCFile,
+			}
+			])
+
 		return JSONRPC.startup(self)
 
 
@@ -82,7 +91,9 @@ class PluginInterface(JSONRPC):
 class Node:
 	def __init__(self, nodeID, RPCFile):
 		self.nodeID = nodeID
-		self.RPCFile = RPCFile
+
+		abspath = os.path.abspath(RPCFile)
+		self.directory, self.RPCFile = os.path.split(abspath)
 
 		self.pluginResultCallbacks = {} #ID -> (function(result), function(error))
 
