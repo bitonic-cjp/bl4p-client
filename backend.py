@@ -16,23 +16,58 @@
 #    You should have received a copy of the GNU General Public License
 #    along with the BL4P Client. If not, see <http://www.gnu.org/licenses/>.
 
+import decimal
+
 import messages
+from order import BuyOrder, SellOrder
+import settings
 
 
 
 class Backend:
+	def __init__(self):
+		self.orders = {}
+		self.nextLocalOrderID = 0
+
+
+	def setLNAddress(self, address):
+		self.LNAddress = address
+
+
+	def setBL4PAddress(self, address):
+		self.BL4PAddress = address
+
+
 	def handleIncomingMessage(self, message):
 		return \
 		{
-		messages.BuyCommand: self.handleBuyCommand,
+		messages.BuyCommand : self.handleBuyCommand,
 		messages.SellCommand: self.handleSellCommand,
 		}[message.__class__](message)
 
 
 	def handleBuyCommand(self, cmd):
-		pass #TODO
+		order = BuyOrder(
+			self.LNAddress,
+			limitRate = decimal.Decimal(cmd.limitRate) / settings.cryptoDivisor,
+			totalBidAmount = decimal.Decimal(cmd.amount),
+			)
+		self.addOrder(order)
 
 
 	def handleSellCommand(self, cmd):
-		pass #TODO
+		order = SellOrder(
+			self.BL4PAddress,
+			limitRate = decimal.Decimal(cmd.limitRate) / settings.cryptoDivisor,
+			totalBidAmount = decimal.Decimal(cmd.amount),
+			)
+		self.addOrder(order)
+
+
+	def addOrder(self, order):
+		ID = self.nextLocalOrderID
+		self.nextLocalOrderID += 1
+		order.ID = ID
+		self.orders[ID] = order
+		#TODO: try to trade on it
 

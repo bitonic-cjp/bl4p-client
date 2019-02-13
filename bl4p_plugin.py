@@ -66,6 +66,9 @@ class BL4PClient:
 		self.pluginInterface = plugin_interface.PluginInterface(self, stdin, stdout)
 		self.pluginInterface.startup()
 
+		self.backend.setLNAddress(  'LNdummy'  ) #TODO: get from RPC interface
+		self.backend.setBL4PAddress('BL4Pdummy') #TODO: get from RPC interface
+
 
 	async def shutdown(self):
 		await self.pluginInterface.shutdown()
