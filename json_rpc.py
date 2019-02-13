@@ -28,6 +28,9 @@ class JSONRPC:
 		self.inputStream = inputStream
 		self.outputStream = outputStream
 		self.outgoingRequestID = 0
+
+		self.decoder = json.JSONDecoder()
+
 		self.task = asyncio.ensure_future(self.handleIncomingData())
 
 
@@ -46,14 +49,9 @@ class JSONRPC:
 				#self.log('Started JSON RPC')
 				inputBuffer = b''
 				while True:
-					newData = await self.inputStream.readline()
+					newData = await self.inputStream.read(1024)
 					inputBuffer += newData
-					messages = inputBuffer.split(b'\n\n')
-
-					for msg in messages[:-1]:
-						self.handleMessageData(msg)
-					inputBuffer = messages[-1] #the remaining data
-
+					inputBuffer = self.handleMessageData(inputBuffer)
 					if not newData: #EOF
 						return
 			except asyncio.CancelledError:
@@ -108,24 +106,29 @@ class JSONRPC:
 		self.writeJSON(msg)
 
 
-	def handleMessageData(self, msg):
-		try:
-			msg = msg.decode('UTF-8')
-			request = json.loads(msg)
+	def handleMessageData(self, inputBuffer):
+		while True:
+			#self.log('HandleMessageData: ' + str(inputBuffer))
+			try:
+				request, length = self.decoder.raw_decode(inputBuffer.decode("UTF-8"))
+			except ValueError:
+				break #probably the buffer is incomplete
+			inputBuffer = inputBuffer[length:].lstrip()
 
-			#self.log('Handling incoming message: ' + str(request))
+			try:
+				#self.log('Handling incoming message: ' + str(request))
+				if 'error' in request:
+					self.handleError(request['id'], request['error'])
+				elif 'result' in request:
+					self.handleResult(request['id'], request['result'])
+				elif 'id' in request:
+					self.handleRequest(request['id'], request['method'], request['params'])
+				else:
+					self.handleNotification(request['method'], request['params'])
+			except Exception:
+				self.log(traceback.format_exc())
 
-			if 'error' in request:
-				self.handleError(request['id'], request['error'])
-			elif 'result' in request:
-				self.handleResult(request['id'], request['result'])
-			elif 'id' in request:
-				self.handleRequest(request['id'], request['method'], request['params'])
-			else:
-				self.handleNotification(request['method'], request['params'])
-
-		except Exception:
-			self.log(traceback.format_exc())
+		return inputBuffer
 
 
 	def handleRequest(self, ID, name, params):
