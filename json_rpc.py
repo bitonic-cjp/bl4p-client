@@ -109,7 +109,7 @@ class JSONRPC:
 		sys.stderr.write(s + '\n')
 
 
-	async def synCall(self, name, params):
+	async def synCall(self, name, params=[]):
 		ID = self.sendRequest(name, params)
 		while True:
 			message = await self.getNextMessage()
@@ -120,7 +120,7 @@ class JSONRPC:
 		return message['result']
 
 
-	def sendRequest(self, name, params):
+	def sendRequest(self, name, params=[]):
 		ID = self.outgoingRequestID
 		self.outgoingRequestID += 1
 		msg = {'id': ID, 'method': name, 'params': params}

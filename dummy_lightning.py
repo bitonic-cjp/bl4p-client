@@ -58,6 +58,14 @@ class PluginInterface(JSONRPC):
 		self.node = node
 
 
+	async def startup(self):
+		print('PluginInterface startup')
+		manifest = await self.synCall('getmanifest')
+		print(manifest)
+
+		return JSONRPC.startup(self)
+
+
 	def handleResult(self, ID, result):
 		resultCB, errorCB = self.node.pluginResultCallbacks[ID]
 		del self.node.pluginResultCallbacks[ID]
