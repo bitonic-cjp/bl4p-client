@@ -63,7 +63,10 @@ class Bl4pApi:
 					if message is None:
 						break
 					result = deserialize(message)
-					self.handleResult(result)
+					try:
+						self.handleResult(result)
+					except:
+						self.log(traceback.format_exc())
 			except asyncio.CancelledError:
 				await self.websocket.close()
 				#We're cancelled, so just quit the function
