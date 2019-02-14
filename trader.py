@@ -60,8 +60,13 @@ class Trader:
 
 	def initiateOfferSearch(self):
 		for order in self.client.backend.getOrders():
+		for o in self.client.backend.getOrders():
+			#Only query for idle transactions:
+			if o.status != order.STATUS_IDLE:
+				continue
+
 			self.client.handleOutgoingMessage(
-				messages.BL4PFindOffers(query=order)
+				messages.BL4PFindOffers(query=o)
 				)
 
 
