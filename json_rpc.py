@@ -18,8 +18,8 @@
 
 import asyncio
 import json
-import sys
-import traceback
+
+from log import log, logException
 
 
 
@@ -47,7 +47,7 @@ class JSONRPC:
 
 
 	async def handleIncomingData(self):
-		#self.log('Started JSON RPC')
+		#log('Started JSON RPC')
 		try:
 			try:
 				while True:
@@ -60,15 +60,15 @@ class JSONRPC:
 			except BrokenPipeError:
 				pass #Pipe closed, so just quit the function
 		except:
-			self.log('Exception in JSON RPC:')
-			self.log(traceback.format_exc())
-		#self.log('Stopped JSON RPC')
+			log('Exception in JSON RPC:')
+			logException()
+		#log('Stopped JSON RPC')
 
 
 	async def getNextMessage(self):
 		while True:
 			try:
-				#self.log('Input buffer: ' + str(self.inputBuffer))
+				#log('Input buffer: ' + str(self.inputBuffer))
 				request, length = self.decoder.raw_decode(self.inputBuffer.decode("UTF-8"))
 			except ValueError:
 				#probably the buffer is incomplete
@@ -78,14 +78,14 @@ class JSONRPC:
 				self.inputBuffer += newData
 				continue
 
-			#self.log('Request: ' + str(request))
+			#log('Request: ' + str(request))
 			#TODO: length in chars may be different from length in bytes
 			self.inputBuffer = self.inputBuffer[length:].lstrip()
 			return request
 
 
 	def handleMessage(self, request):
-		#self.log('Handling incoming message: ' + str(request))
+		#log('Handling incoming message: ' + str(request))
 		try:
 			if 'error' in request:
 				self.handleError(request['id'], request['error'])
@@ -96,17 +96,12 @@ class JSONRPC:
 			else:
 				self.handleNotification(request['method'], request['params'])
 		except Exception:
-			self.log(traceback.format_exc())
+			logException()
 
 
 	def writeJSON(self, msg):
 		msg = json.dumps(msg)
 		self.outputStream.write(msg.encode('UTF-8') + b'\n\n')
-
-
-	def log(self, s):
-		#TODO
-		sys.stderr.write(s + '\n')
 
 
 	async def synCall(self, name, params=[]):
