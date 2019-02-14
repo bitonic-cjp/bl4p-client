@@ -20,6 +20,7 @@ import asyncio
 
 from log import log, logException
 import messages
+import order
 
 
 
@@ -55,11 +56,12 @@ class Trader:
 
 
 	def handleIncomingMessage(self, message):
-		log('Trader got incoming message')
+		{
+		messages.BL4PFindOffersResult : self.handleBL4PFindOffersResult,
+		}[message.__class__](message)
 
 
 	def initiateOfferSearch(self):
-		for order in self.client.backend.getOrders():
 		for o in self.client.backend.getOrders():
 			#Only query for idle transactions:
 			if o.status != order.STATUS_IDLE:
@@ -69,4 +71,31 @@ class Trader:
 				messages.BL4PFindOffers(query=o)
 				)
 
+
+	def handleBL4PFindOffersResult(self, message):
+		localID = message.request.query.ID
+
+		if not message.offers: #found no matching offers
+			localOrder = self.client.backend.getOrder(localID)
+
+			if localOrder.remoteOfferID is not None:
+				#No matching offers and we're already published:
+				#do nothing
+				return
+
+			log('Found no offers - making our own')
+			self.client.handleOutgoingMessage(
+				messages.BL4PAddOffer(offer=localOrder)
+				)
+			#Note: the reply is sent to Backend
+			return
+
+		log('Found offers - starting a transaction')
+		#TODO: filter on sensibility (e.g. max >= min for all conditions)
+		#TODO: check if offers actually match
+		#TODO: filter counterOffers on acceptability
+		#TODO: sort counterOffers (e.g. on exchange rate)
+
+		#Start trade on the first in the list
+		self.client.backend.startTransaction(localID, message.offers[0])
 

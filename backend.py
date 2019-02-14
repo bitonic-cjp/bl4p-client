@@ -45,6 +45,10 @@ class Backend:
 		return self.orders.values()
 
 
+	def getOrder(self, localID):
+		return self.orders[localID]
+
+
 	def getNextOutgoingMessage(self):
 		return self.outgoingMessageQueue.pop(0)
 
@@ -88,9 +92,16 @@ class Backend:
 
 
 	def handleBL4PAddOfferResult(self, result):
+		#Note: the request was sent by Trader
+
 		localID = result.request.offer.ID
 		remoteID = result.ID
 		order = self.orders[localID]
 		order.remoteOfferID = remoteID
 		log('Local ID %d gets remote ID %s' % (localID, remoteID))
+
+
+	def startTransaction(self, localID, counterOffer):
+		log('startTransaction')
+		#TODO
 
