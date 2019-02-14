@@ -24,9 +24,6 @@ import messages
 
 
 class BL4PInterface(bl4p.Bl4pApi):
-	def handleResult(self, result):
-		log('BL4PInterface: Received result: ' + str(result))
-		#TODO
 	def __init__(self, client):
 		bl4p.Bl4pApi.__init__(self, log=log)
 		self.client = client
@@ -40,4 +37,19 @@ class BL4PInterface(bl4p.Bl4pApi):
 			raise Exception('BL4PInterface cannot send message ' + str(message))
 		log('BL4PInterface: Sending request: ' + str(request))
 		self.sendRequest(request)
+
+
+	def handleResult(self, result):
+		log('BL4PInterface: Received result: ' + str(result))
+		if isinstance(result, bl4p_pb2.BL4P_AddOfferResult):
+			message = messages.BL4PAddOfferResult(
+				request=None, #TODO
+				ID=result.offerID,
+				)
+		else:
+			log('Ignoring unrecognized message type from BL4P: ' + \
+				str(result.__class__))
+			return
+
+		self.client.handleIncomingMessage(message)
 

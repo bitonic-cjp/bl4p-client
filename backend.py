@@ -51,6 +51,8 @@ class Backend:
 		{
 		messages.BuyCommand : self.handleBuyCommand,
 		messages.SellCommand: self.handleSellCommand,
+
+		messages.BL4PAddOfferResult: self.handleBL4PAddOfferResult,
 		}[message.__class__](message)
 
 
@@ -80,4 +82,8 @@ class Backend:
 
 		#TODO: try to trade on it before adding an offer
 		self.addOutgoingMessage(messages.BL4PAddOffer(offer=order))
+
+
+	def handleBL4PAddOfferResult(self, result):
+		pass #TODO
 

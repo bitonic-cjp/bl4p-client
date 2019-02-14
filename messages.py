@@ -33,3 +33,11 @@ class SellCommand(Struct):
 class BL4PAddOffer(Struct):
 	offer = None
 
+
+class BL4PResult(Struct):
+	request = None
+
+
+class BL4PAddOfferResult(BL4PResult):
+	ID = 0
+
