@@ -68,7 +68,7 @@ class BL4PClient:
 		self.pluginInterface = plugin_interface.PluginInterface(self, stdin, stdout)
 		self.pluginInterface.startup()
 
-		self.bl4pInterface = bl4p_interface.BL4PInterface()
+		self.bl4pInterface = bl4p_interface.BL4PInterface(self)
 		await self.bl4pInterface.startup('ws://localhost:8000/', '3', '3')
 
 		self.backend.setLNAddress(  'LNdummy'  ) #TODO: get from RPC interface

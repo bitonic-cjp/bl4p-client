@@ -27,6 +27,9 @@ class BL4PInterface(bl4p.Bl4pApi):
 	def handleResult(self, result):
 		log('BL4PInterface: Received result: ' + str(result))
 		#TODO
+	def __init__(self, client):
+		bl4p.Bl4pApi.__init__(self, log=log)
+		self.client = client
 
 
 	def sendOutgoingMessage(self, message):

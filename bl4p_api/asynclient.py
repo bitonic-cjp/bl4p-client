@@ -25,6 +25,10 @@ from .serialization import serialize, deserialize
 
 
 class Bl4pApi:
+	def __init__(self, log=lambda s:None):
+		self.log = log
+
+
 	async def startup(self, url, userid, password):
 		header = \
 		{
@@ -66,7 +70,7 @@ class Bl4pApi:
 				#TODO: maybe complain in case there are ongoing calls?
 				pass #Connection closed, so just quit the function
 		except:
-			pass #TODO: log traceback.format_exc()
+			self.log(traceback.format_exc())
 
 
 	async def sendOutgoingData(self):
@@ -80,7 +84,7 @@ class Bl4pApi:
 			except websockets.exceptions.ConnectionClosed:
 				pass #Connection closed, so just quit the function
 		except:
-			pass #TODO: log traceback.format_exc()
+			self.log(traceback.format_exc())
 
 
 	def handleResult(self, result):
