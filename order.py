@@ -58,6 +58,7 @@ class Order(offer.Offer):
 		self.totalBidAmount = totalBidAmount
 		self.perTxMaxAmount = totalBidAmount #TODO
 		self.perTxMaxAmountSide = BID
+		self.remoteOfferID = None
 		self.status = STATUS_IDLE
 
 		self.settings = settings

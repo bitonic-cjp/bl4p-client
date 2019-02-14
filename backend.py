@@ -18,6 +18,7 @@
 
 import decimal
 
+from log import log
 import messages
 from order import BuyOrder, SellOrder
 import settings
@@ -85,5 +86,9 @@ class Backend:
 
 
 	def handleBL4PAddOfferResult(self, result):
-		pass #TODO
+		localID = result.request.offer.ID
+		remoteID = result.ID
+		order = self.orders[localID]
+		order.remoteOfferID = remoteID
+		log('Local ID %d gets remote ID %s' % (localID, remoteID))
 
