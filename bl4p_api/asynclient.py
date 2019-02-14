@@ -19,6 +19,9 @@ import asyncio
 import traceback
 import websockets
 
+from .offer import Offer
+from .serialization import serialize, deserialize
+
 
 
 class Bl4pApi:
@@ -30,16 +33,21 @@ class Bl4pApi:
 		}
 		self.websocket = await websockets.connect(
 			url, extra_headers=header)
-		self.task = asyncio.ensure_future(self.handleIncomingData())
+
+		self.sendQueue = asyncio.Queue()
+		self.receiveTask = asyncio.ensure_future(self.handleIncomingData())
+		self.sendTask    = asyncio.ensure_future(self.sendOutgoingData())
 
 
 	async def shutdown(self):
-		self.task.cancel()
-		await self.task
+		self.receiveTask.cancel()
+		self.sendTask.cancel()
+		await self.waitFinished()
 
 
 	async def waitFinished(self):
-		await self.task
+		await self.sendTask
+		await self.receiveTask
 
 
 	async def handleIncomingData(self):
@@ -49,7 +57,8 @@ class Bl4pApi:
 					message = await self.websocket.recv()
 					if message is None:
 						break
-					self.handleMessage(message)
+					result = deserialize(message)
+					self.handleResult(result)
 			except asyncio.CancelledError:
 				await self.websocket.close()
 				#We're cancelled, so just quit the function
@@ -60,6 +69,25 @@ class Bl4pApi:
 			pass #TODO: log traceback.format_exc()
 
 
-	def handleMessage(self, message):
-		pass #TODO
+	async def sendOutgoingData(self):
+		try:
+			try:
+				while True:
+					message = await self.sendQueue.get()
+					await self.websocket.send(message)
+			except asyncio.CancelledError:
+				pass #We're cancelled, so just quit the function
+			except websockets.exceptions.ConnectionClosed:
+				pass #Connection closed, so just quit the function
+		except:
+			pass #TODO: log traceback.format_exc()
+
+
+	def handleResult(self, result):
+		pass #To be overloaded in derived classes
+
+
+	def sendRequest(self, message):
+		#TODO: raise an exception here if the send task has stopped
+		self.sendQueue.put_nowait(serialize(message))
 
