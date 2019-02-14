@@ -27,6 +27,7 @@ from .serialization import serialize, deserialize
 class Bl4pApi:
 	def __init__(self, log=lambda s:None):
 		self.log = log
+		self.lastRequestID = 0
 
 
 	async def startup(self, url, userid, password):
@@ -92,6 +93,10 @@ class Bl4pApi:
 
 
 	def sendRequest(self, message):
+		message.request = self.lastRequestID
+		self.lastRequestID += 1
+
 		#TODO: raise an exception here if the send task has stopped
 		self.sendQueue.put_nowait(serialize(message))
+		return message.request
 

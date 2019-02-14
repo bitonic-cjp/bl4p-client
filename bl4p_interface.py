@@ -27,6 +27,7 @@ class BL4PInterface(bl4p.Bl4pApi):
 	def __init__(self, client):
 		bl4p.Bl4pApi.__init__(self, log=log)
 		self.client = client
+		self.activeRequests = {}
 
 
 	def sendOutgoingMessage(self, message):
@@ -36,14 +37,14 @@ class BL4PInterface(bl4p.Bl4pApi):
 		else:
 			raise Exception('BL4PInterface cannot send message ' + str(message))
 		log('BL4PInterface: Sending request: ' + str(request))
-		self.sendRequest(request)
+		requestID = self.sendRequest(request)
+		self.activeRequests[requestID] = message
 
 
 	def handleResult(self, result):
 		log('BL4PInterface: Received result: ' + str(result))
 		if isinstance(result, bl4p_pb2.BL4P_AddOfferResult):
 			message = messages.BL4PAddOfferResult(
-				request=None, #TODO
 				ID=result.offerID,
 				)
 		else:
@@ -51,5 +52,7 @@ class BL4PInterface(bl4p.Bl4pApi):
 				str(result.__class__))
 			return
 
+		message.request = self.activeRequests[result.request]
+		del self.activeRequests[result.request]
 		self.client.handleIncomingMessage(message)
 
