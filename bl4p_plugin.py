@@ -87,20 +87,34 @@ class BL4PClient:
 
 	def handleIncomingMessage(self, message):
 		#Process a single incoming message:
-		self.backend.handleIncomingMessage(message)
+
+		#TODO: have interfaces register their message types
+		if message.__class__ in [messages.BuyCommand, messages.SellCommand, messages.BL4PAddOfferResult]:
+			self.backend.handleIncomingMessage(message)
+		elif message.__class__ in [messages.BL4PFindOffersResult]:
+			self.trader.handleIncomingMessage(message)
+		else:
+			raise Exception('Unknown incoming message type ' + str(message))
 
 		#Process queue of outgoing messages:
 		while True:
 			try:
+				#TODO: keep in queue if transmission fails
 				message = self.backend.getNextOutgoingMessage()
 			except IndexError:
 				break #no more outgoing messages
 
-			#TODO: have interfaces register their message types
-			if message.__class__ in [messages.BL4PAddOffer]:
-				self.bl4pInterface.sendOutgoingMessage(message)
-			else:
-				raise Exception('Unknown outgoing message type ' + str(message))
+			self.handleOutgoingMessage(message)
+
+
+	def handleOutgoingMessage(self, message):
+		#Process a single outgoing message:
+
+		#TODO: have interfaces register their message types
+		if message.__class__ in [messages.BL4PAddOffer, messages.BL4PFindOffers]:
+			self.bl4pInterface.sendOutgoingMessage(message)
+		else:
+			raise Exception('Unknown outgoing message type ' + str(message))
 
 
 

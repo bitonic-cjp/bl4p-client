@@ -18,6 +18,7 @@
 
 from bl4p_api import bl4p_pb2
 from bl4p_api import asynclient as bl4p
+from bl4p_api import offer
 from log import log
 import messages
 
@@ -34,6 +35,9 @@ class BL4PInterface(bl4p.Bl4pApi):
 		if isinstance(message, messages.BL4PAddOffer):
 			request = bl4p_pb2.BL4P_AddOffer()
 			request.offer.CopyFrom(message.offer.toPB2())
+		elif isinstance(message, messages.BL4PFindOffers):
+			request = bl4p_pb2.BL4P_FindOffers()
+			request.query.CopyFrom(message.query.toPB2())
 		else:
 			raise Exception('BL4PInterface cannot send message ' + str(message))
 		log('BL4PInterface: Sending request: ' + str(request))
@@ -47,6 +51,12 @@ class BL4PInterface(bl4p.Bl4pApi):
 			message = messages.BL4PAddOfferResult(
 				ID=result.offerID,
 				)
+		elif isinstance(result, bl4p_pb2.BL4P_FindOffersResult):
+			message = messages.BL4PFindOffersResult(offers = \
+				[
+				offer.Offer.fromPB2(offer_PB2)
+				for offer_PB2 in result.offers
+				])
 		else:
 			log('Ignoring unrecognized message type from BL4P: ' + \
 				str(result.__class__))

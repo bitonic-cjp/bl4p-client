@@ -19,6 +19,7 @@
 import asyncio
 
 from log import log, logException
+import messages
 
 
 
@@ -44,12 +45,23 @@ class Trader:
 		try:
 			try:
 				while True:
-					await asyncio.sleep(10)
-					log('10 seconds done')
+					await asyncio.sleep(1)
+					self.initiateOfferSearch()
 			except asyncio.CancelledError:
 				pass #We're cancelled, so just quit the function
 		except:
 			log('Exception in Trader:')
 			logException()
+
+
+	def handleIncomingMessage(self, message):
+		log('Trader got incoming message')
+
+
+	def initiateOfferSearch(self):
+		for order in self.client.backend.getOrders():
+			self.client.handleOutgoingMessage(
+				messages.BL4PFindOffers(query=order)
+				)
 
 

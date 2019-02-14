@@ -40,6 +40,11 @@ class Backend:
 		self.BL4PAddress = address
 
 
+
+	def getOrders(self):
+		return self.orders.values()
+
+
 	def getNextOutgoingMessage(self):
 		return self.outgoingMessageQueue.pop(0)
 
@@ -80,9 +85,6 @@ class Backend:
 		self.nextLocalOrderID += 1
 		order.ID = ID
 		self.orders[ID] = order
-
-		#TODO: try to trade on it before adding an offer
-		self.addOutgoingMessage(messages.BL4PAddOffer(offer=order))
 
 
 	def handleBL4PAddOfferResult(self, result):

@@ -34,10 +34,18 @@ class BL4PAddOffer(Struct):
 	offer = None
 
 
+class BL4PFindOffers(Struct):
+	query = None
+
+
 class BL4PResult(Struct):
 	request = None
 
 
 class BL4PAddOfferResult(BL4PResult):
 	ID = 0
+
+
+class BL4PFindOffersResult(BL4PResult):
+	offers = []
 
