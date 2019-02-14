@@ -25,6 +25,7 @@ import backend
 import bl4p_interface
 import messages
 import plugin_interface
+import trader
 
 
 
@@ -61,6 +62,7 @@ async def stdio():
 class BL4PClient:
 	def __init__(self):
 		self.backend = backend.Backend()
+		self.trader = trader.Trader(self)
 
 
 	async def startup(self):
@@ -74,8 +76,11 @@ class BL4PClient:
 		self.backend.setLNAddress(  'LNdummy'  ) #TODO: get from RPC interface
 		self.backend.setBL4PAddress('BL4Pdummy') #TODO: get from RPC interface
 
+		self.trader.startup()
+
 
 	async def shutdown(self):
+		await self.trader.shutdown()
 		await self.bl4pInterface.shutdown()
 		await self.pluginInterface.shutdown()
 
