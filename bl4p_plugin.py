@@ -116,6 +116,8 @@ class BL4PClient:
 		#TODO: have interfaces register their message types
 		if message.__class__ in [messages.BL4PStart, messages.BL4PAddOffer, messages.BL4PFindOffers]:
 			self.bl4pInterface.sendOutgoingMessage(message)
+		elif message.__class__ in [messages.LNPay]:
+			log('Sending LN transaction (NYI)') #TODO
 		else:
 			raise Exception('Unknown outgoing message type ' + str(message))
 

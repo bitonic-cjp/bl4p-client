@@ -153,13 +153,21 @@ class Backend:
 		tx = self.transactions[txID]
 
 		assert message.senderAmount == tx.fiatAmount
-		#TODO: check that we're not paying too much fees
+		#TODO: check that we're not paying too much fees to BL4P
+
+		#Send out over Lightning:
+		self.addOutgoingMessage(messages.LNPay(
+			destinationNodeID=tx.counterOffer.address,
+			paymentHash=tx.paymentHash,
+			recipientCryptoAmount=tx.minCryptoAmount,
+			maxSenderCryptoAmount=tx.maxCryptoAmount,
+			minCLTVExpiryDelta=tx.CLTV_expiry_delta,
+			fiatAmount=tx.fiatAmount,
+			offerID=tx.counterOffer.ID,
+			))
 
 		tx.senderAmount = message.senderAmount     #Sender of *fiat*
 		tx.receiverAmount = message.receiverAmount #Receiver of *fiat*
 		tx.paymentHash = message.paymentHash
-		tx.status = transaction.STATUS_RECEIVED_BL4P_PROMISE
-
-		#Immediately continue with the next stage: TODO
-		#self.lockCryptoFunds(client)
+		tx.status = transaction.STATUS_LOCKED
 

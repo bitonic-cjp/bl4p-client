@@ -64,3 +64,13 @@ class BL4PAddOfferResult(BL4PResult):
 class BL4PFindOffersResult(BL4PResult):
 	offers = []
 
+
+class LNPay(Struct):
+	destinationNodeID = ''
+	paymentHash = b''
+	recipientCryptoAmount = 0
+	maxSenderCryptoAmount = 0
+	minCLTVExpiryDelta = 0
+	fiatAmount = 0
+	offerID = 0
+

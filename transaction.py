@@ -32,17 +32,15 @@ sha256 = lambda preimage: hashlib.sha256(preimage).digest()
 State transitions:
 
 Seller market taker:
-initial -> received_BL4P_promise -> locked_lightning_tx -> received_preimage -> finished
+initial -> locked -> received_preimage -> finished
 
 Buyer market maker:
-locked_lightning_tx -> sent_bl4p_funds -> finished
+locked -> received_preimage -> finished
 '''
 STATUS_INITIAL = 0
-STATUS_RECEIVED_BL4P_PROMISE = 1
-STATUS_LOCKED_LIGHTNING_TX = 2
-STATUS_SENT_BL4P_FUNDS = 3
-STATUS_RECEIVED_PREIMAGE = 4
-STATUS_FINISHED = 5
+STATUS_LOCKED = 1
+STATUS_RECEIVED_PREIMAGE = 2
+STATUS_FINISHED = 3
 
 
 def getMinConditionValue(offer1, offer2, condition):
@@ -160,41 +158,23 @@ class SellTransaction(Transaction):
 			offer.Condition.LOCKED_TIMEOUT
 			)
 
-		self.counterOffer = counterOffer
-		self.fiatAmount = fiatAmount
-		self.minCryptoAmount = minCryptoAmount
-		self.maxCryptoAmount = maxCryptoAmount
-		self.sender_timeout_delta_ms = sender_timeout_delta_ms
-		self.locked_timeout_delta_s = locked_timeout_delta_s
-
-	#TODO: unlock the following functionality:
-	'''
-	def lockCryptoFunds(self, client):
-		localOffer   = client.storage.getOrder(self.localOrderID)
-		counterOffer = self.counterOffer
-
 		#Choose the CLTV expiry delta as small as possible
 		CLTV_expiry_delta = getMinConditionValue(
 			localOffer, counterOffer,
 			offer.Condition.CLTV_EXPIRY_DELTA
 			)
 
-		#Send out over Lightning:
-		assert localOffer.bid.currency == client.lightning.getCurrency()
-		assert localOffer.bid.exchange == 'ln'
-		client.lightning.startTransaction(
-			destinationNodeID=counterOffer.address,
-			paymentHash=self.paymentHash,
-			recipientCryptoAmount=self.minCryptoAmount,
-			maxSenderCryptoAmount=self.maxCryptoAmount,
-			minCLTVExpiryDelta=CLTV_expiry_delta,
-			fiatAmount=self.senderAmount,
-			offerID=counterOffer.ID,
-			)
-
-		self.status = STATUS_LOCKED_LIGHTNING_TX
+		self.counterOffer = counterOffer
+		self.fiatAmount = fiatAmount
+		self.minCryptoAmount = minCryptoAmount
+		self.maxCryptoAmount = maxCryptoAmount
+		self.sender_timeout_delta_ms = sender_timeout_delta_ms
+		self.locked_timeout_delta_s = locked_timeout_delta_s
+		self.CLTV_expiry_delta = CLTV_expiry_delta
 
 
+	#TODO: unlock the following functionality:
+	'''
 	def receiveFiatFunds(self, client, paymentPreimage):
 		self.paymentPreimage = paymentPreimage
 		self.status = STATUS_RECEIVED_PREIMAGE
