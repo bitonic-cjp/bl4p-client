@@ -30,3 +30,6 @@ class SellCommand(Struct):
 	limitRate = 0
 
 
+class BL4PAddOffer(Struct):
+	offer = None
+

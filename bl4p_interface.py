@@ -16,8 +16,22 @@
 #    You should have received a copy of the GNU General Public License
 #    along with the BL4P Client. If not, see <http://www.gnu.org/licenses/>.
 
+from bl4p_api import bl4p_pb2
 from bl4p_api import asynclient as bl4p
+import messages
+
+
 
 class BL4PInterface(bl4p.Bl4pApi):
-	pass #TODO
+	def handleResult(self, result):
+		pass #TODO
+
+
+	def sendOutgoingMessage(self, message):
+		if isinstance(message, messages.BL4PAddOffer):
+			request = bl4p_pb2.BL4P_AddOffer()
+			request.offer.CopyFrom(message.offer.toPB2())
+		else:
+			raise Exception('BL4PInterface cannot send message ' + str(message))
+		self.sendRequest(request)
 

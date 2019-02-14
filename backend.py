@@ -27,6 +27,7 @@ import settings
 class Backend:
 	def __init__(self):
 		self.orders = {}
+		self.outgoingMessageQueue = []
 		self.nextLocalOrderID = 0
 
 
@@ -38,8 +39,15 @@ class Backend:
 		self.BL4PAddress = address
 
 
+	def getNextOutgoingMessage(self):
+		return self.outgoingMessageQueue.pop(0)
+
+
+	def addOutgoingMessage(self, message):
+		self.outgoingMessageQueue.append(message)
+
+
 	def handleIncomingMessage(self, message):
-		return \
 		{
 		messages.BuyCommand : self.handleBuyCommand,
 		messages.SellCommand: self.handleSellCommand,
@@ -69,5 +77,7 @@ class Backend:
 		self.nextLocalOrderID += 1
 		order.ID = ID
 		self.orders[ID] = order
-		#TODO: try to trade on it
+
+		#TODO: try to trade on it before adding an offer
+		self.addOutgoingMessage(messages.BL4PAddOffer(offer=order))
 

@@ -23,6 +23,7 @@ import sys
 
 import backend
 import bl4p_interface
+import messages
 import plugin_interface
 
 
@@ -80,8 +81,21 @@ class BL4PClient:
 
 
 	def handleIncomingMessage(self, message):
+		#Process a single incoming message:
 		self.backend.handleIncomingMessage(message)
-		#TODO: process queue of outgoing messages
+
+		#Process queue of outgoing messages:
+		while True:
+			try:
+				message = self.backend.getNextOutgoingMessage()
+			except IndexError:
+				break #no more outgoing messages
+
+			#TODO: have interfaces register their message types
+			if message.__class__ in [messages.BL4PAddOffer]:
+				self.bl4pInterface.sendOutgoingMessage(message)
+			else:
+				raise Exception('Unknown outgoing message type ' + str(message))
 
 
 
