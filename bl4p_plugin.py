@@ -22,7 +22,7 @@ import signal
 import sys
 
 import backend
-from bl4p_api import asynclient as bl4p
+import bl4p_interface
 import plugin_interface
 
 
@@ -67,7 +67,7 @@ class BL4PClient:
 		self.pluginInterface = plugin_interface.PluginInterface(self, stdin, stdout)
 		self.pluginInterface.startup()
 
-		self.bl4pInterface = bl4p.Bl4pApi()
+		self.bl4pInterface = bl4p_interface.BL4PInterface()
 		await self.bl4pInterface.startup('ws://localhost:8000/', '3', '3')
 
 		self.backend.setLNAddress(  'LNdummy'  ) #TODO: get from RPC interface
