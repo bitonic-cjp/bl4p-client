@@ -89,7 +89,7 @@ class BL4PClient:
 		#Process a single incoming message:
 
 		#TODO: have interfaces register their message types
-		if message.__class__ in [messages.BuyCommand, messages.SellCommand, messages.BL4PAddOfferResult]:
+		if message.__class__ in [messages.BuyCommand, messages.SellCommand, messages.BL4PStartResult, messages.BL4PAddOfferResult]:
 			self.backend.handleIncomingMessage(message)
 		elif message.__class__ in [messages.BL4PFindOffersResult]:
 			self.trader.handleIncomingMessage(message)
@@ -111,7 +111,7 @@ class BL4PClient:
 		#Process a single outgoing message:
 
 		#TODO: have interfaces register their message types
-		if message.__class__ in [messages.BL4PAddOffer, messages.BL4PFindOffers]:
+		if message.__class__ in [messages.BL4PStart, messages.BL4PAddOffer, messages.BL4PFindOffers]:
 			self.bl4pInterface.sendOutgoingMessage(message)
 		else:
 			raise Exception('Unknown outgoing message type ' + str(message))

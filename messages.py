@@ -30,6 +30,13 @@ class SellCommand(Struct):
 	limitRate = 0
 
 
+class BL4PStart(Struct):
+	amount = 0
+	sender_timeout_delta_ms = 0
+	locked_timeout_delta_s = 0
+	receiver_pays_fee = True
+
+
 class BL4PAddOffer(Struct):
 	offer = None
 
@@ -40,6 +47,12 @@ class BL4PFindOffers(Struct):
 
 class BL4PResult(Struct):
 	request = None
+
+
+class BL4PStartResult(Struct):
+	senderAmount = 0
+	receiverAmount = 0
+	paymentHash = b''
 
 
 class BL4PAddOfferResult(BL4PResult):

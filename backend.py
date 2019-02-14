@@ -20,7 +20,9 @@ import decimal
 
 from log import log
 import messages
+import order
 from order import BuyOrder, SellOrder
+from transaction import BuyTransaction, SellTransaction
 import settings
 
 
@@ -28,8 +30,10 @@ import settings
 class Backend:
 	def __init__(self):
 		self.orders = {}
+		self.transactions = {}
 		self.outgoingMessageQueue = []
 		self.nextLocalOrderID = 0
+		self.nextLocalTransactionID = 0
 
 
 	def setLNAddress(self, address):
@@ -61,6 +65,8 @@ class Backend:
 		{
 		messages.BuyCommand : self.handleBuyCommand,
 		messages.SellCommand: self.handleSellCommand,
+
+		messages.BL4PStartResult: self.handleBL4PStartResult,
 
 		messages.BL4PAddOfferResult: self.handleBL4PAddOfferResult,
 		}[message.__class__](message)
@@ -102,6 +108,42 @@ class Backend:
 
 
 	def startTransaction(self, localID, counterOffer):
-		log('startTransaction')
-		#TODO
+		ownOrder = self.orders[localID]
+		if isinstance(ownOrder, BuyOrder):
+			return
+			#TODO: enable buyer-initiated trade once supported
+			#tx = BuyTransaction(localID)
+			#TODO: fill with offer data
+		elif isinstance(ownOrder, SellOrder):
+			tx = SellTransaction(localID)
+			#TODO: fill with offer data
+		else:
+			raise Exception('Unsupported order type - cannot use it in trade')
+
+		log('Doing trade for local order ID' + str(localID))
+		log('  local order: ' + str(ownOrder))
+		log('  counter offer: ' + str(counterOffer))
+
+		tx.initiateFromCounterOffer(ownOrder, counterOffer)
+
+		self.addTransaction(tx)
+		self.orders[localID].status = order.STATUS_TRADING
+
+		#Create transaction on the exchange:
+		self.addOutgoingMessage(messages.BL4PStart(
+			amount = tx.fiatAmount,
+			sender_timeout_delta_ms = tx.sender_timeout_delta_ms,
+			locked_timeout_delta_s = tx.locked_timeout_delta_s,
+			receiver_pays_fee = True
+			))
+
+
+	def addTransaction(self, tx):
+		ID = self.nextLocalTransactionID
+		self.nextLocalTransactionID += 1
+		self.transactions[ID] = tx
+
+
+	def handleBL4PStartResult(self, message):
+		pass #TODO: handle received information
 

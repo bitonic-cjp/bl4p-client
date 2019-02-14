@@ -32,7 +32,13 @@ class BL4PInterface(bl4p.Bl4pApi):
 
 
 	def sendOutgoingMessage(self, message):
-		if isinstance(message, messages.BL4PAddOffer):
+		if isinstance(message, messages.BL4PStart):
+			request = bl4p_pb2.BL4P_Start()
+			request.amount.amount = message.amount
+			request.sender_timeout_delta_ms = message.sender_timeout_delta_ms
+			request.locked_timeout_delta_s = message.locked_timeout_delta_s
+			request.receiver_pays_fee = message.receiver_pays_fee
+		elif isinstance(message, messages.BL4PAddOffer):
 			request = bl4p_pb2.BL4P_AddOffer()
 			request.offer.CopyFrom(message.offer.toPB2())
 		elif isinstance(message, messages.BL4PFindOffers):
@@ -47,7 +53,13 @@ class BL4PInterface(bl4p.Bl4pApi):
 
 	def handleResult(self, result):
 		log('BL4PInterface: Received result: ' + str(result))
-		if isinstance(result, bl4p_pb2.BL4P_AddOfferResult):
+		if isinstance(result, bl4p_pb2.BL4P_StartResult):
+			message = messages.BL4PStartResult(
+				senderAmount = result.sender_amount.amount,
+				receiverAmount = result.receiver_amount.amount,
+				paymentHash = result.payment_hash
+				)
+		elif isinstance(result, bl4p_pb2.BL4P_AddOfferResult):
 			message = messages.BL4PAddOfferResult(
 				ID=result.offerID,
 				)
