@@ -46,13 +46,13 @@ class BL4PInterface(bl4p.Bl4pApi):
 			request.query.CopyFrom(message.query.toPB2())
 		else:
 			raise Exception('BL4PInterface cannot send message ' + str(message))
-		log('BL4PInterface: Sending request: ' + str(request))
+		#log('BL4PInterface: Sending request: ' + str(request))
 		requestID = self.sendRequest(request)
 		self.activeRequests[requestID] = message
 
 
 	def handleResult(self, result):
-		log('BL4PInterface: Received result: ' + str(result))
+		#log('BL4PInterface: Received result: ' + str(result))
 		if isinstance(result, bl4p_pb2.BL4P_StartResult):
 			message = messages.BL4PStartResult(
 				senderAmount = result.sender_amount.amount,

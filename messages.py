@@ -31,6 +31,8 @@ class SellCommand(Struct):
 
 
 class BL4PStart(Struct):
+	localTransactionID = 0 #not transmitted - for local use only
+
 	amount = 0
 	sender_timeout_delta_ms = 0
 	locked_timeout_delta_s = 0

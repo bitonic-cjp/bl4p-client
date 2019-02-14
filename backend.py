@@ -22,6 +22,7 @@ from log import log
 import messages
 import order
 from order import BuyOrder, SellOrder
+import transaction
 from transaction import BuyTransaction, SellTransaction
 import settings
 
@@ -126,11 +127,13 @@ class Backend:
 
 		tx.initiateFromCounterOffer(ownOrder, counterOffer)
 
-		self.addTransaction(tx)
+		txID = self.addTransaction(tx)
 		self.orders[localID].status = order.STATUS_TRADING
 
 		#Create transaction on the exchange:
 		self.addOutgoingMessage(messages.BL4PStart(
+			localTransactionID = txID,
+
 			amount = tx.fiatAmount,
 			sender_timeout_delta_ms = tx.sender_timeout_delta_ms,
 			locked_timeout_delta_s = tx.locked_timeout_delta_s,
@@ -142,8 +145,21 @@ class Backend:
 		ID = self.nextLocalTransactionID
 		self.nextLocalTransactionID += 1
 		self.transactions[ID] = tx
+		return ID
 
 
 	def handleBL4PStartResult(self, message):
-		pass #TODO: handle received information
+		txID = message.request.localTransactionID
+		tx = self.transactions[txID]
+
+		assert message.senderAmount == tx.fiatAmount
+		#TODO: check that we're not paying too much fees
+
+		tx.senderAmount = message.senderAmount     #Sender of *fiat*
+		tx.receiverAmount = message.receiverAmount #Receiver of *fiat*
+		tx.paymentHash = message.paymentHash
+		tx.status = transaction.STATUS_RECEIVED_BL4P_PROMISE
+
+		#Immediately continue with the next stage: TODO
+		#self.lockCryptoFunds(client)
 

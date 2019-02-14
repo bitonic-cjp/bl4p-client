@@ -24,6 +24,7 @@ import sys
 import backend
 import bl4p_interface
 import messages
+from log import log
 import plugin_interface
 import trader
 
@@ -87,6 +88,7 @@ class BL4PClient:
 
 	def handleIncomingMessage(self, message):
 		#Process a single incoming message:
+		log('Incoming message: ' + str(message))
 
 		#TODO: have interfaces register their message types
 		if message.__class__ in [messages.BuyCommand, messages.SellCommand, messages.BL4PStartResult, messages.BL4PAddOfferResult]:
@@ -109,6 +111,7 @@ class BL4PClient:
 
 	def handleOutgoingMessage(self, message):
 		#Process a single outgoing message:
+		log('Outgoing message: ' + str(message))
 
 		#TODO: have interfaces register their message types
 		if message.__class__ in [messages.BL4PStart, messages.BL4PAddOffer, messages.BL4PFindOffers]:

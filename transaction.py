@@ -169,27 +169,6 @@ class SellTransaction(Transaction):
 
 	#TODO: unlock the following functionality:
 	'''
-		#Create transaction on the exchange:
-		senderAmount, receiverAmount, paymentHash = \
-			client.connection.start(
-				fiatAmount,
-				sender_timeout_delta_ms,
-				locked_timeout_delta_s,
-				receiver_pays_fee=True
-				)
-		#TODO: handle failure of the above
-
-		assert senderAmount == fiatAmount
-
-		self.senderAmount = senderAmount     #Sender of *fiat*
-		self.receiverAmount = receiverAmount #Receiver of *fiat*
-		self.paymentHash = paymentHash
-		self.status = STATUS_RECEIVED_BL4P_PROMISE
-
-		#Immediately continue with the next stage:
-		self.lockCryptoFunds(client)
-
-
 	def lockCryptoFunds(self, client):
 		localOffer   = client.storage.getOrder(self.localOrderID)
 		counterOffer = self.counterOffer
