@@ -39,6 +39,7 @@ class PluginInterface(JSONRPC):
 	def __init__(self, client, inputStream, outputStream):
 		JSONRPC.__init__(self, inputStream, outputStream)
 		self.client = client
+		self.RPCPath = None
 
 		self.options = {}
 		self.methods = \
@@ -56,6 +57,19 @@ class PluginInterface(JSONRPC):
 			self.log('Test notification received')
 
 		self.subscriptions = {'test': testHandler}
+
+
+	async def startup(self):
+		#Keep handling messages until one message handler sets self.RPCPath
+		#(this happens on the init message)
+		while self.RPCPath is None:
+			message = await self.getNextMessage()
+			if message is None:
+				raise Exception('Plugin interface closed before init call')
+			self.handleMessage(message)
+
+		#Start the regular message handling thread
+		return JSONRPC.startup(self)
 
 
 	def handleRequest(self, ID, name, params):

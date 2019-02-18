@@ -26,6 +26,7 @@ import bl4p_interface
 import messages
 from log import log
 import plugin_interface
+import rpc_interface
 import trader
 
 
@@ -69,13 +70,17 @@ class BL4PClient:
 	async def startup(self):
 		stdin, stdout = await stdio()
 		self.pluginInterface = plugin_interface.PluginInterface(self, stdin, stdout)
-		self.pluginInterface.startup()
+		await self.pluginInterface.startup() #Guarantees that RPCPath is set
+
+		reader, writer = await asyncio.open_unix_connection(path=self.pluginInterface.RPCPath)
+		self.rpcInterface = rpc_interface.RPCInterface(self, reader, writer)
+		self.rpcInterface.startup()
 
 		self.bl4pInterface = bl4p_interface.BL4PInterface(self)
 		await self.bl4pInterface.startup('ws://localhost:8000/', '3', '3')
 
 		self.backend.setLNAddress(  'LNdummy'  ) #TODO: get from RPC interface
-		self.backend.setBL4PAddress('BL4Pdummy') #TODO: get from RPC interface
+		self.backend.setBL4PAddress('BL4Pdummy') #TODO
 
 		self.trader.startup()
 
@@ -83,6 +88,7 @@ class BL4PClient:
 	async def shutdown(self):
 		await self.trader.shutdown()
 		await self.bl4pInterface.shutdown()
+		await self.rpcInterface.shutdown()
 		await self.pluginInterface.shutdown()
 
 
@@ -117,7 +123,7 @@ class BL4PClient:
 		if message.__class__ in [messages.BL4PStart, messages.BL4PAddOffer, messages.BL4PFindOffers]:
 			self.bl4pInterface.sendOutgoingMessage(message)
 		elif message.__class__ in [messages.LNPay]:
-			log('Sending LN transaction (NYI)') #TODO
+			self.rpcInterface.sendOutgoingMessage(message)
 		else:
 			raise Exception('Unknown outgoing message type ' + str(message))
 
