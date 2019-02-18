@@ -64,13 +64,14 @@ class PluginInterface(JSONRPC):
 		#print(manifest)
 
 		await self.synCall('init',
-			[
-			{}, #options
-			{   #configuration
-			'lightning-dir': self.node.directory,
-			'rpc-file'     : self.node.RPCFile,
-			}
-			])
+			{
+			'options': {},
+			'configuration': \
+				{
+				'lightning-dir': self.node.directory,
+				'rpc-file'     : self.node.RPCFile,
+				}
+			})
 
 		return JSONRPC.startup(self)
 

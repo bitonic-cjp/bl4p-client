@@ -53,7 +53,7 @@ class PluginInterface(JSONRPC):
 		'bl4p.sell'             : (self.sell             , MethodType.RPCMETHOD),
 		}
 
-		def testHandler(*args):
+		def testHandler(**kwargs):
 			self.log('Test notification received')
 
 		self.subscriptions = {'test': testHandler}
@@ -75,7 +75,7 @@ class PluginInterface(JSONRPC):
 	def handleRequest(self, ID, name, params):
 		try:
 			func, _ = self.methods[name]
-			result = func(*params)
+			result = func(**params)
 			self.sendResponse(ID, result)
 		except Exception as e:
 			self.log(traceback.format_exc())
@@ -87,10 +87,10 @@ class PluginInterface(JSONRPC):
 
 	def handleNotification(self, name, params):
 		func = self.subscriptions[name]
-		func(*params)
+		func(**params)
 
 
-	def getManifest(self, *args):
+	def getManifest(self, **kwargs):
 		methods = []
 		hooks = []
 		for name, entry in self.methods.items():
@@ -124,7 +124,7 @@ class PluginInterface(JSONRPC):
 			}
 
 
-	def init(self, options, configuration, *args):
+	def init(self, options, configuration, **kwargs):
 		#self.log('Plugin init got called')
 
 		filename = configuration['rpc-file']
@@ -143,18 +143,18 @@ class PluginInterface(JSONRPC):
 		return {'name': settings.cryptoName, 'divisor': settings.cryptoDivisor}
 
 
-	def buy(self, limitRate, amount):
+	def buy(self, limit_rate, amount, **kwargs):
 		'Place an order for buying crypto-currency with fiat-currency'
 		self.client.handleIncomingMessage(messages.BuyCommand(
-			limitRate=limitRate,
+			limitRate=limit_rate,
 			amount=amount
 			))
 
 
-	def sell(self, limitRate, amount):
+	def sell(self, limit_rate, amount, **kwargs):
 		'Place an order for selling crypto-currency for fiat-currency'
 		self.client.handleIncomingMessage(messages.SellCommand(
-			limitRate=limitRate,
+			limitRate=limit_rate,
 			amount=amount
 			))
 

@@ -41,7 +41,7 @@ def buy():
 	limitRate = int(decimal.Decimal(limitRate) * fiatDivisor)
 	amount = input('Maximum amount (%s)? ' % fiatName)
 	amount = int(decimal.Decimal(amount) * fiatDivisor)
-	return rpc.call('bl4p.buy', [limitRate, amount])
+	return rpc.call('bl4p.buy', {'limit_rate': limitRate, 'amount': amount})
 
 
 def sell():
@@ -49,7 +49,7 @@ def sell():
 	limitRate = int(decimal.Decimal(limitRate) * fiatDivisor)
 	amount = input('Maximum amount (%s)? ' % cryptoName)
 	amount = int(decimal.Decimal(amount) * cryptoDivisor)
-	return rpc.call('bl4p.sell', [limitRate, amount])
+	return rpc.call('bl4p.sell', {'limit_rate': limitRate, 'amount': amount})
 
 
 def stop():
