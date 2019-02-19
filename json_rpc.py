@@ -78,14 +78,14 @@ class JSONRPC:
 				self.inputBuffer += newData
 				continue
 
-			#log('Request: ' + str(request))
 			#TODO: length in chars may be different from length in bytes
 			self.inputBuffer = self.inputBuffer[length:].lstrip()
+
+			#log('<-- ' + str(request))
 			return request
 
 
 	def handleMessage(self, request):
-		#log('Handling incoming message: ' + str(request))
 		try:
 			if 'error' in request:
 				self.handleError(request['id'], request['error'])
@@ -100,6 +100,7 @@ class JSONRPC:
 
 
 	def writeJSON(self, msg):
+		#log('--> ' + str(msg))
 		msg = json.dumps(msg)
 		self.outputStream.write(msg.encode('UTF-8') + b'\n\n')
 
