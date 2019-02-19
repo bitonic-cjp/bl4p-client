@@ -22,9 +22,9 @@ import inspect
 import os
 import re
 import settings
-import traceback
 
 from json_rpc import JSONRPC
+from log import log, logException
 import messages
 
 
@@ -54,7 +54,7 @@ class PluginInterface(JSONRPC):
 		}
 
 		def testHandler(**kwargs):
-			self.log('Test notification received')
+			log('Test notification received')
 
 		self.subscriptions = {'test': testHandler}
 
@@ -78,7 +78,7 @@ class PluginInterface(JSONRPC):
 			result = func(**params)
 			self.sendResponse(ID, result)
 		except Exception as e:
-			self.log(traceback.format_exc())
+			logException()
 			self.sendErrorResponse(ID,
 				"Error while processing {}: {}".format(
 				name, repr(e)
