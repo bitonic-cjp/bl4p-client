@@ -145,6 +145,18 @@ class Node:
 
 		#Own methods
 		print('Method got called: ', name, params)
+		method = \
+		{
+		'getinfo': self.getInfo,
+		}[name]
+		#TODO: exception handling
+		result = method(**params)
+		interface.sendResponse(ID, result)
+
+
+	def getInfo(self, **kwargs):
+		return {'id': self.nodeID}
+
 
 
 nodes = \

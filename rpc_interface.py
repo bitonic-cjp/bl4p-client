@@ -45,7 +45,17 @@ class RPCInterface(JSONRPC):
 	def __init__(self, client, inputStream, outputStream):
 		JSONRPC.__init__(self, inputStream, outputStream)
 		self.client = client
+
+		self.nodeID = None
+
 		self.ongoingLNPay = {} #ID -> LNPay message
+
+
+	async def startup(self):
+		info = await self.synCall('getinfo')
+		self.nodeID = info['id']
+
+		return JSONRPC.startup(self)
 
 
 	def sendOutgoingMessage(self, message):

@@ -74,12 +74,12 @@ class BL4PClient:
 
 		reader, writer = await asyncio.open_unix_connection(path=self.pluginInterface.RPCPath)
 		self.rpcInterface = rpc_interface.RPCInterface(self, reader, writer)
-		self.rpcInterface.startup()
+		await self.rpcInterface.startup() #Gets our LN node ID
 
 		self.bl4pInterface = bl4p_interface.BL4PInterface(self)
 		await self.bl4pInterface.startup('ws://localhost:8000/', '3', '3')
 
-		self.backend.setLNAddress(  'LNdummy'  ) #TODO: get from RPC interface
+		self.backend.setLNAddress(self.rpcInterface.nodeID)
 		self.backend.setBL4PAddress('BL4Pdummy') #TODO
 
 		self.trader.startup()
