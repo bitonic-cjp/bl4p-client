@@ -57,7 +57,7 @@ class BL4PInterface(bl4p.Bl4pApi):
 			message = messages.BL4PStartResult(
 				senderAmount = result.sender_amount.amount,
 				receiverAmount = result.receiver_amount.amount,
-				paymentHash = result.payment_hash
+				paymentHash = result.payment_hash.data
 				)
 		elif isinstance(result, bl4p_pb2.BL4P_AddOfferResult):
 			message = messages.BL4PAddOfferResult(

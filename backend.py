@@ -155,6 +155,11 @@ class Backend:
 		assert message.senderAmount == tx.fiatAmount
 		#TODO: check that we're not paying too much fees to BL4P
 
+		tx.senderAmount = message.senderAmount     #Sender of *fiat*
+		tx.receiverAmount = message.receiverAmount #Receiver of *fiat*
+		tx.paymentHash = message.paymentHash
+		tx.status = transaction.STATUS_LOCKED
+
 		#Send out over Lightning:
 		self.addOutgoingMessage(messages.LNPay(
 			destinationNodeID=tx.counterOffer.address,
@@ -165,9 +170,4 @@ class Backend:
 			fiatAmount=tx.fiatAmount,
 			offerID=tx.counterOffer.ID,
 			))
-
-		tx.senderAmount = message.senderAmount     #Sender of *fiat*
-		tx.receiverAmount = message.receiverAmount #Receiver of *fiat*
-		tx.paymentHash = message.paymentHash
-		tx.status = transaction.STATUS_LOCKED
 
