@@ -144,10 +144,10 @@ class Node:
 			return
 
 		#Own methods
-		print('Method got called: ', name, params)
 		method = \
 		{
 		'getinfo': self.getInfo,
+		'getroute': self.getRoute,
 		}[name]
 		#TODO: exception handling
 		result = method(**params)
@@ -156,6 +156,10 @@ class Node:
 
 	def getInfo(self, **kwargs):
 		return {'id': self.nodeID}
+
+
+	def getRoute(self, id, msatoshi, cltv, **kwargs):
+		return {'route': []} #TODO
 
 
 
