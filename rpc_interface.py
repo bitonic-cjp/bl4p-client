@@ -45,18 +45,38 @@ class RPCInterface(JSONRPC):
 	def __init__(self, client, inputStream, outputStream):
 		JSONRPC.__init__(self, inputStream, outputStream)
 		self.client = client
+		self.ongoingLNPay = {} #ID -> LNPay message
 
 
 	def sendOutgoingMessage(self, message):
 		if isinstance(message, messages.LNPay):
 			log('LNPay message arrived at RPCInterface')
-			#payload = Payload(message.fiatAmount, message.offerID)
-			#destinationNodeID
-			#paymentHash
-			#recipientCryptoAmount
-			#maxSenderCryptoAmount
-			#minCLTVExpiryDelta
-			#self.sendRequest('pay', params=[])
+
+			ID = self.sendRequest('getroute',
+				{
+				    "id": message.destinationNodeID,
+				    "msatoshi": message.recipientCryptoAmount,
+				    "riskfactor": 1,
+				    "cltv": message.minCLTVExpiryDelta,
+				})
+
+			self.ongoingLNPay[ID] = message
+
+			#TODO: do this on receiving the reply:
+			'''
+			payload = Payload(message.fiatAmount, message.offerID)
+
+			#TODO: check maxSenderCryptoAmount
+
+			#TODO: include payload and set realm number
+			ID = self.sendRequest('sendpay',
+				{
+				    "route": route,
+				    "payment_hash": message.paymentHash,
+				    #"description": description, #Is this useful for the payload?
+				    "msatoshi": message.recipientCryptoAmount,
+				})
+			'''
 		else:
 			raise Exception('RPCInterface cannot send message ' + str(message))
 

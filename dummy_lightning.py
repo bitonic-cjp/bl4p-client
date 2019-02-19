@@ -34,17 +34,7 @@ class RPCInterface(JSONRPC):
 
 
 	def handleRequest(self, ID, name, params):
-		outgoingID = self.node.pluginInterface.sendRequest(name, params)
-
-		def resultCB(result):
-			#print(result)
-			self.sendResponse(ID, result)
-
-		def errorCB(error):
-			#print(error)
-			self.sendErrorResponse(ID, error)
-
-		self.node.pluginResultCallbacks[outgoingID] = (resultCB, errorCB)
+		self.node.handleRPCCall(self, ID, name, params)
 
 
 	def handleNotification(self, name, params):
@@ -56,11 +46,13 @@ class PluginInterface(JSONRPC):
 	def __init__(self, node, inputStream, outputStream):
 		JSONRPC.__init__(self, inputStream, outputStream)
 		self.node = node
+		self.manifest = None
 
 
 	async def startup(self):
 		#print('PluginInterface startup')
-		manifest = await self.synCall('getmanifest')
+		self.manifest = await self.synCall('getmanifest')
+		self.methods = [m['name'] for m in self.manifest['rpcmethods']]
 		#print(manifest)
 
 		await self.synCall('init',
@@ -134,6 +126,25 @@ class Node:
 		self.pluginProcess.kill()
 		await self.pluginProcess.wait()
 
+
+	def handleRPCCall(self, interface, ID, name, params):
+		#Plugin RPC pass-through:
+		if name in self.pluginInterface.methods:
+			outgoingID = self.pluginInterface.sendRequest(name, params)
+
+			def resultCB(result):
+				#print(result)
+				interface.sendResponse(ID, result)
+
+			def errorCB(error):
+				#print(error)
+				interface.sendErrorResponse(ID, error)
+
+			self.pluginResultCallbacks[outgoingID] = (resultCB, errorCB)
+			return
+
+		#Own methods
+		print('Method got called: ', name, params)
 
 
 nodes = \
