@@ -24,6 +24,19 @@ import time
 import traceback
 
 from json_rpc import JSONRPC
+from simplestruct import Struct
+
+
+
+class Transaction(Struct):
+	sourceID        = ''
+	destID          = ''
+	source_msatoshi = 0
+	dest_msatoshi   = 0
+	paymentHash     = '' #hex
+	paymentPreimage = '' #hex
+	realm           = 0
+	data            = '' #hex
 
 
 
@@ -175,28 +188,47 @@ class Node:
 
 
 	def sendPay(self, route, payment_hash, msatoshi, realm, data, **kwargs):
-		print('sendPay got called')
-		#TODO
+		#TODO: realm, data is a fantasy interface, not yet in lightningd
 
+		assert len(route) > 1
+		assert route[0]['id'] == self.nodeID
+		assert route[-1]['id'] != self.nodeID
+		assert route[-1]['msatoshi'] == msatoshi
+
+		tx = Transaction(
+			sourceID = route[ 0]['id'],
+			destID   = route[-1]['id'],
+			source_msatoshi = route[ 0]['msatoshi'],
+			dest_msatoshi   = route[-1]['msatoshi'],
+			paymentHash = payment_hash,
+			paymentPreimage = None,
+			)
+
+		global nodes
+		nodes[tx.destID].handleIncomingTransaction(tx)
+
+
+	def handleIncomingTransaction(self, tx):
+		print('handleIncomingTransaction got called')
 
 
 nodes = \
-[
-	Node(nodeID='node0', RPCFile='node0-rpc'),
-	Node(nodeID='node1', RPCFile='node1-rpc'),
-]
+{
+	'node0': Node(nodeID='node0', RPCFile='node0-rpc'),
+	'node1': Node(nodeID='node1', RPCFile='node1-rpc'),
+}
 
 
 
 async def startup():
 	#print('Starting nodes')
-	for n in nodes:
+	for n in nodes.values():
 		await n.startup()
 
 
 async def shutdown():
 	#print('Shutting down nodes')
-	for n in nodes:
+	for n in nodes.values():
 		await n.shutdown()
 
 
