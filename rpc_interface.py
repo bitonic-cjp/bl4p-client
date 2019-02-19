@@ -94,17 +94,22 @@ class RPCInterface(JSONRPC):
 
 			route = result['route']
 
+			senderCryptoAmount = route[0]["msatoshi"]
+			if senderCryptoAmount > message.maxSenderCryptoAmount:
+				#TODO: proper handling of this
+				raise Exception('maxSenderCryptoAmount exceeded')
+
 			payload = Payload(message.fiatAmount, message.offerID)
 
-			#TODO: check maxSenderCryptoAmount
-
-			#TODO: include payload and set realm number
 			self.sendStoredRequest(message, 'sendpay',
 				{
-				    "route": route,
-				    "payment_hash": message.paymentHash,
-				    #"description": description, #Is this useful for the payload?
-				    "msatoshi": message.recipientCryptoAmount,
+					"route": route,
+					"payment_hash": message.paymentHash.hex(),
+					#"description": description, #Is this useful for the payload?
+					"msatoshi": message.recipientCryptoAmount,
+
+					"realm": 254, #TODO
+					"data": payload.encode().hex(),
 				})
 		elif (name, messageClass) == ('sendpay', messages.LNPay):
 			pass #TODO: maybe check if sendpay was OK
