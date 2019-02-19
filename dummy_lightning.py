@@ -66,6 +66,7 @@ class PluginInterface(JSONRPC):
 		#print('PluginInterface startup')
 		self.manifest = await self.synCall('getmanifest')
 		self.methods = [m['name'] for m in self.manifest['rpcmethods']]
+		self.hooks = self.manifest['hooks'][:]
 		#print(manifest)
 
 		await self.synCall('init',
@@ -210,6 +211,34 @@ class Node:
 
 	def handleIncomingTransaction(self, tx):
 		print('handleIncomingTransaction got called')
+		assert 'htlc_accepted' in self.pluginInterface.hooks
+
+		#TODO: per_hop is a fantasy interface, not yet in lightningd
+		ID = self.pluginInterface.sendRequest('htlc_accepted', {
+			'onion':
+				{
+				'hop_data':
+					{
+					'realm': bytes([tx.realm]).hex(),
+					'per_hop': tx.data,
+					},
+				},
+			'htlc':
+				{
+				'msatoshi': tx.dest_msatoshi,
+				'cltv_expiry': 0, #TODO
+				'payment_hash': tx.paymentHash,
+				}
+			})
+
+		def resultCB(result):
+			print(result) #TODO
+
+		def errorCB(error):
+			print(error) #TODO
+
+		self.pluginResultCallbacks[ID] = (resultCB, errorCB)
+
 
 
 nodes = \

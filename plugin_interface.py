@@ -47,10 +47,12 @@ class PluginInterface(JSONRPC):
 		'getmanifest': (self.getManifest, MethodType.RPCMETHOD),
 		'init'       : (self.init       , MethodType.RPCMETHOD),
 
-		'bl4p.getfiatcurrency'  : (self.getFiatCurrency  , MethodType.RPCMETHOD),
-		'bl4p.getcryptocurrency': (self.getCryptoCurrency, MethodType.RPCMETHOD),
-		'bl4p.buy'              : (self.buy              , MethodType.RPCMETHOD),
-		'bl4p.sell'             : (self.sell             , MethodType.RPCMETHOD),
+		'bl4p.getfiatcurrency'  : (self.getFiatCurrency   , MethodType.RPCMETHOD),
+		'bl4p.getcryptocurrency': (self.getCryptoCurrency , MethodType.RPCMETHOD),
+		'bl4p.buy'              : (self.buy               , MethodType.RPCMETHOD),
+		'bl4p.sell'             : (self.sell              , MethodType.RPCMETHOD),
+
+		'htlc_accepted'         : (self.handleHTLCAccepted, MethodType.HOOK),
 		}
 
 		def testHandler(**kwargs):
@@ -157,4 +159,30 @@ class PluginInterface(JSONRPC):
 			limitRate=limit_rate,
 			amount=amount
 			))
+
+
+	def handleHTLCAccepted(self, onion, htlc, **kwargs):
+		'''
+		Parameter format:
+		'onion':
+			{
+			'hop_data':
+				{
+				'realm': hex,
+				'per_hop': hex
+				'short_channel_id': str,
+				'amt_to_forward': int,
+				'outgoing_cltv_value': int,
+				},
+			'next_onion': hex,
+			'shared_secret': hex,
+			},
+		'htlc':
+			{
+			'msatoshi': int,
+			'cltv_expiry': int,
+			'payment_hash': hex,
+			}
+		'''
+		log('handleHTLCAccepted got called')
 
