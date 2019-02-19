@@ -148,6 +148,7 @@ class Node:
 		{
 		'getinfo': self.getInfo,
 		'getroute': self.getRoute,
+		'sendpay': self.sendPay,
 		}[name]
 		#TODO: exception handling
 		result = method(**params)
@@ -160,6 +161,11 @@ class Node:
 
 	def getRoute(self, id, msatoshi, cltv, **kwargs):
 		return {'route': []} #TODO
+
+
+	def sendPay(self, route, payment_hash, msatoshi, **kwargs):
+		print('sendPay got called')
+		#TODO
 
 
 

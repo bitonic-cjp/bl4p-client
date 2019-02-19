@@ -48,7 +48,7 @@ class RPCInterface(JSONRPC):
 
 		self.nodeID = None
 
-		self.ongoingLNPay = {} #ID -> LNPay message
+		self.ongoingRequests = {} #ID -> (methodname, message)
 
 
 	async def startup(self):
@@ -58,41 +58,58 @@ class RPCInterface(JSONRPC):
 		return JSONRPC.startup(self)
 
 
+	def sendStoredRequest(self, message, name, params):
+		ID = self.sendRequest(name, params)
+		self.ongoingRequests[ID] = (name, message)
+
+
+	def handleResult(self, ID, result):
+		name, message = self.ongoingRequests[ID]
+		del self.ongoingRequests[ID]
+		self.handleStoredRequestResult(message, name, result)
+
+
 	def sendOutgoingMessage(self, message):
 		if isinstance(message, messages.LNPay):
-			log('LNPay message arrived at RPCInterface')
-
-			ID = self.sendRequest('getroute',
+			self.sendStoredRequest(message, 'getroute',
 				{
 				    "id": message.destinationNodeID,
 				    "msatoshi": message.recipientCryptoAmount,
 				    "riskfactor": 1,
 				    "cltv": message.minCLTVExpiryDelta,
 				})
+			#TODO: we called getroute, but that is no guarantee we
+			#will have an outgoing transaction (we might crash
+			#before sendpay succeeds).
+			#Make sure the LNPay message stays stored!
+		else:
+			raise Exception('RPCInterface cannot send message ' + str(message))
 
-			self.ongoingLNPay[ID] = message
 
-			#TODO: do this on receiving the reply:
-			'''
+	def handleStoredRequestResult(self, message, name, result):
+		messageClass = message.__class__
+
+		if (name, messageClass) == ('getroute', messages.LNPay):
+			log('Got getroute results')
+
+			route = result['route']
+
 			payload = Payload(message.fiatAmount, message.offerID)
 
 			#TODO: check maxSenderCryptoAmount
 
 			#TODO: include payload and set realm number
-			ID = self.sendRequest('sendpay',
+			self.sendStoredRequest(message, 'sendpay',
 				{
 				    "route": route,
 				    "payment_hash": message.paymentHash,
 				    #"description": description, #Is this useful for the payload?
 				    "msatoshi": message.recipientCryptoAmount,
 				})
-			'''
+		elif (name, messageClass) == ('sendpay', messages.LNPay):
+			pass #TODO: maybe check if sendpay was OK
 		else:
-			raise Exception('RPCInterface cannot send message ' + str(message))
-
-
-	def handleResult(self, ID, result):
-		pass #TODO
+			raise Exception('RPCInterface made an error in storing requests')
 
 
 	def handleError(self, ID, error):
