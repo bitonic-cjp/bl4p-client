@@ -33,6 +33,8 @@ class Transaction(Struct):
 	destID          = ''
 	source_msatoshi = 0
 	dest_msatoshi   = 0
+	sourceCLTV      = 0
+	destCLTV        = 0
 	paymentHash     = '' #hex
 	paymentPreimage = '' #hex
 	realm           = 0
@@ -178,10 +180,12 @@ class Node:
 		[
 		{
 			'msatoshi': int(1.01*msatoshi), #simulated 1% fee
-			'id': self.nodeID,
+			'delay': cltv + 100, #simulated 10 hops, 10 blocks per hop
+			'id': 'ID of some intermediate node',
 		},
 		{
 			'msatoshi': msatoshi,
+			'delay': cltv,
 			'id': id,
 		},
 		]
@@ -191,8 +195,7 @@ class Node:
 	def sendPay(self, route, payment_hash, msatoshi, realm, data, **kwargs):
 		#TODO: realm, data is a fantasy interface, not yet in lightningd
 
-		assert len(route) > 1
-		assert route[0]['id'] == self.nodeID
+		assert len(route) > 0
 		assert route[-1]['id'] != self.nodeID
 		assert route[-1]['msatoshi'] == msatoshi
 
@@ -201,6 +204,8 @@ class Node:
 			destID   = route[-1]['id'],
 			source_msatoshi = route[ 0]['msatoshi'],
 			dest_msatoshi   = route[-1]['msatoshi'],
+			sourceCLTV = route[ 0]['delay'],
+			destCLTV   = route[-1]['delay'],
 			paymentHash = payment_hash,
 			paymentPreimage = None,
 			)
@@ -210,7 +215,6 @@ class Node:
 
 
 	def handleIncomingTransaction(self, tx):
-		print('handleIncomingTransaction got called')
 		assert 'htlc_accepted' in self.pluginInterface.hooks
 
 		#TODO: per_hop is a fantasy interface, not yet in lightningd
@@ -226,7 +230,7 @@ class Node:
 			'htlc':
 				{
 				'msatoshi': tx.dest_msatoshi,
-				'cltv_expiry': 0, #TODO
+				'cltv_expiry': tx.destCLTV,
 				'payment_hash': tx.paymentHash,
 				}
 			})
