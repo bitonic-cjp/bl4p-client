@@ -70,6 +70,8 @@ class Backend:
 		messages.BL4PStartResult: self.handleBL4PStartResult,
 
 		messages.BL4PAddOfferResult: self.handleBL4PAddOfferResult,
+
+		messages.LNIncoming: self.handleLNIncoming,
 		}[message.__class__](message)
 
 
@@ -170,4 +172,8 @@ class Backend:
 			fiatAmount=tx.fiatAmount,
 			offerID=tx.counterOffer.ID,
 			))
+
+
+	def handleLNIncoming(self, message):
+		log('handleLNIncoming called')
 

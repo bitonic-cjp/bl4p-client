@@ -16,28 +16,11 @@
 #    You should have received a copy of the GNU General Public License
 #    along with the BL4P Client. If not, see <http://www.gnu.org/licenses/>.
 
-import struct
-
 from json_rpc import JSONRPC
+from ln_payload import Payload
 from log import log
 import messages
 import settings
-
-
-
-class Payload:
-	@staticmethod
-	def decode(data):
-		fiatAmount, offerID = struct.unpack('!QI', data)
-		return Payload(fiatAmount, offerID)
-
-	def __init__(self, fiatAmount, offerID):
-		self.fiatAmount = fiatAmount
-		self.offerID = offerID
-
-
-	def encode(self):
-		return struct.pack('!QI', self.fiatAmount, self.offerID)
 
 
 
@@ -90,8 +73,6 @@ class RPCInterface(JSONRPC):
 		messageClass = message.__class__
 
 		if (name, messageClass) == ('getroute', messages.LNPay):
-			log('Got getroute results')
-
 			route = result['route']
 
 			senderCryptoAmount = route[0]["msatoshi"]

@@ -97,7 +97,7 @@ class BL4PClient:
 		log('Incoming message: ' + str(message))
 
 		#TODO: have interfaces register their message types
-		if message.__class__ in [messages.BuyCommand, messages.SellCommand, messages.BL4PStartResult, messages.BL4PAddOfferResult]:
+		if message.__class__ in [messages.BuyCommand, messages.SellCommand, messages.BL4PStartResult, messages.BL4PAddOfferResult, messages.LNIncoming]:
 			self.backend.handleIncomingMessage(message)
 		elif message.__class__ in [messages.BL4PFindOffersResult]:
 			self.trader.handleIncomingMessage(message)

@@ -74,3 +74,11 @@ class LNPay(Struct):
 	fiatAmount = 0
 	offerID = 0
 
+
+class LNIncoming(Struct):
+	paymentHash = b''
+	cryptoAmount = 0
+	CLTVExpiryDelta = 0
+	fiatAmount = 0
+	offerID = 0
+

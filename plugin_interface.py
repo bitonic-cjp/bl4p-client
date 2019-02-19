@@ -24,6 +24,7 @@ import re
 import settings
 
 from json_rpc import JSONRPC
+from ln_payload import Payload
 from log import log, logException
 import messages
 
@@ -169,10 +170,7 @@ class PluginInterface(JSONRPC):
 			'hop_data':
 				{
 				'realm': hex,
-				'per_hop': hex
-				'short_channel_id': str,
-				'amt_to_forward': int,
-				'outgoing_cltv_value': int,
+				'per_hop': hex,
 				},
 			'next_onion': hex,
 			'shared_secret': hex,
@@ -185,4 +183,15 @@ class PluginInterface(JSONRPC):
 			}
 		'''
 		log('handleHTLCAccepted got called')
+		realm = bytes.fromhex(onion['hop_data']['realm'])[0]
+		assert realm == 254 #TODO
+		payload = Payload.decode(
+			bytes.fromhex(onion['hop_data']['per_hop']))
+		self.client.handleIncomingMessage(messages.LNIncoming(
+			paymentHash = bytes.fromhex(htlc['payment_hash']),
+			cryptoAmount = htlc['msatoshi'],
+			CLTVExpiryDelta = htlc['cltv_expiry'], #TODO: check if this is a relative or absolute value. For now, relative is used everywhere.
+			fiatAmount = payload.fiatAmount,
+			offerID = payload.offerID,
+			))
 

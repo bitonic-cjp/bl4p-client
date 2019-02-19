@@ -208,6 +208,8 @@ class Node:
 			destCLTV   = route[-1]['delay'],
 			paymentHash = payment_hash,
 			paymentPreimage = None,
+			realm = realm,
+			data = data,
 			)
 
 		global nodes
@@ -230,7 +232,7 @@ class Node:
 			'htlc':
 				{
 				'msatoshi': tx.dest_msatoshi,
-				'cltv_expiry': tx.destCLTV,
+				'cltv_expiry': tx.destCLTV, #TODO: check if this is a relative or absolute value. For now, relative is used everywhere.
 				'payment_hash': tx.paymentHash,
 				}
 			})
