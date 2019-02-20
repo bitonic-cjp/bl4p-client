@@ -173,5 +173,25 @@ class Backend(messages.Handler):
 
 
 	def handleLNIncoming(self, message):
-		log('handleLNIncoming called')
+		localID = message.offerID
+		ownOrder = self.getOrder(localID)
+
+		#TODO: proper handling of failing this condition:
+		assert self.orders[localID].status == order.STATUS_IDLE
+
+		tx = BuyTransaction(localID)
+		tx.initiateFromLNIncoming(ownOrder, message)
+
+		log('Received incoming transaction')
+
+		txID = self.addTransaction(tx)
+		self.orders[localID].status = order.STATUS_TRADING
+
+		#Lock fiat funds:
+		self.addOutgoingMessage(messages.BL4PSend(
+			localTransactionID = txID,
+
+			amount=tx.fiatAmount,
+			paymentHash=tx.paymentHash,
+			))
 

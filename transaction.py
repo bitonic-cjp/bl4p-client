@@ -63,6 +63,7 @@ class Transaction:
 		self.localOrderID = localOrderID
 		self.status = STATUS_INITIAL
 		self.paymentHash = None
+		self.paymentPreimage = None
 
 
 
@@ -72,24 +73,19 @@ class BuyTransaction(Transaction):
 		log('Created buy tx')
 
 
-	#TODO: unlock the following functionality:
-	'''
-	def initiateFromLNTransaction(self, client, lntx):
-		log('Initiating buy tx from LN tx')
-
-		localOffer = client.storage.getOrder(self.localOrderID)
-
-		self.receiverAmount = lntx.recipientCryptoAmount
-		self.fiatAmount = lntx.payload.fiatAmount
-		self.paymentHash = lntx.paymentHash
-		self.status = STATUS_LOCKED_LIGHTNING_TX
-
+	def initiateFromLNIncoming(self, localOffer, message):
 		#TODO: check if lntx conforms to our order
 		#TODO: check if remaining order size is sufficient
 
-		self.lockFiatFunds(client)
+		self.cryptoAmount = message.cryptoAmount
+		self.fiatAmount = message.fiatAmount
+		self.paymentHash = message.paymentHash
+		self.status = STATUS_LOCKED
+		#TODO:
 
 
+	#TODO: unlock the following functionality:
+	'''
 	def lockFiatFunds(self, client):
 		paymentPreimage = client.connection.send(
 			self.fiatAmount, self.paymentHash)

@@ -39,6 +39,13 @@ class BL4PStart(Struct):
 	receiver_pays_fee = True
 
 
+class BL4PSend(Struct):
+	localTransactionID = 0 #not transmitted - for local use only
+
+	amount = 0
+	paymentHash = b''
+
+
 class BL4PAddOffer(Struct):
 	offer = None
 

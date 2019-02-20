@@ -29,6 +29,7 @@ class BL4PInterface(bl4p.Bl4pApi, messages.Handler):
 		bl4p.Bl4pApi.__init__(self, log=log)
 		messages.Handler.__init__(self, {
 			messages.BL4PStart     : self.sendStart,
+			messages.BL4PSend      : self.sendSend,
 			messages.BL4PAddOffer  : self.sendAddOffer,
 			messages.BL4PFindOffers: self.sendFindOffers,
 			})
@@ -44,6 +45,10 @@ class BL4PInterface(bl4p.Bl4pApi, messages.Handler):
 		request.receiver_pays_fee = message.receiver_pays_fee
 		requestID = self.sendRequest(request)
 		self.activeRequests[requestID] = message
+
+
+	def sendSend(self, message):
+		log('sendSend called')
 
 
 	def sendAddOffer(self, message):
