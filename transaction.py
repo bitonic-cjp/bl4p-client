@@ -15,15 +15,9 @@
 #    You should have received a copy of the GNU General Public License
 #    along with BL4P client. If not, see <http://www.gnu.org/licenses/>.
 
-import hashlib
-
 from bl4p_api import offer
 from log import log
 import settings
-
-
-
-sha256 = lambda preimage: hashlib.sha256(preimage).digest()
 
 
 
@@ -35,12 +29,11 @@ Seller market taker:
 initial -> locked -> received_preimage -> finished
 
 Buyer market maker:
-locked -> received_preimage -> finished
+locked -> finished
 '''
 STATUS_INITIAL = 0
 STATUS_LOCKED = 1
-STATUS_RECEIVED_PREIMAGE = 2
-STATUS_FINISHED = 3
+STATUS_FINISHED = 2
 
 
 def getMinConditionValue(offer1, offer2, condition):
@@ -86,20 +79,6 @@ class BuyTransaction(Transaction):
 
 	#TODO: unlock the following functionality:
 	'''
-	def lockFiatFunds(self, client):
-		paymentPreimage = client.connection.send(
-			self.fiatAmount, self.paymentHash)
-		#TODO: handle failure of the above
-
-		assert sha256(paymentPreimage) == self.paymentHash
-
-		self.paymentPreimage = paymentPreimage
-		self.status = STATUS_SENT_BL4P_FUNDS
-
-		log('We got the preimage from BL4P')
-		self.receiveCryptoTransaction(client)
-
-
 	def receiveCryptoTransaction(self, client):
 		client.lightning.finishIncomingTransaction(
 			self.paymentHash, self.paymentPreimage)

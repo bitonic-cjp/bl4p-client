@@ -87,6 +87,7 @@ class BL4PClient:
 
 		self.messageRouter.addHandler(self.backend)
 		self.messageRouter.addHandler(self.trader)
+		self.messageRouter.addHandler(self.pluginInterface)
 		self.messageRouter.addHandler(self.bl4pInterface)
 		self.messageRouter.addHandler(self.rpcInterface)
 

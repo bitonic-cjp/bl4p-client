@@ -94,6 +94,11 @@ class LNIncoming(Struct):
 	offerID = 0
 
 
+class LNFinish(Struct):
+	paymentHash = b''
+	paymentPreimage = b''
+
+
 
 class Handler:
 	def __init__(self, handlerMethods={}):

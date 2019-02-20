@@ -17,6 +17,7 @@
 #    along with the BL4P Client. If not, see <http://www.gnu.org/licenses/>.
 
 import decimal
+import hashlib
 
 from log import log
 import messages
@@ -25,6 +26,10 @@ from order import BuyOrder, SellOrder
 import transaction
 from transaction import BuyTransaction, SellTransaction
 import settings
+
+
+
+sha256 = lambda preimage: hashlib.sha256(preimage).digest()
 
 
 
@@ -183,7 +188,7 @@ class Backend(messages.Handler):
 		tx = BuyTransaction(localID)
 		tx.initiateFromLNIncoming(ownOrder, message)
 
-		log('Received incoming transaction')
+		log('Received incoming Lightning transaction')
 
 		txID = self.addTransaction(tx)
 		self.orders[localID].status = order.STATUS_TRADING
@@ -198,5 +203,18 @@ class Backend(messages.Handler):
 
 
 	def handleBL4PSendResult(self, message):
-		log('handleBL4PSendResult called')
+		txID = message.request.localTransactionID
+		tx = self.transactions[txID]
+
+		assert sha256(message.paymentPreimage) == tx.paymentHash
+		log('We got the preimage from BL4P')
+
+		tx.paymentPreimage = message.paymentPreimage
+		tx.status = transaction.STATUS_FINISHED
+
+		#Receive crypto funds
+		self.addOutgoingMessage(messages.LNFinish(
+			paymentHash=tx.paymentHash,
+			paymentPreimage=tx.paymentPreimage,
+			))
 

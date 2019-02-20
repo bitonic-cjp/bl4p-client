@@ -100,3 +100,5 @@ class BL4PInterface(bl4p.Bl4pApi, messages.Handler):
 		del self.activeRequests[result.request]
 		self.client.handleIncomingMessage(message)
 
+	#TODO: handle error results
+

@@ -36,9 +36,12 @@ class MethodType(Enum):
 
 
 
-class PluginInterface(JSONRPC):
+class PluginInterface(JSONRPC, messages.Handler):
 	def __init__(self, client, inputStream, outputStream):
 		JSONRPC.__init__(self, inputStream, outputStream)
+		messages.Handler.__init__(self, {
+			messages.LNFinish: self.sendFinish,
+			})
 		self.client = client
 		self.RPCPath = None
 
@@ -194,4 +197,8 @@ class PluginInterface(JSONRPC):
 			fiatAmount = payload.fiatAmount,
 			offerID = payload.offerID,
 			))
+
+
+	def sendFinish(self, message):
+		log('sendFinish called')
 
