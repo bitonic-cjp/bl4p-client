@@ -66,10 +66,10 @@ class PluginInterface(JSONRPC):
 		#Keep handling messages until one message handler sets self.RPCPath
 		#(this happens on the init message)
 		while self.RPCPath is None:
-			message = await self.getNextMessage()
+			message = await self.getNextJSON()
 			if message is None:
 				raise Exception('Plugin interface closed before init call')
-			self.handleMessage(message)
+			self.handleJSON(message)
 
 		#Start the regular message handling thread
 		return JSONRPC.startup(self)

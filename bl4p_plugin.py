@@ -65,6 +65,7 @@ class BL4PClient:
 	def __init__(self):
 		self.backend = backend.Backend()
 		self.trader = trader.Trader(self)
+		self.messageRouter = messages.Router()
 
 
 	async def startup(self):
@@ -84,6 +85,11 @@ class BL4PClient:
 
 		self.trader.startup()
 
+		self.messageRouter.addHandler(self.backend)
+		self.messageRouter.addHandler(self.trader)
+		self.messageRouter.addHandler(self.bl4pInterface)
+		self.messageRouter.addHandler(self.rpcInterface)
+
 
 	async def shutdown(self):
 		await self.trader.shutdown()
@@ -94,15 +100,8 @@ class BL4PClient:
 
 	def handleIncomingMessage(self, message):
 		#Process a single incoming message:
-		log('Incoming message: ' + str(message))
-
-		#TODO: have interfaces register their message types
-		if message.__class__ in [messages.BuyCommand, messages.SellCommand, messages.BL4PStartResult, messages.BL4PAddOfferResult, messages.LNIncoming]:
-			self.backend.handleIncomingMessage(message)
-		elif message.__class__ in [messages.BL4PFindOffersResult]:
-			self.trader.handleIncomingMessage(message)
-		else:
-			raise Exception('Unknown incoming message type ' + str(message))
+		log('<== ' + str(message))
+		self.messageRouter.handleMessage(message)
 
 		#Process queue of outgoing messages:
 		while True:
@@ -117,15 +116,8 @@ class BL4PClient:
 
 	def handleOutgoingMessage(self, message):
 		#Process a single outgoing message:
-		log('Outgoing message: ' + str(message))
-
-		#TODO: have interfaces register their message types
-		if message.__class__ in [messages.BL4PStart, messages.BL4PAddOffer, messages.BL4PFindOffers]:
-			self.bl4pInterface.sendOutgoingMessage(message)
-		elif message.__class__ in [messages.LNPay]:
-			self.rpcInterface.sendOutgoingMessage(message)
-		else:
-			raise Exception('Unknown outgoing message type ' + str(message))
+		log('==> ' + str(message))
+		self.messageRouter.handleMessage(message)
 
 
 

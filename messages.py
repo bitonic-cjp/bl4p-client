@@ -82,3 +82,23 @@ class LNIncoming(Struct):
 	fiatAmount = 0
 	offerID = 0
 
+
+
+class Handler:
+	def __init__(self, handlerMethods={}):
+		self.handlerMethods = handlerMethods
+
+
+	def handleMessage(self, message):
+		return self.handlerMethods[message.__class__](message)
+
+
+
+class Router(Handler):
+	def addHandler(self, handler):
+		for msgClass, method in handler.handlerMethods.items():
+			if msgClass in self.handlerMethods:
+				raise Exception(
+					'Router: cannot have multiple handlers for a single message class')
+			self.handlerMethods[msgClass] = method
+

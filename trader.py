@@ -24,8 +24,11 @@ import order
 
 
 
-class Trader:
+class Trader(messages.Handler):
 	def __init__(self, client):
+		messages.Handler.__init__(self, {
+			messages.BL4PFindOffersResult : self.handleBL4PFindOffersResult,
+			})
 		self.client = client
 
 
@@ -53,12 +56,6 @@ class Trader:
 		except:
 			log('Exception in Trader:')
 			logException()
-
-
-	def handleIncomingMessage(self, message):
-		{
-		messages.BL4PFindOffersResult : self.handleBL4PFindOffersResult,
-		}[message.__class__](message)
 
 
 	def initiateOfferSearch(self):

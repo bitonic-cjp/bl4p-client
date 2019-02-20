@@ -28,8 +28,19 @@ import settings
 
 
 
-class Backend:
+class Backend(messages.Handler):
 	def __init__(self):
+		messages.Handler.__init__(self, {
+			messages.BuyCommand : self.handleBuyCommand,
+			messages.SellCommand: self.handleSellCommand,
+
+			messages.BL4PStartResult: self.handleBL4PStartResult,
+
+			messages.BL4PAddOfferResult: self.handleBL4PAddOfferResult,
+
+			messages.LNIncoming: self.handleLNIncoming,
+			})
+
 		self.orders = {}
 		self.transactions = {}
 		self.outgoingMessageQueue = []
@@ -60,19 +71,6 @@ class Backend:
 
 	def addOutgoingMessage(self, message):
 		self.outgoingMessageQueue.append(message)
-
-
-	def handleIncomingMessage(self, message):
-		{
-		messages.BuyCommand : self.handleBuyCommand,
-		messages.SellCommand: self.handleSellCommand,
-
-		messages.BL4PStartResult: self.handleBL4PStartResult,
-
-		messages.BL4PAddOfferResult: self.handleBL4PAddOfferResult,
-
-		messages.LNIncoming: self.handleLNIncoming,
-		}[message.__class__](message)
 
 
 	def handleBuyCommand(self, cmd):

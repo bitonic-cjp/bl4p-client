@@ -24,29 +24,38 @@ import messages
 
 
 
-class BL4PInterface(bl4p.Bl4pApi):
+class BL4PInterface(bl4p.Bl4pApi, messages.Handler):
 	def __init__(self, client):
 		bl4p.Bl4pApi.__init__(self, log=log)
+		messages.Handler.__init__(self, {
+			messages.BL4PStart     : self.sendStart,
+			messages.BL4PAddOffer  : self.sendAddOffer,
+			messages.BL4PFindOffers: self.sendFindOffers,
+			})
 		self.client = client
 		self.activeRequests = {}
 
 
-	def sendOutgoingMessage(self, message):
-		if isinstance(message, messages.BL4PStart):
-			request = bl4p_pb2.BL4P_Start()
-			request.amount.amount = message.amount
-			request.sender_timeout_delta_ms = message.sender_timeout_delta_ms
-			request.locked_timeout_delta_s = message.locked_timeout_delta_s
-			request.receiver_pays_fee = message.receiver_pays_fee
-		elif isinstance(message, messages.BL4PAddOffer):
-			request = bl4p_pb2.BL4P_AddOffer()
-			request.offer.CopyFrom(message.offer.toPB2())
-		elif isinstance(message, messages.BL4PFindOffers):
-			request = bl4p_pb2.BL4P_FindOffers()
-			request.query.CopyFrom(message.query.toPB2())
-		else:
-			raise Exception('BL4PInterface cannot send message ' + str(message))
-		#log('BL4PInterface: Sending request: ' + str(request))
+	def sendStart(self, message):
+		request = bl4p_pb2.BL4P_Start()
+		request.amount.amount = message.amount
+		request.sender_timeout_delta_ms = message.sender_timeout_delta_ms
+		request.locked_timeout_delta_s = message.locked_timeout_delta_s
+		request.receiver_pays_fee = message.receiver_pays_fee
+		requestID = self.sendRequest(request)
+		self.activeRequests[requestID] = message
+
+
+	def sendAddOffer(self, message):
+		request = bl4p_pb2.BL4P_AddOffer()
+		request.offer.CopyFrom(message.offer.toPB2())
+		requestID = self.sendRequest(request)
+		self.activeRequests[requestID] = message
+
+
+	def sendFindOffers(self, message):
+		request = bl4p_pb2.BL4P_FindOffers()
+		request.query.CopyFrom(message.query.toPB2())
 		requestID = self.sendRequest(request)
 		self.activeRequests[requestID] = message
 

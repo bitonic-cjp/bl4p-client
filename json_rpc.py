@@ -51,10 +51,10 @@ class JSONRPC:
 		try:
 			try:
 				while True:
-					message = await self.getNextMessage()
+					message = await self.getNextJSON()
 					if message is None:
 						break
-					self.handleMessage(message)
+					self.handleJSON(message)
 			except asyncio.CancelledError:
 				pass #We're cancelled, so just quit the function
 			except BrokenPipeError:
@@ -65,7 +65,7 @@ class JSONRPC:
 		#log('Stopped JSON RPC')
 
 
-	async def getNextMessage(self):
+	async def getNextJSON(self):
 		while True:
 			try:
 				#log('Input buffer: ' + str(self.inputBuffer))
@@ -85,7 +85,7 @@ class JSONRPC:
 			return request
 
 
-	def handleMessage(self, request):
+	def handleJSON(self, request):
 		try:
 			if 'error' in request:
 				self.handleError(request['id'], request['error'])
@@ -108,11 +108,11 @@ class JSONRPC:
 	async def synCall(self, name, params={}):
 		ID = self.sendRequest(name, params)
 		while True:
-			message = await self.getNextMessage()
+			message = await self.getNextJSON()
 			if 'result' in message and 'id' in message and message['id'] == ID:
 				break #it's ours
 			#Generic processing of messages that are not ours
-			self.handleMessage(message)
+			self.handleJSON(message)
 		return message['result']
 
 

@@ -24,9 +24,12 @@ import settings
 
 
 
-class RPCInterface(JSONRPC):
+class RPCInterface(JSONRPC, messages.Handler):
 	def __init__(self, client, inputStream, outputStream):
 		JSONRPC.__init__(self, inputStream, outputStream)
+		messages.Handler.__init__(self, {
+			messages.LNPay: self.sendPay,
+			})
 		self.client = client
 
 		self.nodeID = None
@@ -52,21 +55,18 @@ class RPCInterface(JSONRPC):
 		self.handleStoredRequestResult(message, name, result)
 
 
-	def sendOutgoingMessage(self, message):
-		if isinstance(message, messages.LNPay):
-			self.sendStoredRequest(message, 'getroute',
-				{
-				    "id": message.destinationNodeID,
-				    "msatoshi": message.recipientCryptoAmount,
-				    "riskfactor": 1,
-				    "cltv": message.minCLTVExpiryDelta,
-				})
-			#TODO: we called getroute, but that is no guarantee we
-			#will have an outgoing transaction (we might crash
-			#before sendpay succeeds).
-			#Make sure the LNPay message stays stored!
-		else:
-			raise Exception('RPCInterface cannot send message ' + str(message))
+	def sendPay(self, message):
+		self.sendStoredRequest(message, 'getroute',
+			{
+			    "id": message.destinationNodeID,
+			    "msatoshi": message.recipientCryptoAmount,
+			    "riskfactor": 1,
+			    "cltv": message.minCLTVExpiryDelta,
+			})
+		#TODO: we called getroute, but that is no guarantee we
+		#will have an outgoing transaction (we might crash
+		#before sendpay succeeds).
+		#Make sure the LNPay message stays stored!
 
 
 	def handleStoredRequestResult(self, message, name, result):
