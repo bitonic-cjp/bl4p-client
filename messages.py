@@ -58,10 +58,14 @@ class BL4PResult(Struct):
 	request = None
 
 
-class BL4PStartResult(Struct):
+class BL4PStartResult(BL4PResult):
 	senderAmount = 0
 	receiverAmount = 0
 	paymentHash = b''
+
+
+class BL4PSendResult(BL4PResult):
+	paymentPreimage = b''
 
 
 class BL4PAddOfferResult(BL4PResult):

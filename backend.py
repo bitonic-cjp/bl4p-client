@@ -35,6 +35,7 @@ class Backend(messages.Handler):
 			messages.SellCommand: self.handleSellCommand,
 
 			messages.BL4PStartResult: self.handleBL4PStartResult,
+			messages.BL4PSendResult: self.handleBL4PSendResult,
 
 			messages.BL4PAddOfferResult: self.handleBL4PAddOfferResult,
 
@@ -194,4 +195,8 @@ class Backend(messages.Handler):
 			amount=tx.fiatAmount,
 			paymentHash=tx.paymentHash,
 			))
+
+
+	def handleBL4PSendResult(self, message):
+		log('handleBL4PSendResult called')
 

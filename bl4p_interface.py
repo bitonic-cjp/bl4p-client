@@ -48,7 +48,11 @@ class BL4PInterface(bl4p.Bl4pApi, messages.Handler):
 
 
 	def sendSend(self, message):
-		log('sendSend called')
+		request = bl4p_pb2.BL4P_Send()
+		request.sender_amount.amount = message.amount
+		request.payment_hash.data = message.paymentHash
+		requestID = self.sendRequest(request)
+		self.activeRequests[requestID] = message
 
 
 	def sendAddOffer(self, message):
@@ -72,6 +76,10 @@ class BL4PInterface(bl4p.Bl4pApi, messages.Handler):
 				senderAmount = result.sender_amount.amount,
 				receiverAmount = result.receiver_amount.amount,
 				paymentHash = result.payment_hash.data
+				)
+		elif isinstance(result, bl4p_pb2.BL4P_SendResult):
+			message = messages.BL4PSendResult(
+				paymentPreimage = result.payment_preimage.data,
 				)
 		elif isinstance(result, bl4p_pb2.BL4P_AddOfferResult):
 			message = messages.BL4PAddOfferResult(
