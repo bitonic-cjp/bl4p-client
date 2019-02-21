@@ -41,6 +41,7 @@ class Backend(messages.Handler):
 
 			messages.BL4PStartResult: self.handleBL4PStartResult,
 			messages.BL4PSendResult: self.handleBL4PSendResult,
+			messages.BL4PReceiveResult: self.handleBL4PReceiveResult,
 
 			messages.BL4PAddOfferResult: self.handleBL4PAddOfferResult,
 
@@ -223,6 +224,8 @@ class Backend(messages.Handler):
 			paymentPreimage=tx.paymentPreimage,
 			))
 
+		#TODO: clean up everything
+
 
 	def handleLNOutgoingFinished(self, message):
 		assert sha256(message.paymentPreimage) == message.paymentHash
@@ -232,9 +235,18 @@ class Backend(messages.Handler):
 			if tx.paymentHash != message.paymentHash or not isinstance(tx, SellTransaction):
 				continue
 
+			tx.paymentPreimage = message.paymentPreimage
+			tx.status = transaction.STATUS_FINISHED
+
 			#Receive fiat funds:
 			self.addOutgoingMessage(messages.BL4PReceive(
 				localTransactionID=txID,
-				paymentPreimage=message.paymentPreimage,
+				paymentPreimage=tx.paymentPreimage,
 				))
+
+
+	def handleBL4PReceiveResult(self, message):
+		txID = message.request.localTransactionID
+		log('Transaction is finished')
+		#TODO: clean up everything
 

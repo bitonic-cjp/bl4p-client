@@ -75,6 +75,10 @@ class BL4PSendResult(BL4PResult):
 	paymentPreimage = b''
 
 
+class BL4PReceiveResult(BL4PResult):
+	pass
+
+
 class BL4PAddOfferResult(BL4PResult):
 	ID = 0
 
