@@ -225,7 +225,6 @@ class Backend(messages.Handler):
 
 
 	def handleLNOutgoingFinished(self, message):
-		log('handleLNOutgoingFinished got called')
 		assert sha256(message.paymentPreimage) == message.paymentHash
 		log('We got the preimage from the LN payment')
 

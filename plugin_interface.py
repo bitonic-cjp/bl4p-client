@@ -239,8 +239,6 @@ class PluginInterface(JSONRPC, messages.Handler):
 
 
 	def sendFinish(self, message):
-		log('sendFinish called')
-
 		ID = self.findOngoingRequest('htlc_accepted',
 			lambda x: x.paymentHash == message.paymentHash)
 

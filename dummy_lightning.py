@@ -283,7 +283,6 @@ class Node:
 
 
 	def finishOutgoingTransaction(self, tx):
-		print('finishOutgoingTransaction called')
 		ID = self.findOngoingRequest('waitsendpay', lambda x: x.paymentHash == tx.paymentHash)
 		self.sendDelayedResponse(ID,
 			{
