@@ -97,6 +97,11 @@ class PluginInterface(JSONRPC):
 
 
 
+class DelayedResponse:
+	pass #Attributes will be added on an ad-hoc basis
+
+
+
 class Node:
 	def __init__(self, nodeID, RPCFile):
 		self.nodeID = nodeID
@@ -105,6 +110,7 @@ class Node:
 		self.directory, self.RPCFile = os.path.split(abspath)
 
 		self.pluginResultCallbacks = {} #ID -> (function(result), function(error))
+		self.ongoingRequests = {} #ID -> (interface, methodname, message)
 
 
 	async def startup(self):
@@ -143,6 +149,21 @@ class Node:
 		await self.pluginProcess.wait()
 
 
+	def findOngoingRequest(self, name, func):
+		for ID, value in self.ongoingRequests.items():
+			interface, methodName, delayedResponse = value
+			if methodName == name and func(delayedResponse):
+				return ID
+		raise IndexError()
+
+
+	def sendDelayedResponse(self, ID, result):
+		#TODO: have a way to send delayed error responses
+		interface = self.ongoingRequests[ID][0]
+		del self.ongoingRequests[ID]
+		interface.sendResponse(ID, result)
+
+
 	def handleRPCCall(self, interface, ID, name, params):
 		#Plugin RPC pass-through:
 		if name in self.pluginInterface.methods:
@@ -165,9 +186,13 @@ class Node:
 		'getinfo': self.getInfo,
 		'getroute': self.getRoute,
 		'sendpay': self.sendPay,
+		'waitsendpay': self.waitSendPay,
 		}[name]
 		#TODO: exception handling
 		result = method(**params)
+		if isinstance(result, DelayedResponse):
+			self.ongoingRequests[ID] = interface, name, result
+			return
 		interface.sendResponse(ID, result)
 
 
@@ -216,6 +241,12 @@ class Node:
 		nodes[tx.destID].handleIncomingTransaction(tx)
 
 
+	def waitSendPay(self, payment_hash):
+		ret = DelayedResponse()
+		ret.paymentHash = payment_hash
+		return ret
+
+
 	def handleIncomingTransaction(self, tx):
 		assert 'htlc_accepted' in self.pluginInterface.hooks
 
@@ -253,7 +284,12 @@ class Node:
 
 	def finishOutgoingTransaction(self, tx):
 		print('finishOutgoingTransaction called')
-
+		ID = self.findOngoingRequest('waitsendpay', lambda x: x.paymentHash == tx.paymentHash)
+		self.sendDelayedResponse(ID,
+			{
+			'status': 'complete',
+			'payment_preimage': tx.paymentPreimage,
+			})
 
 
 nodes = \

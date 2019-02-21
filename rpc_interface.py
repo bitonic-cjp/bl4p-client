@@ -84,16 +84,23 @@ class RPCInterface(JSONRPC, messages.Handler):
 
 			self.sendStoredRequest(message, 'sendpay',
 				{
-					"route": route,
-					"payment_hash": message.paymentHash.hex(),
-					#"description": description, #Is this useful for the payload?
-					"msatoshi": message.recipientCryptoAmount,
+				'route': route,
+				'payment_hash': message.paymentHash.hex(),
+				'msatoshi': message.recipientCryptoAmount,
 
-					"realm": 254, #TODO
-					"data": payload.encode().hex(),
+				'realm': 254, #TODO
+				'data': payload.encode().hex(),
 				})
 		elif (name, messageClass) == ('sendpay', messages.LNPay):
-			pass #TODO: maybe check if sendpay was OK
+			#TODO: maybe check if sendpay was OK
+			self.sendStoredRequest(message, 'waitsendpay',
+				{
+				'payment_hash': message.paymentHash.hex(),
+				})
+		elif (name, messageClass) == ('waitsendpay', messages.LNPay):
+			assert result['status'] == 'complete' #TODO: what else?
+			paymentPreimage = bytes.fromhex(result['payment_preimage'])
+			log('Got preimage from LN payment')
 		else:
 			raise Exception('RPCInterface made an error in storing requests')
 
