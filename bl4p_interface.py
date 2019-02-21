@@ -30,6 +30,7 @@ class BL4PInterface(bl4p.Bl4pApi, messages.Handler):
 		messages.Handler.__init__(self, {
 			messages.BL4PStart     : self.sendStart,
 			messages.BL4PSend      : self.sendSend,
+			messages.BL4PReceive   : self.sendReceive,
 			messages.BL4PAddOffer  : self.sendAddOffer,
 			messages.BL4PFindOffers: self.sendFindOffers,
 			})
@@ -53,6 +54,10 @@ class BL4PInterface(bl4p.Bl4pApi, messages.Handler):
 		request.payment_hash.data = message.paymentHash
 		requestID = self.sendRequest(request)
 		self.activeRequests[requestID] = message
+
+
+	def sendReceive(self, message):
+		log('sendReceive got called')
 
 
 	def sendAddOffer(self, message):

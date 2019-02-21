@@ -46,6 +46,13 @@ class BL4PSend(Struct):
 	paymentHash = b''
 
 
+class BL4PReceive(Struct):
+	localTransactionID = 0 #not transmitted - for local use only
+
+
+	paymentPreimage = b''
+
+
 class BL4PAddOffer(Struct):
 	offer = None
 

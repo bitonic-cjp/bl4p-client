@@ -226,4 +226,16 @@ class Backend(messages.Handler):
 
 	def handleLNOutgoingFinished(self, message):
 		log('handleLNOutgoingFinished got called')
+		assert sha256(message.paymentPreimage) == message.paymentHash
+		log('We got the preimage from the LN payment')
+
+		for txID, tx in self.transactions.items():
+			if tx.paymentHash != message.paymentHash or not isinstance(tx, SellTransaction):
+				continue
+
+			#Receive fiat funds:
+			self.addOutgoingMessage(messages.BL4PReceive(
+				localTransactionID=txID,
+				paymentPreimage=message.paymentPreimage,
+				))
 
