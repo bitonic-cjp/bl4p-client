@@ -200,7 +200,7 @@ class Node:
 		assert route[-1]['msatoshi'] == msatoshi
 
 		tx = Transaction(
-			sourceID = route[ 0]['id'],
+			sourceID = self.nodeID,
 			destID   = route[-1]['id'],
 			source_msatoshi = route[ 0]['msatoshi'],
 			dest_msatoshi   = route[-1]['msatoshi'],
@@ -238,12 +238,21 @@ class Node:
 			})
 
 		def resultCB(result):
-			print(result) #TODO
+			global nodes
+
+			if result['result'] == 'resolve':
+				tx.paymentPreimage = result['payment_key']
+				nodes[tx.sourceID].finishOutgoingTransaction(tx)
+			#TODO: handle fail and continue
 
 		def errorCB(error):
 			print(error) #TODO
 
 		self.pluginResultCallbacks[ID] = (resultCB, errorCB)
+
+
+	def finishOutgoingTransaction(self, tx):
+		print('finishOutgoingTransaction called')
 
 
 
