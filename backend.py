@@ -179,6 +179,10 @@ class Backend(messages.Handler):
 
 
 	def handleLNIncoming(self, message):
+		#TODO: check if this is a new notification for an already
+		#ongoing tx.
+		#In that case, simply send back the payment preimage again.
+
 		localID = message.offerID
 		ownOrder = self.getOrder(localID)
 

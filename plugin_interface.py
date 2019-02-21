@@ -36,6 +36,11 @@ class MethodType(Enum):
 
 
 
+class DelayedResponse:
+	pass #Attributes will be added on an ad-hoc basis
+
+
+
 class PluginInterface(JSONRPC, messages.Handler):
 	def __init__(self, client, inputStream, outputStream):
 		JSONRPC.__init__(self, inputStream, outputStream)
@@ -64,6 +69,8 @@ class PluginInterface(JSONRPC, messages.Handler):
 
 		self.subscriptions = {'test': testHandler}
 
+		self.ongoingRequests = {} #ID -> (methodname, DelayedResponse)
+
 
 	async def startup(self):
 		#Keep handling messages until one message handler sets self.RPCPath
@@ -82,6 +89,9 @@ class PluginInterface(JSONRPC, messages.Handler):
 		try:
 			func, _ = self.methods[name]
 			result = func(**params)
+			if isinstance(result, DelayedResponse):
+				self.ongoingRequests[ID] = name, result
+				return
 			self.sendResponse(ID, result)
 		except Exception as e:
 			logException()
@@ -89,6 +99,20 @@ class PluginInterface(JSONRPC, messages.Handler):
 				"Error while processing {}: {}".format(
 				name, repr(e)
 				))
+
+
+	def findOngoingRequest(self, name, func):
+		for ID, value in self.ongoingRequests.items():
+			methodName, delayedResponse = value
+			if methodName == name and func(delayedResponse):
+				return ID
+		raise IndexError()
+
+
+	def sendDelayedResponse(self, ID, result):
+		#TODO: have a way to send delayed error responses
+		del self.ongoingRequests[ID]
+		self.sendResponse(ID, result)
 
 
 	def handleNotification(self, name, params):
@@ -187,18 +211,41 @@ class PluginInterface(JSONRPC, messages.Handler):
 		'''
 		log('handleHTLCAccepted got called')
 		realm = bytes.fromhex(onion['hop_data']['realm'])[0]
-		assert realm == 254 #TODO
-		payload = Payload.decode(
-			bytes.fromhex(onion['hop_data']['per_hop']))
-		self.client.handleIncomingMessage(messages.LNIncoming(
-			paymentHash = bytes.fromhex(htlc['payment_hash']),
-			cryptoAmount = htlc['msatoshi'],
+		if realm != 254: #TODO
+			return {'result': 'continue'} #it's not handled by us
+
+		try:
+			paymentHash = bytes.fromhex(htlc['payment_hash'])
+			payload = Payload.decode(
+				bytes.fromhex(onion['hop_data']['per_hop']))
+			cryptoAmount = htlc['msatoshi']
 			CLTVExpiryDelta = htlc['cltv_expiry'], #TODO: check if this is a relative or absolute value. For now, relative is used everywhere.
+		except:
+			log('Refused incoming transaction because there is something wrong with it:')
+			logException()
+			return {'result': 'fail'}
+
+		self.client.handleIncomingMessage(messages.LNIncoming(
+			paymentHash = paymentHash,
+			cryptoAmount = cryptoAmount,
+			CLTVExpiryDelta = CLTVExpiryDelta,
 			fiatAmount = payload.fiatAmount,
 			offerID = payload.offerID,
 			))
 
+		ret = DelayedResponse()
+		ret.paymentHash = paymentHash
+		return ret
+
 
 	def sendFinish(self, message):
 		log('sendFinish called')
+
+		ID = self.findOngoingRequest('htlc_accepted',
+			lambda x: x.paymentHash == message.paymentHash)
+
+		self.sendDelayedResponse(ID, {
+			'result': 'resolve',
+			'payment_key': message.paymentPreimage.hex(),
+			})
 
