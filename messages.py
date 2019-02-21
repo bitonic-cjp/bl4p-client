@@ -99,6 +99,10 @@ class LNFinish(Struct):
 	paymentPreimage = b''
 
 
+class LNOutgoingFinished(Struct):
+	paymentHash = b''
+	paymentPreimage = b''
+
 
 class Handler:
 	def __init__(self, handlerMethods={}):

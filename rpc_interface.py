@@ -100,7 +100,11 @@ class RPCInterface(JSONRPC, messages.Handler):
 		elif (name, messageClass) == ('waitsendpay', messages.LNPay):
 			assert result['status'] == 'complete' #TODO: what else?
 			paymentPreimage = bytes.fromhex(result['payment_preimage'])
-			log('Got preimage from LN payment')
+			log('We got the preimage from the LN payment')
+			self.client.handleIncomingMessage(messages.LNOutgoingFinished(
+				paymentHash = message.paymentHash,
+				paymentPreimage = paymentPreimage,
+				))
 		else:
 			raise Exception('RPCInterface made an error in storing requests')
 

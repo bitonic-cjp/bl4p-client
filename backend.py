@@ -45,6 +45,7 @@ class Backend(messages.Handler):
 			messages.BL4PAddOfferResult: self.handleBL4PAddOfferResult,
 
 			messages.LNIncoming: self.handleLNIncoming,
+			messages.LNOutgoingFinished: self.handleLNOutgoingFinished,
 			})
 
 		self.orders = {}
@@ -221,4 +222,8 @@ class Backend(messages.Handler):
 			paymentHash=tx.paymentHash,
 			paymentPreimage=tx.paymentPreimage,
 			))
+
+
+	def handleLNOutgoingFinished(self, message):
+		log('handleLNOutgoingFinished got called')
 
