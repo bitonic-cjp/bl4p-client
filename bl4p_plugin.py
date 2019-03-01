@@ -27,7 +27,6 @@ import messages
 from log import log
 import plugin_interface
 import rpc_interface
-import trader
 
 
 
@@ -63,8 +62,7 @@ async def stdio():
 
 class BL4PClient:
 	def __init__(self):
-		self.backend = backend.Backend()
-		self.trader = trader.Trader(self)
+		self.backend = backend.Backend(self)
 		self.messageRouter = messages.Router()
 
 
@@ -83,17 +81,14 @@ class BL4PClient:
 		self.backend.setLNAddress(self.rpcInterface.nodeID)
 		self.backend.setBL4PAddress('BL4Pdummy') #TODO
 
-		self.trader.startup()
 
 		self.messageRouter.addHandler(self.backend)
-		self.messageRouter.addHandler(self.trader)
 		self.messageRouter.addHandler(self.pluginInterface)
 		self.messageRouter.addHandler(self.bl4pInterface)
 		self.messageRouter.addHandler(self.rpcInterface)
 
 
 	async def shutdown(self):
-		await self.trader.shutdown()
 		await self.bl4pInterface.shutdown()
 		await self.rpcInterface.shutdown()
 		await self.pluginInterface.shutdown()
@@ -103,16 +98,6 @@ class BL4PClient:
 		#Process a single incoming message:
 		log('<== ' + str(message))
 		self.messageRouter.handleMessage(message)
-
-		#Process queue of outgoing messages:
-		while True:
-			try:
-				#TODO: keep in queue if transmission fails
-				message = self.backend.getNextOutgoingMessage()
-			except IndexError:
-				break #no more outgoing messages
-
-			self.handleOutgoingMessage(message)
 
 
 	def handleOutgoingMessage(self, message):

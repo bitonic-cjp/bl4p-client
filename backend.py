@@ -25,6 +25,7 @@ from log import log
 import messages
 import order
 from order import BuyOrder, SellOrder
+import ordertask
 import settings
 from simplestruct import Struct
 
@@ -97,7 +98,7 @@ class SellTransaction(Struct):
 
 
 class Backend(messages.Handler):
-	def __init__(self):
+	def __init__(self, client):
 		messages.Handler.__init__(self, {
 			messages.BuyCommand : self.handleBuyCommand,
 			messages.SellCommand: self.handleSellCommand,
@@ -107,14 +108,16 @@ class Backend(messages.Handler):
 			messages.BL4PReceiveResult: self.handleBL4PReceiveResult,
 
 			messages.BL4PAddOfferResult: self.handleBL4PAddOfferResult,
+			messages.BL4PFindOffersResult : self.handleBL4PFindOffersResult,
 
 			messages.LNIncoming: self.handleLNIncoming,
 			messages.LNOutgoingFinished: self.handleLNOutgoingFinished,
 			})
 
+		self.client = client
 		self.orders = {}
+		self.orderTasks = {}
 		self.transactions = {}
-		self.outgoingMessageQueue = []
 		self.nextLocalOrderID = 0
 		self.nextLocalTransactionID = 0
 
@@ -134,14 +137,6 @@ class Backend(messages.Handler):
 
 	def getOrder(self, localID):
 		return self.orders[localID]
-
-
-	def getNextOutgoingMessage(self):
-		return self.outgoingMessageQueue.pop(0)
-
-
-	def addOutgoingMessage(self, message):
-		self.outgoingMessageQueue.append(message)
 
 
 	def handleBuyCommand(self, cmd):
@@ -167,6 +162,8 @@ class Backend(messages.Handler):
 		self.nextLocalOrderID += 1
 		order.ID = ID
 		self.orders[ID] = order
+		self.orderTasks[ID] = ordertask.OrderTask(self.client, ID)
+		self.orderTasks[ID].startup()
 
 
 	def handleBL4PAddOfferResult(self, result):
@@ -177,6 +174,11 @@ class Backend(messages.Handler):
 		order = self.orders[localID]
 		order.remoteOfferID = remoteID
 		log('Local ID %d gets remote ID %s' % (localID, remoteID))
+
+
+	def handleBL4PFindOffersResult(self, result):
+		localID = result.request.query.ID
+		self.orderTasks[localID].setCallResult(result)
 
 
 	def startTransaction(self, localID, counterOffer):
@@ -260,7 +262,7 @@ class Backend(messages.Handler):
 		self.orders[localID].status = order.STATUS_TRADING
 
 		#Create transaction on the exchange:
-		self.addOutgoingMessage(messages.BL4PStart(
+		self.client.handleOutgoingMessage(messages.BL4PStart(
 			localTransactionID = txID,
 
 			amount = tx.fiatAmount,
@@ -290,7 +292,7 @@ class Backend(messages.Handler):
 		tx.status = STATUS_LOCKED
 
 		#Send out over Lightning:
-		self.addOutgoingMessage(messages.LNPay(
+		self.client.handleOutgoingMessage(messages.LNPay(
 			destinationNodeID=tx.counterOffer.address,
 			paymentHash=tx.paymentHash,
 			recipientCryptoAmount=tx.minCryptoAmount,
@@ -329,7 +331,7 @@ class Backend(messages.Handler):
 		self.orders[localID].status = order.STATUS_TRADING
 
 		#Lock fiat funds:
-		self.addOutgoingMessage(messages.BL4PSend(
+		self.client.handleOutgoingMessage(messages.BL4PSend(
 			localTransactionID = txID,
 
 			amount=tx.fiatAmount,
@@ -348,7 +350,7 @@ class Backend(messages.Handler):
 		tx.status = STATUS_FINISHED
 
 		#Receive crypto funds
-		self.addOutgoingMessage(messages.LNFinish(
+		self.client.handleOutgoingMessage(messages.LNFinish(
 			paymentHash=tx.paymentHash,
 			paymentPreimage=tx.paymentPreimage,
 			))
@@ -368,7 +370,7 @@ class Backend(messages.Handler):
 			tx.status = STATUS_FINISHED
 
 			#Receive fiat funds:
-			self.addOutgoingMessage(messages.BL4PReceive(
+			self.client.handleOutgoingMessage(messages.BL4PReceive(
 				localTransactionID=txID,
 				paymentPreimage=tx.paymentPreimage,
 				))
