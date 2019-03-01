@@ -75,10 +75,10 @@ class OrderTask:
 
 			if order.remoteOfferID is None:
 				log('Found no offers - making our own')
-				self.client.handleOutgoingMessage(
-					messages.BL4PAddOffer(offer=order)
-					)
-				#Note: the reply is sent to Backend
+				result = await self.call(messages.BL4PAddOffer(offer=order))
+				remoteID = result.ID
+				order.remoteOfferID = remoteID
+				log('Local ID %d gets remote ID %s' % (self.orderID, remoteID))
 
 			await asyncio.sleep(1)
 

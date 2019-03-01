@@ -167,13 +167,8 @@ class Backend(messages.Handler):
 
 
 	def handleBL4PAddOfferResult(self, result):
-		#Note: the request was sent by Trader
-
 		localID = result.request.offer.ID
-		remoteID = result.ID
-		order = self.orders[localID]
-		order.remoteOfferID = remoteID
-		log('Local ID %d gets remote ID %s' % (localID, remoteID))
+		self.orderTasks[localID].setCallResult(result)
 
 
 	def handleBL4PFindOffersResult(self, result):
