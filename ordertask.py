@@ -144,7 +144,11 @@ class OrderTask:
 	async def doOfferSearch(self):
 		order = self.client.backend.getOrder(self.orderID)
 		while True: #TODO: quit once the order is finished
-			queryResult = await self.call(messages.BL4PFindOffers(query=order))
+			queryResult = await self.call(messages.BL4PFindOffers(
+				localOrderID=self.orderID,
+
+				query=order
+				))
 
 			if queryResult.offers: #found a matching offer
 				log('Found offers - starting a transaction')
@@ -168,7 +172,11 @@ class OrderTask:
 
 	async def publishOffer(self):
 		order = self.client.backend.getOrder(self.orderID)
-		result = await self.call(messages.BL4PAddOffer(offer=order))
+		result = await self.call(messages.BL4PAddOffer(
+			localOrderID=self.orderID,
+
+			offer=order
+			))
 		remoteID = result.ID
 		order.remoteOfferID = remoteID
 		log('Local ID %d gets remote ID %s' % (self.orderID, remoteID))
@@ -295,6 +303,7 @@ class OrderTask:
 	async def receiveFiatFunds(self):
 		receiveResult = await self.call(messages.BL4PReceive(
 			localOrderID=self.orderID,
+
 			paymentPreimage=self.transaction.paymentPreimage,
 			))
 

@@ -35,12 +35,11 @@ class Backend(messages.Handler):
 			messages.BuyCommand : self.handleBuyCommand,
 			messages.SellCommand: self.handleSellCommand,
 
-			messages.BL4PStartResult: self.handleBL4PStartResult,
-			messages.BL4PSendResult: self.handleBL4PSendResult,
-			messages.BL4PReceiveResult: self.handleBL4PReceiveResult,
-
-			messages.BL4PAddOfferResult: self.handleBL4PAddOfferResult,
-			messages.BL4PFindOffersResult : self.handleBL4PFindOffersResult,
+			messages.BL4PStartResult      : self.handleBL4PResult,
+			messages.BL4PSendResult       : self.handleBL4PResult,
+			messages.BL4PReceiveResult    : self.handleBL4PResult,
+			messages.BL4PAddOfferResult   : self.handleBL4PResult,
+			messages.BL4PFindOffersResult : self.handleBL4PResult,
 
 			messages.LNIncoming: self.handleLNIncoming,
 			messages.LNOutgoingFinished: self.handleLNOutgoingFinished,
@@ -96,17 +95,7 @@ class Backend(messages.Handler):
 		self.orderTasks[ID].startup()
 
 
-	def handleBL4PAddOfferResult(self, result):
-		localID = result.request.offer.ID
-		self.orderTasks[localID].setCallResult(result)
-
-
-	def handleBL4PFindOffersResult(self, result):
-		localID = result.request.query.ID
-		self.orderTasks[localID].setCallResult(result)
-
-
-	def handleBL4PStartResult(self, result):
+	def handleBL4PResult(self, result):
 		localID = result.request.localOrderID
 		self.orderTasks[localID].setCallResult(result)
 
@@ -116,17 +105,7 @@ class Backend(messages.Handler):
 		self.orderTasks[localID].setCallResult(message)
 
 
-	def handleBL4PSendResult(self, message):
-		localID = message.request.localOrderID
-		self.orderTasks[localID].setCallResult(message)
-
-
 	def handleLNOutgoingFinished(self, message):
 		localID = message.localOrderID
-		self.orderTasks[localID].setCallResult(message)
-
-
-	def handleBL4PReceiveResult(self, message):
-		localID = message.request.localOrderID
 		self.orderTasks[localID].setCallResult(message)
 

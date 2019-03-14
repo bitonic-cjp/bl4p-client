@@ -30,34 +30,31 @@ class SellCommand(Struct):
 	limitRate = 0
 
 
-class BL4PStart(Struct):
+class BL4PRequest(Struct):
 	localOrderID = 0 #not transmitted - for local use only
 
+
+class BL4PStart(BL4PRequest):
 	amount = 0
 	sender_timeout_delta_ms = 0
 	locked_timeout_delta_s = 0
 	receiver_pays_fee = True
 
 
-class BL4PSend(Struct):
-	localOrderID = 0 #not transmitted - for local use only
-
+class BL4PSend(BL4PRequest):
 	amount = 0
 	paymentHash = b''
 
 
-class BL4PReceive(Struct):
-	localOrderID = 0 #not transmitted - for local use only
-
-
+class BL4PReceive(BL4PRequest):
 	paymentPreimage = b''
 
 
-class BL4PAddOffer(Struct):
+class BL4PAddOffer(BL4PRequest):
 	offer = None
 
 
-class BL4PFindOffers(Struct):
+class BL4PFindOffers(BL4PRequest):
 	query = None
 
 
