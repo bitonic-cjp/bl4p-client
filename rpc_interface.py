@@ -101,6 +101,8 @@ class RPCInterface(JSONRPC, messages.Handler):
 			assert result['status'] == 'complete' #TODO: what else?
 			paymentPreimage = bytes.fromhex(result['payment_preimage'])
 			self.client.handleIncomingMessage(messages.LNOutgoingFinished(
+				localOrderID = message.localOrderID,
+
 				paymentHash = message.paymentHash,
 				paymentPreimage = paymentPreimage,
 				))

@@ -31,7 +31,7 @@ class SellCommand(Struct):
 
 
 class BL4PStart(Struct):
-	localTransactionID = 0 #not transmitted - for local use only
+	localOrderID = 0 #not transmitted - for local use only
 
 	amount = 0
 	sender_timeout_delta_ms = 0
@@ -40,14 +40,14 @@ class BL4PStart(Struct):
 
 
 class BL4PSend(Struct):
-	localTransactionID = 0 #not transmitted - for local use only
+	localOrderID = 0 #not transmitted - for local use only
 
 	amount = 0
 	paymentHash = b''
 
 
 class BL4PReceive(Struct):
-	localTransactionID = 0 #not transmitted - for local use only
+	localOrderID = 0 #not transmitted - for local use only
 
 
 	paymentPreimage = b''
@@ -88,6 +88,8 @@ class BL4PFindOffersResult(BL4PResult):
 
 
 class LNPay(Struct):
+	localOrderID = 0 #not transmitted - for local use only
+
 	destinationNodeID = ''
 	paymentHash = b''
 	recipientCryptoAmount = 0
@@ -111,6 +113,8 @@ class LNFinish(Struct):
 
 
 class LNOutgoingFinished(Struct):
+	localOrderID = 0
+
 	paymentHash = b''
 	paymentPreimage = b''
 
