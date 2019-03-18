@@ -41,8 +41,9 @@ class Backend(messages.Handler):
 			messages.BL4PAddOfferResult   : self.handleBL4PResult,
 			messages.BL4PFindOffersResult : self.handleBL4PResult,
 
-			messages.LNIncoming: self.handleLNIncoming,
+			messages.LNIncoming        : self.handleLNIncoming,
 			messages.LNOutgoingFinished: self.handleLNOutgoingFinished,
+			messages.LNOutgoingFailed  : self.handleLNOutgoingFailed,
 			})
 
 		self.client = client
@@ -108,6 +109,11 @@ class Backend(messages.Handler):
 
 
 	def handleLNOutgoingFinished(self, message):
+		localID = message.localOrderID
+		self.orderTasks[localID].setCallResult(message)
+
+
+	def handleLNOutgoingFailed(self, message):
 		localID = message.localOrderID
 		self.orderTasks[localID].setCallResult(message)
 

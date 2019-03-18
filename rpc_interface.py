@@ -55,6 +55,12 @@ class RPCInterface(JSONRPC, messages.Handler):
 		self.handleStoredRequestResult(message, name, result)
 
 
+	def handleError(self, ID, error):
+		name, message = self.ongoingRequests[ID]
+		del self.ongoingRequests[ID]
+		self.handleStoredRequestError(message, name, error)
+
+
 	def sendPay(self, message):
 		self.sendStoredRequest(message, 'getroute',
 			{
@@ -111,6 +117,14 @@ class RPCInterface(JSONRPC, messages.Handler):
 			raise Exception('RPCInterface made an error in storing requests')
 
 
-	def handleError(self, ID, error):
-		pass #TODO
+	def handleStoredRequestError(self, message, name, error):
+		messageClass = message.__class__
+
+		if (name, messageClass, error) == ('waitsendpay', messages.LNPay, 203):
+			#Recipient refused the transaction
+			self.client.handleIncomingMessage(messages.LNOutgoingFailed(
+				localOrderID = message.localOrderID,
+				))
+		else:
+			log('Received an unhandled error from a Lightning RPC call!!!')
 

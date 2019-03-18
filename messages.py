@@ -121,6 +121,10 @@ class LNOutgoingFinished(Struct):
 	paymentPreimage = b''
 
 
+class LNOutgoingFailed(Struct):
+	localOrderID = 0
+
+
 class Handler:
 	def __init__(self, handlerMethods={}):
 		self.handlerMethods = handlerMethods

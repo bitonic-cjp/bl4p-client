@@ -158,10 +158,15 @@ class Node:
 
 
 	def sendDelayedResponse(self, ID, result):
-		#TODO: have a way to send delayed error responses
 		interface = self.ongoingRequests[ID][0]
 		del self.ongoingRequests[ID]
 		interface.sendResponse(ID, result)
+
+
+	def sendDelayedErrorResponse(self, ID, error):
+		interface = self.ongoingRequests[ID][0]
+		del self.ongoingRequests[ID]
+		interface.sendErrorResponse(ID, error)
 
 
 	def handleRPCCall(self, interface, ID, name, params):
@@ -274,7 +279,9 @@ class Node:
 			if result['result'] == 'resolve':
 				tx.paymentPreimage = result['payment_key']
 				nodes[tx.sourceID].finishOutgoingTransaction(tx)
-			#TODO: handle fail and continue
+			elif result['result'] == 'fail':
+				nodes[tx.sourceID].failOutgoingTransaction(tx)
+			#TODO: handle continue
 
 		def errorCB(error):
 			print(error) #TODO
@@ -289,6 +296,14 @@ class Node:
 			'status': 'complete',
 			'payment_preimage': tx.paymentPreimage,
 			})
+
+
+	def failOutgoingTransaction(self, tx):
+		ID = self.findOngoingRequest('waitsendpay', lambda x: x.paymentHash == tx.paymentHash)
+		self.sendDelayedErrorResponse(ID,
+			203 #Permanent failure at destination
+			)
+
 
 
 nodes = \
