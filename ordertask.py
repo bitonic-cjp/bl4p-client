@@ -98,11 +98,11 @@ class SellTransaction(Struct):
 
 
 class OrderTask:
-	def __init__(self, client, orderID):
+	def __init__(self, client, order):
 		self.client = client
 		self.callResult = None
 
-		self.orderID = orderID
+		self.order = order
 		self.counterOffer = None
 		self.transaction = None
 
@@ -126,11 +126,10 @@ class OrderTask:
 
 	async def doTrading(self):
 		try:
-			ownOrder = self.client.backend.getOrder(self.orderID)
-			if isinstance(ownOrder, BuyOrder):
+			if isinstance(self.order, BuyOrder):
 				await self.publishOffer()
 				await self.waitForIncomingTransactions()
-			elif isinstance(ownOrder, SellOrder):
+			elif isinstance(self.order, SellOrder):
 				await self.doOfferSearch()
 			else:
 				raise Exception('Unsupported order type - cannot use it in trade')
@@ -142,12 +141,11 @@ class OrderTask:
 
 
 	async def doOfferSearch(self):
-		order = self.client.backend.getOrder(self.orderID)
 		while True: #TODO: quit once the order is finished
 			queryResult = await self.call(messages.BL4PFindOffers(
-				localOrderID=self.orderID,
+				localOrderID=self.order.ID,
 
-				query=order
+				query=self.order
 				))
 
 			if queryResult.offers: #found a matching offer
@@ -163,7 +161,7 @@ class OrderTask:
 				#TODO: maybe continue if the order is not yet complete
 				return
 
-			if order.remoteOfferID is None:
+			if self.order.remoteOfferID is None:
 				log('Found no offers - making our own')
 				await self.publishOffer()
 
@@ -171,15 +169,15 @@ class OrderTask:
 
 
 	async def publishOffer(self):
-		order = self.client.backend.getOrder(self.orderID)
 		result = await self.call(messages.BL4PAddOffer(
-			localOrderID=self.orderID,
+			localOrderID=self.order.ID,
 
-			offer=order
+			offer=self.order
 			))
 		remoteID = result.ID
-		order.remoteOfferID = remoteID
-		log('Local ID %d gets remote ID %s' % (self.orderID, remoteID))
+		self.order.remoteOfferID = remoteID
+		self.client.backend.updateOrder(self.order)
+		log('Local ID %d gets remote ID %s' % (self.order.ID, remoteID))
 
 
 	########################################################################
@@ -187,17 +185,16 @@ class OrderTask:
 	########################################################################
 
 	async def doTransaction(self):
-		ownOrder = self.client.backend.getOrder(self.orderID)
-		assert isinstance(ownOrder, SellOrder) #TODO: enable buyer-initiated trade once supported
+		assert isinstance(self.order, SellOrder) #TODO: enable buyer-initiated trade once supported
 
-		log('Doing trade for local order ID' + str(self.orderID))
-		log('  local order: ' + str(ownOrder))
+		log('Doing trade for local order ID' + str(self.order.ID))
+		log('  local order: ' + str(self.order))
 		log('  counter offer: ' + str(self.counterOffer))
 
 		#Choose the largest fiat amount accepted by both
 		fiatAmountDivisor = settings.fiatDivisor
 		fiatAmount = min(
-			fiatAmountDivisor * ownOrder.ask.max_amount // ownOrder.ask.max_amount_divisor,
+			fiatAmountDivisor * self.order.ask.max_amount // self.order.ask.max_amount_divisor,
 			fiatAmountDivisor * self.counterOffer.bid.max_amount // self.counterOffer.bid.max_amount_divisor
 			)
 		assert fiatAmount > 0
@@ -215,32 +212,32 @@ class OrderTask:
 			(                      fiatAmountDivisor * self.counterOffer.ask.max_amount_divisor * self.counterOffer.bid.max_amount)
 		#Maximum: this is what we are prepared to pay
 		maxCryptoAmount = \
-			(cryptoAmountDivisor * fiatAmount        * ownOrder.bid.max_amount         * ownOrder.ask.max_amount_divisor) // \
-			(                      fiatAmountDivisor * ownOrder.bid.max_amount_divisor * ownOrder.ask.max_amount)
+			(cryptoAmountDivisor * fiatAmount        * self.order.bid.max_amount         * self.order.ask.max_amount_divisor) // \
+			(                      fiatAmountDivisor * self.order.bid.max_amount_divisor * self.order.ask.max_amount)
 		assert minCryptoAmount >= 0
 		assert maxCryptoAmount >= minCryptoAmount
 
 		#Choose the sender timeout limit as small as possible
 		sender_timeout_delta_ms = getMinConditionValue(
-			ownOrder, self.counterOffer,
+			self.order, self.counterOffer,
 			offer.Condition.SENDER_TIMEOUT
 			)
 
 		#Choose the locked timeout limit as large as possible
 		locked_timeout_delta_s = getMaxConditionValue(
-			ownOrder, self.counterOffer,
+			self.order, self.counterOffer,
 			offer.Condition.LOCKED_TIMEOUT
 			)
 
 		#Choose the CLTV expiry delta as small as possible
 		CLTV_expiry_delta = getMinConditionValue(
-			ownOrder, self.counterOffer,
+			self.order, self.counterOffer,
 			offer.Condition.CLTV_EXPIRY_DELTA
 			)
 
 		self.transaction = SellTransaction(
 			status = STATUS_INITIAL,
-			localOrderID = self.orderID,
+			localOrderID = self.order.ID,
 			counterOffer = self.counterOffer,
 			fiatAmount = fiatAmount,
 			minCryptoAmount = minCryptoAmount,
@@ -250,7 +247,8 @@ class OrderTask:
 			CLTV_expiry_delta = CLTV_expiry_delta,
 			)
 
-		ownOrder.status = order.STATUS_TRADING
+		self.order.status = order.STATUS_TRADING
+		self.client.backend.updateOrder(self.order)
 
 		await self.startTransactionOnBL4P()
 
@@ -258,7 +256,7 @@ class OrderTask:
 	async def startTransactionOnBL4P(self):
 		#Create transaction on the exchange:
 		startResult = await self.call(messages.BL4PStart(
-			localOrderID = self.orderID,
+			localOrderID = self.order.ID,
 
 			amount = self.transaction.fiatAmount,
 			sender_timeout_delta_ms = self.transaction.sender_timeout_delta_ms,
@@ -280,7 +278,7 @@ class OrderTask:
 	async def doTransactionOnLightning(self):
 		#Send out over Lightning:
 		lightningResult = await self.call(messages.LNPay(
-			localOrderID = self.orderID,
+			localOrderID = self.order.ID,
 
 			destinationNodeID     = self.transaction.counterOffer.address,
 			paymentHash           = self.transaction.paymentHash,
@@ -302,7 +300,7 @@ class OrderTask:
 
 	async def receiveFiatFunds(self):
 		receiveResult = await self.call(messages.BL4PReceive(
-			localOrderID=self.orderID,
+			localOrderID=self.order.ID,
 
 			paymentPreimage=self.transaction.paymentPreimage,
 			))
@@ -327,17 +325,15 @@ class OrderTask:
 		#ongoing tx.
 		#In that case, simply send back the payment preimage again.
 
-		ownOrder = self.client.backend.getOrder(self.orderID)
-
 		#TODO: proper handling of failing this condition:
-		assert ownOrder.status == order.STATUS_IDLE
+		assert self.order.status == order.STATUS_IDLE
 
 		#TODO: check if lntx conforms to our order
 		#TODO: check if remaining order size is sufficient
 
 		self.transaction = BuyTransaction(
 			status = STATUS_LOCKED,
-			localOrderID = self.orderID,
+			localOrderID = self.order.ID,
 			cryptoAmount = message.cryptoAmount,
 			fiatAmount = message.fiatAmount,
 			paymentHash = message.paymentHash,
@@ -345,7 +341,8 @@ class OrderTask:
 
 		log('Received incoming Lightning transaction')
 
-		ownOrder.status = order.STATUS_TRADING
+		self.order.status = order.STATUS_TRADING
+		self.client.backend.updateOrder(self.order)
 
 		await self.sendFundsOnBL4P()
 
@@ -353,7 +350,7 @@ class OrderTask:
 	async def sendFundsOnBL4P(self):
 		#Lock fiat funds:
 		sendResult = await self.call(messages.BL4PSend(
-			localOrderID = self.orderID,
+			localOrderID = self.order.ID,
 
 			amount      = self.transaction.fiatAmount,
 			paymentHash = self.transaction.paymentHash,

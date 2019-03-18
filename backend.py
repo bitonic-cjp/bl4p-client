@@ -46,8 +46,7 @@ class Backend(messages.Handler):
 			})
 
 		self.client = client
-		self.orders = {}
-		self.orderTasks = {}
+		self.orderTasks = {} #localID -> ordertask.OrderTask
 		self.nextLocalOrderID = 0
 
 
@@ -59,13 +58,8 @@ class Backend(messages.Handler):
 		self.BL4PAddress = address
 
 
-
-	def getOrders(self):
-		return self.orders.values()
-
-
-	def getOrder(self, localID):
-		return self.orders[localID]
+	def updateOrder(self, order):
+		pass #This is where an order can be stored to disk
 
 
 	def handleBuyCommand(self, cmd):
@@ -90,8 +84,8 @@ class Backend(messages.Handler):
 		ID = self.nextLocalOrderID
 		self.nextLocalOrderID += 1
 		order.ID = ID
-		self.orders[ID] = order
-		self.orderTasks[ID] = ordertask.OrderTask(self.client, ID)
+		self.updateOrder(order)
+		self.orderTasks[ID] = ordertask.OrderTask(self.client, order)
 		self.orderTasks[ID].startup()
 
 
