@@ -20,7 +20,7 @@ import decimal
 
 from bl4p_api import offer
 
-from log import log
+from log import log, logException
 import messages
 import order
 from order import BuyOrder, SellOrder
@@ -96,7 +96,15 @@ class Backend(messages.Handler):
 
 	def handleLNIncoming(self, message):
 		localID = message.offerID
-		self.orderTasks[localID].setCallResult(message)
+		try:
+			self.orderTasks[localID].setCallResult(message)
+		except:
+			log('Exception on trying to handle an incoming Lightning transaction for local ID ' + str(localID))
+			logException()
+			log('Apparently we can\'t handle the transaction right now, so we are refusing the incoming transaction.')
+			self.client.handleOutgoingMessage(messages.LNFail(
+				paymentHash=message.paymentHash
+				))
 
 
 	def handleLNOutgoingFinished(self, message):

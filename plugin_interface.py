@@ -36,8 +36,11 @@ class MethodType(Enum):
 
 
 
-class DelayedResponse:
+class OngoingRequest:
 	pass #Attributes will be added on an ad-hoc basis
+
+
+NO_RESPONSE = object() #Placeholder in case no response is to be sent
 
 
 
@@ -46,6 +49,7 @@ class PluginInterface(JSONRPC, messages.Handler):
 		JSONRPC.__init__(self, inputStream, outputStream)
 		messages.Handler.__init__(self, {
 			messages.LNFinish: self.sendFinish,
+			messages.LNFail  : self.sendFail,
 			})
 		self.client = client
 		self.RPCPath = None
@@ -69,7 +73,8 @@ class PluginInterface(JSONRPC, messages.Handler):
 
 		self.subscriptions = {'test': testHandler}
 
-		self.ongoingRequests = {} #ID -> (methodname, DelayedResponse)
+		self.currentRequestID = None
+		self.ongoingRequests = {} #ID -> (methodname, OngoingRequest)
 
 
 	async def startup(self):
@@ -86,11 +91,11 @@ class PluginInterface(JSONRPC, messages.Handler):
 
 
 	def handleRequest(self, ID, name, params):
+		self.currentRequestID = ID
 		try:
 			func, _ = self.methods[name]
 			result = func(**params)
-			if isinstance(result, DelayedResponse):
-				self.ongoingRequests[ID] = name, result
+			if result == NO_RESPONSE:
 				return
 			self.sendResponse(ID, result)
 		except Exception as e:
@@ -99,17 +104,22 @@ class PluginInterface(JSONRPC, messages.Handler):
 				"Error while processing {}: {}".format(
 				name, repr(e)
 				))
+		self.currentRequestID = None
+
+
+	def storeOngoingRequest(self, name, request):
+		self.ongoingRequests[self.currentRequestID] = name, request
 
 
 	def findOngoingRequest(self, name, func):
 		for ID, value in self.ongoingRequests.items():
-			methodName, delayedResponse = value
-			if methodName == name and func(delayedResponse):
+			methodName, request = value
+			if methodName == name and func(request):
 				return ID
 		raise IndexError()
 
 
-	def sendDelayedResponse(self, ID, result):
+	def sendOngoingRequestResponse(self, ID, result):
 		#TODO: have a way to send delayed error responses
 		del self.ongoingRequests[ID]
 		self.sendResponse(ID, result)
@@ -225,6 +235,11 @@ class PluginInterface(JSONRPC, messages.Handler):
 			logException()
 			return {'result': 'fail'}
 
+		#We will have to send a response later, possibly after finishing this function
+		req = OngoingRequest()
+		req.paymentHash = paymentHash
+		self.storeOngoingRequest('htlc_accepted', req)
+
 		self.client.handleIncomingMessage(messages.LNIncoming(
 			paymentHash = paymentHash,
 			cryptoAmount = cryptoAmount,
@@ -233,17 +248,27 @@ class PluginInterface(JSONRPC, messages.Handler):
 			offerID = payload.offerID,
 			))
 
-		ret = DelayedResponse()
-		ret.paymentHash = paymentHash
-		return ret
+		#Don't send a response now:
+		#either it was already sent by the LNIncoming handler,
+		#or we will send it later.
+		return NO_RESPONSE
 
 
 	def sendFinish(self, message):
 		ID = self.findOngoingRequest('htlc_accepted',
 			lambda x: x.paymentHash == message.paymentHash)
 
-		self.sendDelayedResponse(ID, {
+		self.sendOngoingRequestResponse(ID, {
 			'result': 'resolve',
 			'payment_key': message.paymentPreimage.hex(),
+			})
+
+
+	def sendFail(self, message):
+		ID = self.findOngoingRequest('htlc_accepted',
+			lambda x: x.paymentHash == message.paymentHash)
+
+		self.sendOngoingRequestResponse(ID, {
+			'result': 'fail',
 			})
 

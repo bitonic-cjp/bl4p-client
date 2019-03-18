@@ -97,7 +97,14 @@ class SellTransaction(Struct):
 
 
 
+class NoOngoingCall(Exception):
+	pass
+
+
+
 class OrderTask:
+
+
 	def __init__(self, client, order):
 		self.client = client
 		self.callResult = None
@@ -121,6 +128,8 @@ class OrderTask:
 
 
 	def setCallResult(self, result):
+		if self.callResult is None:
+			raise NoOngoingCall()
 		self.callResult.set_result(result)
 
 
@@ -331,10 +340,7 @@ class OrderTask:
 	########################################################################
 
 	async def waitForIncomingTransaction(self):
-		self.callResult = asyncio.Future()
-		await self.callResult
-		message = self.callResult.result()
-
+		message = await self.waitForIncomingMessage()
 		assert isinstance(message, messages.LNIncoming)
 
 		#TODO: check if this is a new notification for an already
@@ -404,7 +410,14 @@ class OrderTask:
 
 	async def call(self, message):
 		self.client.handleOutgoingMessage(message)
+		return await self.waitForIncomingMessage()
+
+
+	async def waitForIncomingMessage(self):
+		assert self.callResult is None
 		self.callResult = asyncio.Future()
 		await self.callResult
-		return self.callResult.result()
+		ret = self.callResult.result()
+		self.callResult = None
+		return ret
 

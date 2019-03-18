@@ -109,6 +109,10 @@ class LNFinish(Struct):
 	paymentPreimage = b''
 
 
+class LNFail(Struct):
+	paymentHash = b''
+
+
 class LNOutgoingFinished(Struct):
 	localOrderID = 0
 
