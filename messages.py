@@ -112,6 +112,7 @@ class LNFinish(Struct):
 class LNOutgoingFinished(Struct):
 	localOrderID = 0
 
+	senderCryptoAmount = 0
 	paymentHash = b''
 	paymentPreimage = b''
 

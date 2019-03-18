@@ -75,8 +75,8 @@ class RPCInterface(JSONRPC, messages.Handler):
 		if (name, messageClass) == ('getroute', messages.LNPay):
 			route = result['route']
 
-			senderCryptoAmount = route[0]["msatoshi"]
-			if senderCryptoAmount > message.maxSenderCryptoAmount:
+			message.senderCryptoAmount = route[0]["msatoshi"]
+			if message.senderCryptoAmount > message.maxSenderCryptoAmount:
 				#TODO: proper handling of this
 				raise Exception('maxSenderCryptoAmount exceeded')
 
@@ -103,6 +103,7 @@ class RPCInterface(JSONRPC, messages.Handler):
 			self.client.handleIncomingMessage(messages.LNOutgoingFinished(
 				localOrderID = message.localOrderID,
 
+				senderCryptoAmount = message.senderCryptoAmount,
 				paymentHash = message.paymentHash,
 				paymentPreimage = paymentPreimage,
 				))

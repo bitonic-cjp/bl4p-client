@@ -48,7 +48,7 @@ sha256 = lambda preimage: hashlib.sha256(preimage).digest()
 
 
 
-#status
+#Transaction status
 '''
 State transitions:
 
@@ -128,9 +128,17 @@ class OrderTask:
 		try:
 			if isinstance(self.order, BuyOrder):
 				await self.publishOffer()
-				await self.waitForIncomingTransactions()
+				while self.order.status == order.STATUS_IDLE:
+					await self.waitForIncomingTransaction()
+					log('Remaining in buy order: ' + \
+						str(self.order.totalBidAmount))
+				log('Finished with buy order')
 			elif isinstance(self.order, SellOrder):
-				await self.doOfferSearch()
+				while self.order.status == order.STATUS_IDLE:
+					await self.doOfferSearch()
+					log('Remaining in sell order: ' + \
+						str(self.order.totalBidAmount))
+				log('Finished with sell order')
 			else:
 				raise Exception('Unsupported order type - cannot use it in trade')
 		except asyncio.CancelledError:
@@ -295,6 +303,9 @@ class OrderTask:
 		self.transaction.paymentPreimage = lightningResult.paymentPreimage
 		self.transaction.status = STATUS_RECEIVED_PREIMAGE
 
+		self.order.setTotalBidAmount(self.order.totalBidAmount - lightningResult.senderCryptoAmount)
+		self.client.backend.updateOrder(self.order)
+
 		await self.receiveFiatFunds()
 
 
@@ -307,14 +318,19 @@ class OrderTask:
 
 		self.transaction.status = STATUS_FINISHED
 		log('Transaction is finished')
-		#TODO: clean up everything
+
+		self.order.status = order.STATUS_IDLE
+		if self.order.totalBidAmount == 0:
+			self.order.status = order.STATUS_COMPLETED
+			#TODO: remove offer from the market
+		self.client.backend.updateOrder(self.order)
 
 
 	########################################################################
 	# Buyer side
 	########################################################################
 
-	async def waitForIncomingTransactions(self):
+	async def waitForIncomingTransaction(self):
 		self.callResult = asyncio.Future()
 		await self.callResult
 		message = self.callResult.result()
@@ -329,7 +345,9 @@ class OrderTask:
 		assert self.order.status == order.STATUS_IDLE
 
 		#TODO: check if lntx conforms to our order
-		#TODO: check if remaining order size is sufficient
+
+		#Check if remaining order size is sufficient:
+		assert message.fiatAmount <= self.order.totalBidAmount
 
 		self.transaction = BuyTransaction(
 			status = STATUS_LOCKED,
@@ -342,6 +360,7 @@ class OrderTask:
 		log('Received incoming Lightning transaction')
 
 		self.order.status = order.STATUS_TRADING
+		self.order.setTotalBidAmount(self.order.totalBidAmount - message.fiatAmount)
 		self.client.backend.updateOrder(self.order)
 
 		await self.sendFundsOnBL4P()
@@ -372,7 +391,11 @@ class OrderTask:
 			paymentPreimage=self.transaction.paymentPreimage,
 			))
 
-		#TODO: clean up everything
+		self.order.status = order.STATUS_IDLE
+		if self.order.totalBidAmount == 0:
+			self.order.status = order.STATUS_COMPLETED
+			#TODO: remove offer from the market
+		self.client.backend.updateOrder(self.order)
 
 
 	########################################################################

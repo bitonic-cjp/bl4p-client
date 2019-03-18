@@ -50,7 +50,6 @@ class Order(offer.Offer):
 	def __init__(self,
 			limitRate, #bid / ask, so fiat/crypto for buy, crypto/fiat for sell
 			totalBidAmount, #bid amount, so fiat for buy, crypto for sell
-			settings,
 			**kwargs):
 
 		offer.Offer.__init__(self, **kwargs)
@@ -61,61 +60,12 @@ class Order(offer.Offer):
 		self.remoteOfferID = None
 		self.status = STATUS_IDLE
 
-		self.settings = settings
 		self.updateOfferMaxAmounts()
-
-
-	def getCondition(self, condition, index):
-		return self.conditions[condition][index]
-
-
-	def setCondition(self, condition, index, value):
-		old = self.conditions[condition]
-		self.conditions[condition] = \
-			(int(value), old[1]) \
-			if index == 0 else \
-			(old[0], int(value))
-
-
-	def getTotalBidAmount(self):
-		return '%s %s' % (
-			str(decimal.Decimal(self.totalBidAmount) / self.bid.max_amount_divisor),
-			self.bid.currency
-			)
 
 
 	def setTotalBidAmount(self, value):
-		self.totalBidAmount = decimal.Decimal(value) * self.bid.max_amount_divisor
+		self.totalBidAmount = value
 		self.updateOfferMaxAmounts()
-
-
-	def getPerTxMaxAmount(self):
-		asset = self.bid if self.perTxMaxAmountSide == BID else self.ask
-		return '%s %s' % (
-			str(decimal.Decimal(self.perTxMaxAmount) / asset.max_amount_divisor),
-			asset.currency
-			)
-
-
-	def setPerTxMaxAmount(self, value):
-		self.perTxMaxAmount, self.perTxMaxAmountSide = value
-		self.updateOfferMaxAmounts()
-
-
-	def listSettings(self):
-		ret = {}
-		for k, v in self.settings.items():
-			getter = v[0]
-			extraArgs = v[2:]
-			ret[k] = getter(*extraArgs)
-		return ret
-
-
-	def setSetting(self, name, value):
-		definition = self.settings[name]
-		setter = definition[1]
-		extraArgs = definition[2:]
-		setter(*extraArgs, value)
 
 
 	def updateOfferMaxAmounts(self):
@@ -149,15 +99,6 @@ class BuyOrder(Order):
 		Order.__init__(self,
 			limitRate=limitRate,
 			totalBidAmount=totalBidAmount,
-			settings=\
-			{
-			'limitRate'       : (self.getLimitRate, self.setLimitRate),
-			'totalBidAmount'  : (self.getTotalBidAmount, self.setTotalBidAmount),
-			'perTxMaxAmount'  : (self.getPerTxMaxAmount, self.setPerTxMaxAmount),
-			'minCLTV'         : (self.getCondition, self.setCondition, offer.Condition.CLTV_EXPIRY_DELTA, 0),
-			'maxSenderTimeout': (self.getCondition, self.setCondition, offer.Condition.SENDER_TIMEOUT, 1),
-			'maxLockedTimeout': (self.getCondition, self.setCondition, offer.Condition.LOCKED_TIMEOUT, 1),
-			},
 
 			bid=offer.Asset(
 				max_amount=0, max_amount_divisor=settings.fiatDivisor, currency=settings.fiatName, exchange='bl3p.eu'
@@ -179,20 +120,6 @@ class BuyOrder(Order):
 			)
 
 
-	def getLimitRate(self):
-		return '%s %s/%s' % (
-			str(decimal.Decimal(self.limitRate) * \
-				self.ask.max_amount_divisor /
-				self.bid.max_amount_divisor),
-			self.bid.currency, self.ask.currency
-			)
-
-
-	def setLimitRate(self, value):
-		self.limitRate = decimal.Decimal(value) * \
-			self.bid.max_amount_divisor / self.ask.max_amount_divisor
-		self.updateOfferMaxAmounts()
-
 
 
 class SellOrder(Order):
@@ -209,15 +136,6 @@ class SellOrder(Order):
 		Order.__init__(self,
 			limitRate=1/limitRate,
 			totalBidAmount=totalBidAmount,
-			settings=\
-			{
-			'limitRate'       : (self.getLimitRate, self.setLimitRate),
-			'totalBidAmount'  : (self.getTotalBidAmount, self.setTotalBidAmount),
-			'perTxMaxAmount'  : (self.getPerTxMaxAmount, self.setPerTxMaxAmount),
-			'maxCLTV'         : (self.getCondition, self.setCondition, offer.Condition.CLTV_EXPIRY_DELTA, 1),
-			'maxSenderTimeout': (self.getCondition, self.setCondition, offer.Condition.SENDER_TIMEOUT, 1),
-			'minLockedTimeout': (self.getCondition, self.setCondition, offer.Condition.LOCKED_TIMEOUT, 0),
-			},
 
 			bid=offer.Asset(
 				max_amount=0, max_amount_divisor=settings.cryptoDivisor, currency=settings.cryptoName, exchange='ln'
@@ -238,20 +156,4 @@ class SellOrder(Order):
 			#TODO: We MUST NEVER make Lightning routes with a longer time than the lock timeout
 			locked_timeout = (3600*24, offer.CONDITION_NO_MAX),
 			)
-
-
-	def getLimitRate(self):
-		return '%s %s/%s' % (
-			str(1 / decimal.Decimal(self.limitRate) * \
-				self.bid.max_amount_divisor /
-				self.ask.max_amount_divisor),
-			self.ask.currency, self.bid.currency
-			)
-
-
-	def setLimitRate(self, value):
-		self.limitRate = (1 / decimal.Decimal(value)) * \
-			self.bid.max_amount_divisor / self.ask.max_amount_divisor
-		self.updateOfferMaxAmounts()
-
 
