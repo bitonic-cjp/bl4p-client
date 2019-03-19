@@ -39,6 +39,7 @@ class Backend(messages.Handler):
 			messages.BL4PSendResult       : self.handleBL4PResult,
 			messages.BL4PReceiveResult    : self.handleBL4PResult,
 			messages.BL4PAddOfferResult   : self.handleBL4PResult,
+			messages.BL4PRemoveOfferResult: self.handleBL4PResult,
 			messages.BL4PFindOffersResult : self.handleBL4PResult,
 
 			messages.LNIncoming        : self.handleLNIncoming,

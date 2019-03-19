@@ -28,11 +28,12 @@ class BL4PInterface(bl4p.Bl4pApi, messages.Handler):
 	def __init__(self, client):
 		bl4p.Bl4pApi.__init__(self, log=log)
 		messages.Handler.__init__(self, {
-			messages.BL4PStart     : self.sendStart,
-			messages.BL4PSend      : self.sendSend,
-			messages.BL4PReceive   : self.sendReceive,
-			messages.BL4PAddOffer  : self.sendAddOffer,
-			messages.BL4PFindOffers: self.sendFindOffers,
+			messages.BL4PStart      : self.sendStart,
+			messages.BL4PSend       : self.sendSend,
+			messages.BL4PReceive    : self.sendReceive,
+			messages.BL4PAddOffer   : self.sendAddOffer,
+			messages.BL4PRemoveOffer: self.sendRemoveOffer,
+			messages.BL4PFindOffers : self.sendFindOffers,
 			})
 		self.client = client
 		self.activeRequests = {}
@@ -70,6 +71,13 @@ class BL4PInterface(bl4p.Bl4pApi, messages.Handler):
 		self.activeRequests[requestID] = message
 
 
+	def sendRemoveOffer(self, message):
+		request = bl4p_pb2.BL4P_RemoveOffer()
+		request.offerID = message.offerID
+		requestID = self.sendRequest(request)
+		self.activeRequests[requestID] = message
+
+
 	def sendFindOffers(self, message):
 		request = bl4p_pb2.BL4P_FindOffers()
 		request.query.CopyFrom(message.query.toPB2())
@@ -94,6 +102,9 @@ class BL4PInterface(bl4p.Bl4pApi, messages.Handler):
 		elif isinstance(result, bl4p_pb2.BL4P_AddOfferResult):
 			message = messages.BL4PAddOfferResult(
 				ID=result.offerID,
+				)
+		elif isinstance(result, bl4p_pb2.BL4P_RemoveOfferResult):
+			message = messages.BL4PRemoveOfferResult(
 				)
 		elif isinstance(result, bl4p_pb2.BL4P_FindOffersResult):
 			message = messages.BL4PFindOffersResult(offers = \

@@ -129,7 +129,10 @@ class OrderTask:
 
 	def setCallResult(self, result):
 		if self.callResult is None:
-			raise NoOngoingCall()
+			raise NoOngoingCall(
+				'Received a call result while no call was going on: ' + \
+				str(result)
+				)
 		self.callResult.set_result(result)
 
 
@@ -335,13 +338,9 @@ class OrderTask:
 			))
 
 		self.transaction.status = STATUS_FINISHED
-		log('Transaction is finished')
 
-		self.order.status = order.STATUS_IDLE
-		if self.order.totalBidAmount == 0:
-			self.order.status = order.STATUS_COMPLETED
-			#TODO: remove offer from the market
-		self.client.backend.updateOrder(self.order)
+		log('Sell transaction is finished')
+		await self.updateOrderAfterTransaction()
 
 
 	########################################################################
@@ -406,16 +405,34 @@ class OrderTask:
 			paymentPreimage=self.transaction.paymentPreimage,
 			))
 
-		self.order.status = order.STATUS_IDLE
-		if self.order.totalBidAmount == 0:
-			self.order.status = order.STATUS_COMPLETED
-			#TODO: remove offer from the market
-		self.client.backend.updateOrder(self.order)
+		log('Buy transaction is finished')
+		await self.updateOrderAfterTransaction()
 
 
 	########################################################################
 	# Generic
 	########################################################################
+
+	async def updateOrderAfterTransaction(self):
+		self.order.status = order.STATUS_IDLE
+		if self.order.totalBidAmount == 0:
+			self.order.status = order.STATUS_COMPLETED
+		self.client.backend.updateOrder(self.order)
+
+		if self.order.remoteOfferID is not None:
+			#Remove offer from the market
+			log('Removing old offer from the market')
+			await self.call(messages.BL4PRemoveOffer(
+				localOrderID=self.order.ID,
+
+				offerID=self.order.remoteOfferID,
+				))
+
+			#Re-add offer to the market
+			if self.order.status == order.STATUS_IDLE:
+				log('Re-adding the offer to the market')
+				await self.publishOffer()
+
 
 	async def call(self, message):
 		self.client.handleOutgoingMessage(message)

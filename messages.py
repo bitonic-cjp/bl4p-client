@@ -54,6 +54,10 @@ class BL4PAddOffer(BL4PRequest):
 	offer = None
 
 
+class BL4PRemoveOffer(BL4PRequest):
+	offerID = 0
+
+
 class BL4PFindOffers(BL4PRequest):
 	query = None
 
@@ -78,6 +82,10 @@ class BL4PReceiveResult(BL4PResult):
 
 class BL4PAddOfferResult(BL4PResult):
 	ID = 0
+
+
+class BL4PRemoveOfferResult(BL4PResult):
+	pass
 
 
 class BL4PFindOffersResult(BL4PResult):
