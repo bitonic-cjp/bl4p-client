@@ -64,7 +64,7 @@ class PluginInterface(JSONRPC):
 		self.manifest = None
 
 
-	async def startup(self):
+	async def startup(self, options):
 		#print('PluginInterface startup')
 		self.manifest = await self.synCall('getmanifest')
 		self.methods = [m['name'] for m in self.manifest['rpcmethods']]
@@ -73,7 +73,7 @@ class PluginInterface(JSONRPC):
 
 		await self.synCall('init',
 			{
-			'options': {},
+			'options': options,
 			'configuration': \
 				{
 				'lightning-dir': self.node.directory,
@@ -103,11 +103,13 @@ class DelayedResponse:
 
 
 class Node:
-	def __init__(self, nodeID, RPCFile):
+	def __init__(self, nodeID, RPCFile, bl4pLogFile):
 		self.nodeID = nodeID
 
 		abspath = os.path.abspath(RPCFile)
 		self.directory, self.RPCFile = os.path.split(abspath)
+
+		self.bl4pLogFile = bl4pLogFile
 
 		self.pluginResultCallbacks = {} #ID -> (function(result), function(error))
 		self.ongoingRequests = {} #ID -> (interface, methodname, message)
@@ -131,8 +133,11 @@ class Node:
 			)
 
 		self.pluginInterface = PluginInterface(self,
-			self.pluginProcess.stdout, self.pluginProcess.stdin)
-		await self.pluginInterface.startup()
+			self.pluginProcess.stdout, self.pluginProcess.stdin,
+			)
+		await self.pluginInterface.startup({
+			'bl4p.logfile': self.bl4pLogFile,
+			})
 
 
 	async def RPCConnection(self, reader, writer):
@@ -308,8 +313,8 @@ class Node:
 
 nodes = \
 {
-	'node0': Node(nodeID='node0', RPCFile='node0-rpc'),
-	'node1': Node(nodeID='node1', RPCFile='node1-rpc'),
+	'node0': Node(nodeID='node0', RPCFile='node0-rpc', bl4pLogFile='node0.bl4p.log'),
+	'node1': Node(nodeID='node1', RPCFile='node1-rpc', bl4pLogFile='node1.bl4p.log'),
 }
 
 

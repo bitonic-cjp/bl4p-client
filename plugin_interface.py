@@ -25,7 +25,7 @@ import settings
 
 from json_rpc import JSONRPC
 from ln_payload import Payload
-from log import log, logException
+from log import log, logException, setLogFile
 import messages
 
 
@@ -54,7 +54,10 @@ class PluginInterface(JSONRPC, messages.Handler):
 		self.client = client
 		self.RPCPath = None
 
-		self.options = {}
+		self.options = \
+		{
+		'bl4p.logfile': 'bl4p.log',
+		}
 		self.methods = \
 		{
 		'getmanifest': (self.getManifest, MethodType.RPCMETHOD),
@@ -165,6 +168,8 @@ class PluginInterface(JSONRPC, messages.Handler):
 
 
 	def init(self, options, configuration, **kwargs):
+		setLogFile(options['bl4p.logfile'])
+
 		#self.log('Plugin init got called')
 
 		filename = configuration['rpc-file']

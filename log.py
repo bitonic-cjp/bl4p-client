@@ -21,8 +21,18 @@ import traceback
 
 
 
+logFile = sys.stderr
+
+
+def setLogFile(filename):
+	global logFile
+	logFile = open(filename, 'a')
+	log('Opened the log file')
+
+
 def log(s):
-	sys.stderr.write(s + '\n')
+	logFile.write(s + '\n')
+	logFile.flush()
 
 
 def logException():
