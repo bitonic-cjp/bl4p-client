@@ -97,7 +97,7 @@ class SellTransaction(Struct):
 
 
 
-class NoOngoingCall(Exception):
+class UnexpectedResult(Exception):
 	pass
 
 
@@ -108,6 +108,7 @@ class OrderTask:
 	def __init__(self, client, order):
 		self.client = client
 		self.callResult = None
+		self.expectedCallResultType = None
 
 		self.order = order
 		self.counterOffer = None
@@ -129,8 +130,13 @@ class OrderTask:
 
 	def setCallResult(self, result):
 		if self.callResult is None:
-			raise NoOngoingCall(
+			raise UnexpectedResult(
 				'Received a call result while no call was going on: ' + \
+				str(result)
+				)
+		if not isinstance(result, self.expectedCallResultType):
+			raise UnexpectedResult(
+				'Received a call result of unexpected type: ' + \
 				str(result)
 				)
 		self.callResult.set_result(result)
@@ -166,7 +172,8 @@ class OrderTask:
 				localOrderID=self.order.ID,
 
 				query=self.order
-				))
+				),
+				messages.BL4PFindOffersResult)
 
 			if queryResult.offers: #found a matching offer
 				log('Found offers - starting a transaction')
@@ -193,7 +200,8 @@ class OrderTask:
 			localOrderID=self.order.ID,
 
 			offer=self.order
-			))
+			),
+			messages.BL4PAddOfferResult)
 		remoteID = result.ID
 		self.order.remoteOfferID = remoteID
 		self.client.backend.updateOrder(self.order)
@@ -282,7 +290,8 @@ class OrderTask:
 			sender_timeout_delta_ms = self.transaction.sender_timeout_delta_ms,
 			locked_timeout_delta_s = self.transaction.locked_timeout_delta_s,
 			receiver_pays_fee = True
-			))
+			),
+			messages.BL4PStartResult)
 
 		assert startResult.senderAmount == self.transaction.fiatAmount
 		#TODO: check that we're not paying too much fees to BL4P
@@ -307,7 +316,8 @@ class OrderTask:
 			minCLTVExpiryDelta    = self.transaction.CLTV_expiry_delta,
 			fiatAmount            = self.transaction.fiatAmount,
 			offerID               = self.transaction.counterOffer.ID,
-			))
+			),
+			messages.LNPayResult)
 
 		if lightningResult.paymentPreimage is None:
 			#LN transaction failed, so revert everything we got so far
@@ -335,7 +345,8 @@ class OrderTask:
 			localOrderID=self.order.ID,
 
 			paymentPreimage=self.transaction.paymentPreimage,
-			))
+			),
+			messages.BL4PReceiveResult)
 
 		self.transaction.status = STATUS_FINISHED
 
@@ -348,8 +359,7 @@ class OrderTask:
 	########################################################################
 
 	async def waitForIncomingTransaction(self):
-		message = await self.waitForIncomingMessage()
-		assert isinstance(message, messages.LNIncoming)
+		message = await self.waitForIncomingMessage(messages.LNIncoming)
 
 		#TODO: check if this is a new notification for an already
 		#ongoing tx.
@@ -387,7 +397,8 @@ class OrderTask:
 
 			amount      = self.transaction.fiatAmount,
 			paymentHash = self.transaction.paymentHash,
-			))
+			),
+			messages.BL4PSendResult)
 
 		assert sha256(sendResult.paymentPreimage) == self.transaction.paymentHash
 		log('We got the preimage from BL4P')
@@ -426,7 +437,8 @@ class OrderTask:
 				localOrderID=self.order.ID,
 
 				offerID=self.order.remoteOfferID,
-				))
+				),
+				messages.BL4PRemoveOfferResult)
 
 			#Re-add offer to the market
 			if self.order.status == order.STATUS_IDLE:
@@ -434,16 +446,19 @@ class OrderTask:
 				await self.publishOffer()
 
 
-	async def call(self, message):
+	async def call(self, message, expectedResultType):
 		self.client.handleOutgoingMessage(message)
-		return await self.waitForIncomingMessage()
+		return await self.waitForIncomingMessage(expectedResultType)
 
 
-	async def waitForIncomingMessage(self):
+	async def waitForIncomingMessage(self, expectedResultType):
 		assert self.callResult is None
 		self.callResult = asyncio.Future()
+		self.expectedCallResultType = expectedResultType
 		await self.callResult
 		ret = self.callResult.result()
+		assert isinstance(ret, expectedResultType)
 		self.callResult = None
+		self.expectedCallResultType = None
 		return ret
 
