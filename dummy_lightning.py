@@ -103,13 +103,14 @@ class DelayedResponse:
 
 
 class Node:
-	def __init__(self, nodeID, RPCFile, bl4pLogFile):
+	def __init__(self, nodeID, RPCFile, bl4pLogFile, bl4pDBFile):
 		self.nodeID = nodeID
 
 		abspath = os.path.abspath(RPCFile)
 		self.directory, self.RPCFile = os.path.split(abspath)
 
 		self.bl4pLogFile = bl4pLogFile
+		self.bl4pDBFile = bl4pDBFile
 
 		self.pluginResultCallbacks = {} #ID -> (function(result), function(error))
 		self.ongoingRequests = {} #ID -> (interface, methodname, message)
@@ -137,6 +138,7 @@ class Node:
 			)
 		await self.pluginInterface.startup({
 			'bl4p.logfile': self.bl4pLogFile,
+			'bl4p.dbfile': self.bl4pDBFile,
 			})
 
 
@@ -313,8 +315,8 @@ class Node:
 
 nodes = \
 {
-	'node0': Node(nodeID='node0', RPCFile='node0-rpc', bl4pLogFile='node0.bl4p.log'),
-	'node1': Node(nodeID='node1', RPCFile='node1-rpc', bl4pLogFile='node1.bl4p.log'),
+	'node0': Node(nodeID='node0', RPCFile='node0-rpc', bl4pLogFile='node0.bl4p.log', bl4pDBFile='node0.bl4p.db'),
+	'node1': Node(nodeID='node1', RPCFile='node1-rpc', bl4pLogFile='node1.bl4p.log', bl4pDBFile='node1.bl4p.db'),
 }
 
 

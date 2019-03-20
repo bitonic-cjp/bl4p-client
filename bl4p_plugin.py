@@ -24,7 +24,7 @@ import sys
 import backend
 import bl4p_interface
 import messages
-from log import log
+from log import log, setLogFile
 import plugin_interface
 import rpc_interface
 
@@ -69,7 +69,9 @@ class BL4PClient:
 	async def startup(self):
 		stdin, stdout = await stdio()
 		self.pluginInterface = plugin_interface.PluginInterface(self, stdin, stdout)
-		await self.pluginInterface.startup() #Guarantees that RPCPath is set
+		await self.pluginInterface.startup() #Guarantees that init is called
+
+		setLogFile(self.pluginInterface.logFile)
 
 		reader, writer = await asyncio.open_unix_connection(path=self.pluginInterface.RPCPath)
 		self.rpcInterface = rpc_interface.RPCInterface(self, reader, writer)
@@ -78,6 +80,7 @@ class BL4PClient:
 		self.bl4pInterface = bl4p_interface.BL4PInterface(self)
 		await self.bl4pInterface.startup('ws://localhost:8000/', '3', '3')
 
+		self.backend.startup(self.pluginInterface.DBFile)
 		self.backend.setLNAddress(self.rpcInterface.nodeID)
 		self.backend.setBL4PAddress('BL4Pdummy') #TODO
 

@@ -25,7 +25,7 @@ import settings
 
 from json_rpc import JSONRPC
 from ln_payload import Payload
-from log import log, logException, setLogFile
+from log import log, logException
 import messages
 
 
@@ -52,11 +52,16 @@ class PluginInterface(JSONRPC, messages.Handler):
 			messages.LNFail  : self.sendFail,
 			})
 		self.client = client
+
+		#Output from the init method:
 		self.RPCPath = None
+		self.logFile = None
+		self.DBFile = None
 
 		self.options = \
 		{
 		'bl4p.logfile': 'bl4p.log',
+		'bl4p.dbfile' : 'bl4p.db',
 		}
 		self.methods = \
 		{
@@ -168,13 +173,14 @@ class PluginInterface(JSONRPC, messages.Handler):
 
 
 	def init(self, options, configuration, **kwargs):
-		setLogFile(options['bl4p.logfile'])
-
 		#self.log('Plugin init got called')
 
 		filename = configuration['rpc-file']
 		lndir = configuration['lightning-dir']
+
 		self.RPCPath = os.path.join(lndir, filename)
+		self.logFile = options['bl4p.logfile']
+		self.DBFile = options['bl4p.dbfile']
 		#self.log('RPC path is ' + self.RPCPath)
 
 

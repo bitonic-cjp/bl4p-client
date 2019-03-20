@@ -26,6 +26,7 @@ import order
 from order import BuyOrder, SellOrder
 import ordertask
 import settings
+import storage
 
 
 
@@ -46,9 +47,15 @@ class Backend(messages.Handler):
 			messages.LNPayResult: self.handleLNPayResult,
 			})
 
+		self.storage = None
+
 		self.client = client
 		self.orderTasks = {} #localID -> ordertask.OrderTask
 		self.nextLocalOrderID = 0
+
+
+	def startup(self, DBFile):
+		self.storage = storage.Storage(DBFile)
 
 
 	def setLNAddress(self, address):
