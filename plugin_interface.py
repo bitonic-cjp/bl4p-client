@@ -224,7 +224,6 @@ class PluginInterface(JSONRPC, messages.Handler):
 			'payment_hash': hex,
 			}
 		'''
-		log('handleHTLCAccepted got called')
 		realm = bytes.fromhex(onion['hop_data']['realm'])[0]
 		if realm != 254: #TODO
 			return {'result': 'continue'} #it's not handled by us
