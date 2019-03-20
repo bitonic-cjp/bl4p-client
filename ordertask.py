@@ -309,7 +309,7 @@ class OrderTask:
 			offerID               = self.transaction.counterOffer.ID,
 			))
 
-		if isinstance(lightningResult, messages.LNOutgoingFailed):
+		if lightningResult.paymentPreimage is None:
 			#LN transaction failed, so revert everything we got so far
 			#TODO: cancel the incoming fiat funds on BL4P
 			log('Outgoing Lightning transaction failed; canceling the transaction')

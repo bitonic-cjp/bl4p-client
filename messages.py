@@ -121,16 +121,12 @@ class LNFail(Struct):
 	paymentHash = b''
 
 
-class LNOutgoingFinished(Struct):
+class LNPayResult(Struct):
 	localOrderID = 0
 
 	senderCryptoAmount = 0
 	paymentHash = b''
-	paymentPreimage = b''
-
-
-class LNOutgoingFailed(Struct):
-	localOrderID = 0
+	paymentPreimage = None #None indicates a failed payment
 
 
 class Handler:

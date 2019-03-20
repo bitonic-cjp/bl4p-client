@@ -106,7 +106,7 @@ class RPCInterface(JSONRPC, messages.Handler):
 		elif (name, messageClass) == ('waitsendpay', messages.LNPay):
 			assert result['status'] == 'complete' #TODO: what else?
 			paymentPreimage = bytes.fromhex(result['payment_preimage'])
-			self.client.handleIncomingMessage(messages.LNOutgoingFinished(
+			self.client.handleIncomingMessage(messages.LNPayResult(
 				localOrderID = message.localOrderID,
 
 				senderCryptoAmount = message.senderCryptoAmount,
@@ -122,8 +122,12 @@ class RPCInterface(JSONRPC, messages.Handler):
 
 		if (name, messageClass, error) == ('waitsendpay', messages.LNPay, 203):
 			#Recipient refused the transaction
-			self.client.handleIncomingMessage(messages.LNOutgoingFailed(
+			self.client.handleIncomingMessage(messages.LNPayResult(
 				localOrderID = message.localOrderID,
+
+				senderCryptoAmount = message.senderCryptoAmount,
+				paymentHash = message.paymentHash,
+				paymentPreimage = None, #indicates error
 				))
 		else:
 			log('Received an unhandled error from a Lightning RPC call!!!')
