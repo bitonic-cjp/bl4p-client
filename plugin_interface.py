@@ -233,7 +233,7 @@ class PluginInterface(JSONRPC, messages.Handler):
 			payload = Payload.decode(
 				bytes.fromhex(onion['hop_data']['per_hop']))
 			cryptoAmount = htlc['msatoshi']
-			CLTVExpiryDelta = htlc['cltv_expiry'], #TODO: check if this is a relative or absolute value. For now, relative is used everywhere.
+			CLTVExpiryDelta = htlc['cltv_expiry'] #TODO: check if this is a relative or absolute value. For now, relative is used everywhere.
 		except:
 			log('Refused incoming transaction because there is something wrong with it:')
 			logException()
