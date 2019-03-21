@@ -58,6 +58,10 @@ class Backend(messages.Handler):
 		self.storage = storage.Storage(DBFile)
 
 
+	def shutdown(self):
+		self.storage.shutdown()
+
+
 	def setLNAddress(self, address):
 		self.LNAddress = address
 
