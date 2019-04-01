@@ -66,33 +66,36 @@ STATUS_FINISHED = 3
 
 
 class BuyTransaction(Struct):
-	status = None
-	localOrderID = None
+	buyOrderID = None
 
-	fiatAmount = None
+	status     = None
+
+	fiatAmount   = None
 	cryptoAmount = None
 
-	paymentHash = None
+	paymentHash     = None
 	paymentPreimage = None
 
 
 
 class SellTransaction(Struct):
-	status = None
-	localOrderID = None
+	sellOrderID  = None
 	counterOffer = None
 
-	fiatAmount = None #Nominal fiat amount (without fees)
-	minCryptoAmount = None
-	maxCryptoAmount = None
-	senderAmount = None   #Fiat amount of sender of fiat
-	receiverAmount = None #Fiat amount of receiver of fiat
+	status = None
+
+	senderFiatAmount   = None #amount of sender of fiat
+	receiverFiatAmount = None #amount of receiver of fiat
+
+	maxSenderCryptoAmount = None
+	senderCryptoAmount    = None #amount of sender of crypto
+	receiverCryptoAmount  = None #amount of sender of crypto
 
 	sender_timeout_delta_ms = None
-	locked_timeout_delta_s = None
-	CLTV_expiry_delta = None
+	locked_timeout_delta_s  = None
+	CLTV_expiry_delta       = None
 
-	paymentHash = None
+	paymentHash     = None
 	paymentPreimage = None
 
 
@@ -221,11 +224,11 @@ class OrderTask:
 
 		#Choose the largest fiat amount accepted by both
 		fiatAmountDivisor = settings.fiatDivisor
-		fiatAmount = min(
+		senderFiatAmount = min(
 			fiatAmountDivisor * self.order.ask.max_amount // self.order.ask.max_amount_divisor,
 			fiatAmountDivisor * self.counterOffer.bid.max_amount // self.counterOffer.bid.max_amount_divisor
 			)
-		assert fiatAmount > 0
+		assert senderFiatAmount > 0
 
 		#Minimum: this is what the other wants
 		#btc = eur * (btc / eur)
@@ -235,15 +238,15 @@ class OrderTask:
 		#Implementation note:
 		#The correctness of this code might depend on Python's unlimited size integers.
 		cryptoAmountDivisor = settings.cryptoDivisor
-		minCryptoAmount = \
-			(cryptoAmountDivisor * fiatAmount        * self.counterOffer.ask.max_amount         * self.counterOffer.bid.max_amount_divisor) // \
+		receiverCryptoAmount = \
+			(cryptoAmountDivisor * senderFiatAmount  * self.counterOffer.ask.max_amount         * self.counterOffer.bid.max_amount_divisor) // \
 			(                      fiatAmountDivisor * self.counterOffer.ask.max_amount_divisor * self.counterOffer.bid.max_amount)
 		#Maximum: this is what we are prepared to pay
-		maxCryptoAmount = \
-			(cryptoAmountDivisor * fiatAmount        * self.order.bid.max_amount         * self.order.ask.max_amount_divisor) // \
+		maxSenderCryptoAmount = \
+			(cryptoAmountDivisor * senderFiatAmount  * self.order.bid.max_amount         * self.order.ask.max_amount_divisor) // \
 			(                      fiatAmountDivisor * self.order.bid.max_amount_divisor * self.order.ask.max_amount)
-		assert minCryptoAmount >= 0
-		assert maxCryptoAmount >= minCryptoAmount
+		assert receiverCryptoAmount >= 0
+		assert maxSenderCryptoAmount >= receiverCryptoAmount
 
 		#Choose the sender timeout limit as small as possible
 		sender_timeout_delta_ms = getMinConditionValue(
@@ -264,15 +267,24 @@ class OrderTask:
 			)
 
 		self.transaction = SellTransaction(
-			status = STATUS_INITIAL,
-			localOrderID = self.order.ID,
+			sellOrderID  = self.order.ID,
 			counterOffer = self.counterOffer,
-			fiatAmount = fiatAmount,
-			minCryptoAmount = minCryptoAmount,
-			maxCryptoAmount = maxCryptoAmount,
+
+			status = STATUS_INITIAL,
+
+			senderFiatAmount   = senderFiatAmount,
+			receiverFiatAmount = None, #don't know yet - depends on fees
+
+			maxSenderCryptoAmount = maxSenderCryptoAmount,
+			senderCryptoAmount    = None, #don't know yet - depends on fees
+			receiverCryptoAmount  = receiverCryptoAmount,
+
 			sender_timeout_delta_ms = sender_timeout_delta_ms,
-			locked_timeout_delta_s = locked_timeout_delta_s,
-			CLTV_expiry_delta = CLTV_expiry_delta,
+			locked_timeout_delta_s  = locked_timeout_delta_s,
+			CLTV_expiry_delta       = CLTV_expiry_delta,
+
+			paymentHash     = None, #don't know yet
+			paymentPreimage = None, #don't know yet
 			)
 
 		self.order.status = order.STATUS_TRADING
@@ -286,18 +298,17 @@ class OrderTask:
 		startResult = await self.call(messages.BL4PStart(
 			localOrderID = self.order.ID,
 
-			amount = self.transaction.fiatAmount,
+			amount = self.transaction.senderFiatAmount,
 			sender_timeout_delta_ms = self.transaction.sender_timeout_delta_ms,
 			locked_timeout_delta_s = self.transaction.locked_timeout_delta_s,
 			receiver_pays_fee = True
 			),
 			messages.BL4PStartResult)
 
-		assert startResult.senderAmount == self.transaction.fiatAmount
+		assert startResult.senderAmount == self.transaction.senderFiatAmount
 		#TODO: check that we're not paying too much fees to BL4P
 
-		self.transaction.senderAmount = startResult.senderAmount     #Sender of *fiat*
-		self.transaction.receiverAmount = startResult.receiverAmount #Receiver of *fiat*
+		self.transaction.receiverFiatAmount = startResult.receiverAmount
 		self.transaction.paymentHash = startResult.paymentHash
 		self.transaction.status = STATUS_LOCKED
 
@@ -311,10 +322,10 @@ class OrderTask:
 
 			destinationNodeID     = self.transaction.counterOffer.address,
 			paymentHash           = self.transaction.paymentHash,
-			recipientCryptoAmount = self.transaction.minCryptoAmount,
-			maxSenderCryptoAmount = self.transaction.maxCryptoAmount,
+			recipientCryptoAmount = self.transaction.receiverCryptoAmount,
+			maxSenderCryptoAmount = self.transaction.maxSenderCryptoAmount,
 			minCLTVExpiryDelta    = self.transaction.CLTV_expiry_delta,
-			fiatAmount            = self.transaction.fiatAmount,
+			fiatAmount            = self.transaction.senderFiatAmount,
 			offerID               = self.transaction.counterOffer.ID,
 			),
 			messages.LNPayResult)
@@ -331,10 +342,11 @@ class OrderTask:
 		assert sha256(lightningResult.paymentPreimage) == self.transaction.paymentHash
 		log('We got the preimage from the LN payment')
 
+		self.transaction.senderCryptoAmount = lightningResult.senderCryptoAmount
 		self.transaction.paymentPreimage = lightningResult.paymentPreimage
 		self.transaction.status = STATUS_RECEIVED_PREIMAGE
 
-		self.order.setTotalBidAmount(self.order.totalBidAmount - lightningResult.senderCryptoAmount)
+		self.order.setTotalBidAmount(self.order.totalBidAmount - self.transaction.senderCryptoAmount)
 		self.client.backend.updateOrder(self.order)
 
 		await self.receiveFiatFunds()
@@ -374,11 +386,15 @@ class OrderTask:
 		assert message.fiatAmount <= self.order.totalBidAmount
 
 		self.transaction = BuyTransaction(
+			buyOrderID = self.order.ID,
+
 			status = STATUS_LOCKED,
-			localOrderID = self.order.ID,
+
 			cryptoAmount = message.cryptoAmount,
-			fiatAmount = message.fiatAmount,
-			paymentHash = message.paymentHash,
+			fiatAmount   = message.fiatAmount,
+
+			paymentHash     = message.paymentHash,
+			paymentPreimage = None, #don't know yet
 			)
 
 		log('Received incoming Lightning transaction')
