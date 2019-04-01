@@ -19,6 +19,66 @@ import sqlite3
 
 
 
+class StoredObject:
+	@staticmethod
+	def create(storage, tableName, **kwargs):
+		names = list(kwargs.keys())
+		values = [kwargs[k] for k in names]
+		questionMarks = ','.join(['?'] * len(kwargs))
+
+		names = ['`%s`' % n for n in names]
+		query = 'INSERT INTO %s (%s) VALUES (%s)' % (tableName, ','.join(names), questionMarks)
+
+		cursor = storage.connection.cursor()
+		cursor.execute(query, values)
+		ID = cursor.lastrowid
+		storage.connection.commit()
+
+		return StoredObject(storage, tableName, ID)
+
+
+	def __init__(self, storage, tableName, ID):
+		self._storage = storage
+		self._tableName = tableName
+		query = 'SELECT * from %s WHERE `ID` = ?' % tableName
+
+		cursor = self._storage.connection.cursor()
+		cursor.execute(query, (ID,))
+
+		values = cursor.fetchone()
+		names = [x[0] for x in cursor.description]
+
+		for name, value in zip(names, values):
+			setattr(self, name, value)
+
+
+	def update(self, **kwargs):
+		names = list(kwargs.keys())
+		values = [kwargs[k] for k in names]
+		questionMarks = ','.join(['?'] * len(kwargs))
+
+		quotedNames = ['`%s`' % n for n in names]
+		query = 'UPDATE %s SET (%s) = (%s) WHERE `ID` = ?' % \
+			(self._tableName, ','.join(quotedNames), questionMarks)
+
+		cursor = self._storage.connection.cursor()
+		cursor.execute(query, values + [self.ID])
+		self._storage.connection.commit()
+
+		#Local update:
+		for name, value in zip(names, values):
+			setattr(self, name, value)
+
+
+	def delete(self):
+		query = 'DELETE FROM %s WHERE `ID` = ?' % self._tableName
+
+		cursor = self._storage.connection.cursor()
+		cursor.execute(query, (self.ID,))
+		self._storage.connection.commit()
+
+
+
 class Storage:
 	def __init__(self, filename):
 		self.connection = sqlite3.connect(filename)
@@ -94,4 +154,22 @@ class Storage:
 			')'
 			)
 		self.connection.commit()
+
+
+
+def main():
+	s = Storage('node0.bl4p.db')
+
+	so = StoredObject.create(s, 'buyOrders', amount=0)
+
+	so.update(limitRate=100)
+
+	so.delete()
+
+	s.shutdown()
+
+
+
+if __name__ == "__main__":
+	main()
 
