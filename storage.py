@@ -34,7 +34,7 @@ class StoredObject:
 		ID = cursor.lastrowid
 		storage.connection.commit()
 
-		return StoredObject(storage, tableName, ID)
+		return ID
 
 
 	def __init__(self, storage, tableName, ID):
@@ -160,7 +160,9 @@ class Storage:
 def main():
 	s = Storage('node0.bl4p.db')
 
-	so = StoredObject.create(s, 'buyOrders', amount=0)
+	ID = StoredObject.create(s, 'buyOrders', amount=0)
+
+	so = StoredObject(s, 'buyOrders', ID)
 
 	so.update(limitRate=100)
 

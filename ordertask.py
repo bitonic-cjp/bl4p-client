@@ -27,6 +27,7 @@ import order
 from order import BuyOrder, SellOrder
 import settings
 from simplestruct import Struct
+import storage
 
 
 
@@ -108,8 +109,9 @@ class UnexpectedResult(Exception):
 class OrderTask:
 
 
-	def __init__(self, client, order):
+	def __init__(self, client, storage, order):
 		self.client = client
+		self.storage = storage
 		self.callResult = None
 		self.expectedCallResultType = None
 
@@ -152,13 +154,13 @@ class OrderTask:
 				while self.order.status == order.STATUS_IDLE:
 					await self.waitForIncomingTransaction()
 					log('Remaining in buy order: ' + \
-						str(self.order.totalBidAmount))
+						str(self.order.amount))
 				log('Finished with buy order')
 			elif isinstance(self.order, SellOrder):
 				while self.order.status == order.STATUS_IDLE:
 					await self.doOfferSearch()
 					log('Remaining in sell order: ' + \
-						str(self.order.totalBidAmount))
+						str(self.order.amount))
 				log('Finished with sell order')
 			else:
 				raise Exception('Unsupported order type - cannot use it in trade')
@@ -346,7 +348,7 @@ class OrderTask:
 		self.transaction.paymentPreimage = lightningResult.paymentPreimage
 		self.transaction.status = STATUS_RECEIVED_PREIMAGE
 
-		self.order.setTotalBidAmount(self.order.totalBidAmount - self.transaction.senderCryptoAmount)
+		self.order.setAmount(self.order.amount - self.transaction.senderCryptoAmount)
 		self.client.backend.updateOrder(self.order)
 
 		await self.receiveFiatFunds()
@@ -383,7 +385,7 @@ class OrderTask:
 		#TODO: check if lntx conforms to our order
 
 		#Check if remaining order size is sufficient:
-		assert message.fiatAmount <= self.order.totalBidAmount
+		assert message.fiatAmount <= self.order.amount
 
 		self.transaction = BuyTransaction(
 			buyOrderID = self.order.ID,
@@ -400,7 +402,7 @@ class OrderTask:
 		log('Received incoming Lightning transaction')
 
 		self.order.status = order.STATUS_TRADING
-		self.order.setTotalBidAmount(self.order.totalBidAmount - message.fiatAmount)
+		self.order.setAmount(self.order.amount - message.fiatAmount)
 		self.client.backend.updateOrder(self.order)
 
 		await self.sendFundsOnBL4P()
@@ -442,7 +444,7 @@ class OrderTask:
 
 	async def updateOrderAfterTransaction(self):
 		self.order.status = order.STATUS_IDLE
-		if self.order.totalBidAmount == 0:
+		if self.order.amount == 0:
 			self.order.status = order.STATUS_COMPLETED
 		self.client.backend.updateOrder(self.order)
 

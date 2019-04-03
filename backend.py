@@ -16,8 +16,6 @@
 #    You should have received a copy of the GNU General Public License
 #    along with the BL4P Client. If not, see <http://www.gnu.org/licenses/>.
 
-import decimal
-
 from bl4p_api import offer
 
 from log import log, logException
@@ -51,7 +49,6 @@ class Backend(messages.Handler):
 
 		self.client = client
 		self.orderTasks = {} #localID -> ordertask.OrderTask
-		self.nextLocalOrderID = 0
 
 
 	def startup(self, DBFile):
@@ -71,34 +68,33 @@ class Backend(messages.Handler):
 
 
 	def updateOrder(self, order):
+		#TODO remove
 		pass #This is where an order can be stored to disk
 
 
 	def handleBuyCommand(self, cmd):
-		order = BuyOrder(
-			self.LNAddress,
-			limitRate = decimal.Decimal(cmd.limitRate) / settings.cryptoDivisor,
-			totalBidAmount = decimal.Decimal(cmd.amount),
+		ID = BuyOrder.create(
+			self.storage,
+			limitRate = cmd.limitRate,
+			amount = cmd.amount,
 			)
+		order = BuyOrder(self.storage, ID, self.LNAddress)
 		self.addOrder(order)
 
 
 	def handleSellCommand(self, cmd):
-		order = SellOrder(
-			self.BL4PAddress,
-			limitRate = decimal.Decimal(cmd.limitRate) / settings.cryptoDivisor,
-			totalBidAmount = decimal.Decimal(cmd.amount),
+		ID = SellOrder.create(
+			self.storage,
+			limitRate = cmd.limitRate,
+			amount = cmd.amount,
 			)
+		order = SellOrder(self.storage, ID, self.BL4PAddress)
 		self.addOrder(order)
 
 
 	def addOrder(self, order):
-		ID = self.nextLocalOrderID
-		self.nextLocalOrderID += 1
-		order.ID = ID
-		self.updateOrder(order)
-		self.orderTasks[ID] = ordertask.OrderTask(self.client, order)
-		self.orderTasks[ID].startup()
+		self.orderTasks[order.ID] = ordertask.OrderTask(self.client, self.storage, order)
+		self.orderTasks[order.ID].startup()
 
 
 	def handleBL4PResult(self, result):
