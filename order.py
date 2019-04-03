@@ -27,18 +27,6 @@ from storage import StoredObject
 BID = True
 ASK = False
 
-#Order status constants
-'''
-State transitions:
-
-idle -> trading
-trading -> completed
-trading -> idle
-'''
-STATUS_IDLE = 0
-STATUS_TRADING = 1
-STATUS_COMPLETED = 2
-
 
 
 class Order(offer.Offer, StoredObject):
@@ -66,7 +54,6 @@ class Order(offer.Offer, StoredObject):
 	perTxMaxAmountSide  = BID
 	limitRateInverted   determined by derived class
 	remoteOfferID       determined on publishing
-	status              determined from stored transactions
 	'''
 
 	def __init__(self, storage, tableName, ID, limitRateInverted, **kwargs):
@@ -74,7 +61,6 @@ class Order(offer.Offer, StoredObject):
 		StoredObject.__init__(self, storage, tableName, ID)
 
 		self.remoteOfferID = None
-		self.status = STATUS_IDLE #TODO: derive from database
 
 		self.perTxMaxAmount = self.amount #TODO
 		self.perTxMaxAmountSide = BID

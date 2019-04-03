@@ -151,13 +151,13 @@ class OrderTask:
 		try:
 			if isinstance(self.order, BuyOrder):
 				await self.publishOffer()
-				while self.order.status == order.STATUS_IDLE:
+				while self.order.amount > 0:
 					await self.waitForIncomingTransaction()
 					log('Remaining in buy order: ' + \
 						str(self.order.amount))
 				log('Finished with buy order')
 			elif isinstance(self.order, SellOrder):
-				while self.order.status == order.STATUS_IDLE:
+				while self.order.amount > 0:
 					await self.doOfferSearch()
 					log('Remaining in sell order: ' + \
 						str(self.order.amount))
@@ -288,8 +288,6 @@ class OrderTask:
 			paymentPreimage = None, #don't know yet
 			)
 
-		self.order.status = order.STATUS_TRADING
-
 		await self.startTransactionOnBL4P()
 
 
@@ -335,7 +333,6 @@ class OrderTask:
 			#TODO: cancel the incoming fiat funds on BL4P
 			log('Outgoing Lightning transaction failed; canceling the transaction')
 			self.transaction = None
-			self.order.status = order.STATUS_IDLE
 			return
 
 		assert sha256(lightningResult.paymentPreimage) == self.transaction.paymentHash
@@ -376,7 +373,7 @@ class OrderTask:
 		#In that case, simply send back the payment preimage again.
 
 		#TODO: proper handling of failing this condition:
-		assert self.order.status == order.STATUS_IDLE
+		assert self.order.amount > 0
 
 		#TODO: check if lntx conforms to our order
 
@@ -397,7 +394,6 @@ class OrderTask:
 
 		log('Received incoming Lightning transaction')
 
-		self.order.status = order.STATUS_TRADING
 		self.order.setAmount(self.order.amount - message.fiatAmount)
 
 		await self.sendFundsOnBL4P()
@@ -438,10 +434,6 @@ class OrderTask:
 	########################################################################
 
 	async def updateOrderAfterTransaction(self):
-		self.order.status = order.STATUS_IDLE
-		if self.order.amount == 0:
-			self.order.status = order.STATUS_COMPLETED
-
 		if self.order.remoteOfferID is not None:
 			#Remove offer from the market
 			log('Removing old offer from the market')
@@ -453,7 +445,7 @@ class OrderTask:
 				messages.BL4PRemoveOfferResult)
 
 			#Re-add offer to the market
-			if self.order.status == order.STATUS_IDLE:
+			if self.order.amount > 0:
 				log('Re-adding the offer to the market')
 				await self.publishOffer()
 
