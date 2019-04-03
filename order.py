@@ -83,7 +83,7 @@ class Order(offer.Offer, StoredObject):
 
 
 	def setAmount(self, value):
-		self.amount = value
+		self.update(amount = value) #sets attribute and stores to disk
 		self.updateOfferMaxAmounts()
 
 

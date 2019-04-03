@@ -209,7 +209,6 @@ class OrderTask:
 			messages.BL4PAddOfferResult)
 		remoteID = result.ID
 		self.order.remoteOfferID = remoteID
-		self.client.backend.updateOrder(self.order)
 		log('Local ID %d gets remote ID %s' % (self.order.ID, remoteID))
 
 
@@ -290,7 +289,6 @@ class OrderTask:
 			)
 
 		self.order.status = order.STATUS_TRADING
-		self.client.backend.updateOrder(self.order)
 
 		await self.startTransactionOnBL4P()
 
@@ -338,7 +336,6 @@ class OrderTask:
 			log('Outgoing Lightning transaction failed; canceling the transaction')
 			self.transaction = None
 			self.order.status = order.STATUS_IDLE
-			self.client.backend.updateOrder(self.order)
 			return
 
 		assert sha256(lightningResult.paymentPreimage) == self.transaction.paymentHash
@@ -349,7 +346,6 @@ class OrderTask:
 		self.transaction.status = STATUS_RECEIVED_PREIMAGE
 
 		self.order.setAmount(self.order.amount - self.transaction.senderCryptoAmount)
-		self.client.backend.updateOrder(self.order)
 
 		await self.receiveFiatFunds()
 
@@ -403,7 +399,6 @@ class OrderTask:
 
 		self.order.status = order.STATUS_TRADING
 		self.order.setAmount(self.order.amount - message.fiatAmount)
-		self.client.backend.updateOrder(self.order)
 
 		await self.sendFundsOnBL4P()
 
@@ -446,7 +441,6 @@ class OrderTask:
 		self.order.status = order.STATUS_IDLE
 		if self.order.amount == 0:
 			self.order.status = order.STATUS_COMPLETED
-		self.client.backend.updateOrder(self.order)
 
 		if self.order.remoteOfferID is not None:
 			#Remove offer from the market

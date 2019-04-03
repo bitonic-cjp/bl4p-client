@@ -67,11 +67,6 @@ class Backend(messages.Handler):
 		self.BL4PAddress = address
 
 
-	def updateOrder(self, order):
-		#TODO remove
-		pass #This is where an order can be stored to disk
-
-
 	def handleBuyCommand(self, cmd):
 		ID = BuyOrder.create(
 			self.storage,
