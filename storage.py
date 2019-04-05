@@ -17,6 +17,8 @@
 
 import sqlite3
 
+from log import log
+
 
 
 class StoredObject:
@@ -144,6 +146,7 @@ class Storage:
 
 
 	def execute(self, query, values=[]):
+		log('SQL query %s; values %s' % (query, values))
 		cursor = self.connection.cursor()
 		cursor.execute(query, values)
 		self.connection.commit()
