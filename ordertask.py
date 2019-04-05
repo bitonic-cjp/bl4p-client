@@ -20,14 +20,15 @@ import asyncio
 import hashlib
 
 from bl4p_api import offer
+from bl4p_api import offer_pb2
+from bl4p_api.offer import Offer
 
 from log import log, logException
 import messages
 import order
 from order import BuyOrder, SellOrder
 import settings
-from simplestruct import Struct
-import storage
+from storage import StoredObject
 
 
 
@@ -66,38 +67,75 @@ STATUS_FINISHED = 3
 
 
 
-class BuyTransaction(Struct):
-	buyOrderID = None
+class BuyTransaction(StoredObject):
+	@staticmethod
+	def create(storage, buyOrder, fiatAmount, cryptoAmount, paymentHash):
+		return StoredObject.create(
+			storage, 'buyTransactions',
 
-	status     = None
+			buyOrder = buyOrder,
 
-	fiatAmount   = None
-	cryptoAmount = None
+			status = STATUS_INITIAL,
 
-	paymentHash     = None
-	paymentPreimage = None
+			fiatAmount   = fiatAmount,
+			cryptoAmount = cryptoAmount,
+
+			paymentHash    = paymentHash,
+			paymentPreimage= None,
+			)
+
+
+	def __init__(self, storage, ID):
+		StoredObject.__init__(self, storage, 'buyTransactions', ID)
 
 
 
-class SellTransaction(Struct):
-	sellOrderID  = None
-	counterOffer = None
+class SellTransaction(StoredObject):
+	@staticmethod
+	def create(storage, sellOrder, counterOffer, senderFiatAmount, maxSenderCryptoAmount, receiverCryptoAmount, senderTimeoutDelta, lockedTimeoutDelta, CLTVExpiryDelta):
+		return StoredObject.create(
+			storage, 'sellTransactions',
 
-	status = None
+			sellOrder  = sellOrder,
+			counterOffer = counterOffer,
 
-	senderFiatAmount   = None #amount of sender of fiat
-	receiverFiatAmount = None #amount of receiver of fiat
+			status = STATUS_INITIAL,
 
-	maxSenderCryptoAmount = None
-	senderCryptoAmount    = None #amount of sender of crypto
-	receiverCryptoAmount  = None #amount of sender of crypto
+			senderFiatAmount   = senderFiatAmount, #amount of sender of fiat
+			receiverFiatAmount = None,             #amount of receiver of fiat
 
-	sender_timeout_delta_ms = None
-	locked_timeout_delta_s  = None
-	CLTV_expiry_delta       = None
+			maxSenderCryptoAmount = maxSenderCryptoAmount,
+			senderCryptoAmount    = None,                  #amount of sender of crypto
+			receiverCryptoAmount  = receiverCryptoAmount,  #amount of sender of crypto
 
-	paymentHash     = None
-	paymentPreimage = None
+			senderTimeoutDelta = senderTimeoutDelta,
+			lockedTimeoutDelta = lockedTimeoutDelta,
+			CLTVExpiryDelta    = CLTVExpiryDelta,
+
+			paymentHash     = None,
+			paymentPreimage = None,
+			)
+
+
+	def __init__(self, storage, ID):
+		StoredObject.__init__(self, storage, 'sellTransactions', ID)
+
+
+
+class CounterOffer(StoredObject):
+	@staticmethod
+	def create(storage, counterOffer):
+		return StoredObject.create(
+			storage, 'counterOffers',
+			blob = counterOffer.toPB2().SerializeToString(),
+			)
+
+
+	def __init__(self, storage, ID):
+		StoredObject.__init__(self, storage, 'counterOffers', ID)
+		counterOffer = offer_pb2.Offer()
+		counterOffer.ParseFromString(self.blob)
+		self.counterOffer = Offer.fromPB2(counterOffer)
 
 
 
@@ -267,26 +305,23 @@ class OrderTask:
 			offer.Condition.CLTV_EXPIRY_DELTA
 			)
 
-		self.transaction = SellTransaction(
-			sellOrderID  = self.order.ID,
-			counterOffer = self.counterOffer,
+		#TODO: check if it's already in the database
+		counterOfferID = CounterOffer.create(self.storage, self.counterOffer)
 
-			status = STATUS_INITIAL,
+		sellTransactionID = SellTransaction.create(self.storage,
+			sellOrder    = self.order.ID,
+			counterOffer = counterOfferID,
 
 			senderFiatAmount   = senderFiatAmount,
-			receiverFiatAmount = None, #don't know yet - depends on fees
 
 			maxSenderCryptoAmount = maxSenderCryptoAmount,
-			senderCryptoAmount    = None, #don't know yet - depends on fees
 			receiverCryptoAmount  = receiverCryptoAmount,
 
-			sender_timeout_delta_ms = sender_timeout_delta_ms,
-			locked_timeout_delta_s  = locked_timeout_delta_s,
-			CLTV_expiry_delta       = CLTV_expiry_delta,
-
-			paymentHash     = None, #don't know yet
-			paymentPreimage = None, #don't know yet
+			senderTimeoutDelta = sender_timeout_delta_ms,
+			lockedTimeoutDelta = locked_timeout_delta_s,
+			CLTVExpiryDelta    = CLTV_expiry_delta,
 			)
+		self.transaction = SellTransaction(self.storage, sellTransactionID)
 
 		await self.startTransactionOnBL4P()
 
@@ -297,8 +332,8 @@ class OrderTask:
 			localOrderID = self.order.ID,
 
 			amount = self.transaction.senderFiatAmount,
-			sender_timeout_delta_ms = self.transaction.sender_timeout_delta_ms,
-			locked_timeout_delta_s = self.transaction.locked_timeout_delta_s,
+			sender_timeout_delta_ms = self.transaction.senderTimeoutDelta,
+			locked_timeout_delta_s = self.transaction.lockedTimeoutDelta,
 			receiver_pays_fee = True
 			),
 			messages.BL4PStartResult)
@@ -318,13 +353,13 @@ class OrderTask:
 		lightningResult = await self.call(messages.LNPay(
 			localOrderID = self.order.ID,
 
-			destinationNodeID     = self.transaction.counterOffer.address,
+			destinationNodeID     = self.counterOffer.address,
 			paymentHash           = self.transaction.paymentHash,
 			recipientCryptoAmount = self.transaction.receiverCryptoAmount,
 			maxSenderCryptoAmount = self.transaction.maxSenderCryptoAmount,
-			minCLTVExpiryDelta    = self.transaction.CLTV_expiry_delta,
+			minCLTVExpiryDelta    = self.transaction.CLTVExpiryDelta,
 			fiatAmount            = self.transaction.senderFiatAmount,
-			offerID               = self.transaction.counterOffer.ID,
+			offerID               = self.counterOffer.ID,
 			),
 			messages.LNPayResult)
 
@@ -380,17 +415,15 @@ class OrderTask:
 		#Check if remaining order size is sufficient:
 		assert message.fiatAmount <= self.order.amount
 
-		self.transaction = BuyTransaction(
-			buyOrderID = self.order.ID,
+		buyTransactionID = BuyTransaction.create(self.storage,
+			buyOrder = self.order.ID,
 
-			status = STATUS_LOCKED,
-
-			cryptoAmount = message.cryptoAmount,
 			fiatAmount   = message.fiatAmount,
+			cryptoAmount = message.cryptoAmount,
 
-			paymentHash     = message.paymentHash,
-			paymentPreimage = None, #don't know yet
+			paymentHash = message.paymentHash,
 			)
+		self.transaction = BuyTransaction(self.storage, buyTransactionID)
 
 		log('Received incoming Lightning transaction')
 
