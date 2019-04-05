@@ -29,10 +29,8 @@ class StoredObject:
 		names = ['`%s`' % n for n in names]
 		query = 'INSERT INTO %s (%s) VALUES (%s)' % (tableName, ','.join(names), questionMarks)
 
-		cursor = storage.connection.cursor()
-		cursor.execute(query, values)
+		cursor = storage.execute(query, values)
 		ID = cursor.lastrowid
-		storage.connection.commit()
 
 		return ID
 
@@ -42,9 +40,7 @@ class StoredObject:
 		self._tableName = tableName
 		query = 'SELECT * from %s WHERE `ID` = ?' % tableName
 
-		cursor = self._storage.connection.cursor()
-		cursor.execute(query, (ID,))
-
+		cursor = self._storage.execute(query, (ID,))
 		values = cursor.fetchone()
 		names = [x[0] for x in cursor.description]
 
@@ -61,9 +57,7 @@ class StoredObject:
 		query = 'UPDATE %s SET (%s) = (%s) WHERE `ID` = ?' % \
 			(self._tableName, ','.join(quotedNames), questionMarks)
 
-		cursor = self._storage.connection.cursor()
-		cursor.execute(query, values + [self.ID])
-		self._storage.connection.commit()
+		self._storage.execute(query, values + [self.ID])
 
 		#Local update:
 		for name, value in zip(names, values):
@@ -72,21 +66,14 @@ class StoredObject:
 
 	def delete(self):
 		query = 'DELETE FROM %s WHERE `ID` = ?' % self._tableName
-
-		cursor = self._storage.connection.cursor()
-		cursor.execute(query, (self.ID,))
-		self._storage.connection.commit()
+		cursor = self._storage.execute(query, (self.ID,))
 
 
 
 class Storage:
 	def __init__(self, filename):
 		self.connection = sqlite3.connect(filename)
-
-		cursor = self.connection.cursor()
-		cursor.execute('PRAGMA foreign_keys = ON')
-		self.connection.commit()
-
+		self.execute('PRAGMA foreign_keys = ON')
 		self.makeTables()
 
 
@@ -154,6 +141,13 @@ class Storage:
 			')'
 			)
 		self.connection.commit()
+
+
+	def execute(self, query, values=[]):
+		cursor = self.connection.cursor()
+		cursor.execute(query, values)
+		self.connection.commit()
+		return cursor
 
 
 
