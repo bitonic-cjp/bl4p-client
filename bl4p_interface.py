@@ -112,6 +112,12 @@ class BL4PInterface(bl4p.Bl4pApi, messages.Handler):
 				offer.Offer.fromPB2(offer_PB2)
 				for offer_PB2 in result.offers
 				])
+
+		elif isinstance(result, bl4p_pb2.Error):
+			#TODO: act appropriately
+			log('Got BL4P error (reason = %d) - ignored' % result.reason)
+			return
+
 		else:
 			log('Ignoring unrecognized message type from BL4P: ' + \
 				str(result.__class__))
@@ -121,5 +127,4 @@ class BL4PInterface(bl4p.Bl4pApi, messages.Handler):
 		del self.activeRequests[result.request]
 		self.client.handleIncomingMessage(message)
 
-	#TODO: handle error results
 
