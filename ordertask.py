@@ -341,9 +341,11 @@ class OrderTask:
 		assert startResult.senderAmount == self.transaction.senderFiatAmount
 		#TODO: check that we're not paying too much fees to BL4P
 
-		self.transaction.receiverFiatAmount = startResult.receiverAmount
-		self.transaction.paymentHash = startResult.paymentHash
-		self.transaction.status = STATUS_LOCKED
+		self.transaction.update(
+			receiverFiatAmount = startResult.receiverAmount,
+			paymentHash = startResult.paymentHash,
+			status = STATUS_LOCKED,
+			)
 
 		await self.doTransactionOnLightning()
 
@@ -373,10 +375,11 @@ class OrderTask:
 		assert sha256(lightningResult.paymentPreimage) == self.transaction.paymentHash
 		log('We got the preimage from the LN payment')
 
-		self.transaction.senderCryptoAmount = lightningResult.senderCryptoAmount
-		self.transaction.paymentPreimage = lightningResult.paymentPreimage
-		self.transaction.status = STATUS_RECEIVED_PREIMAGE
-
+		self.transaction.update(
+			senderCryptoAmount = lightningResult.senderCryptoAmount,
+			paymentPreimage = lightningResult.paymentPreimage,
+			status = STATUS_RECEIVED_PREIMAGE,
+			)
 		self.order.setAmount(self.order.amount - self.transaction.senderCryptoAmount)
 
 		await self.receiveFiatFunds()
@@ -390,7 +393,9 @@ class OrderTask:
 			),
 			messages.BL4PReceiveResult)
 
-		self.transaction.status = STATUS_FINISHED
+		self.transaction.update(
+			status = STATUS_FINISHED,
+			)
 
 		log('Sell transaction is finished')
 		await self.updateOrderAfterTransaction()
@@ -412,6 +417,8 @@ class OrderTask:
 
 		#TODO: check if lntx conforms to our order
 
+		log('Received incoming Lightning transaction')
+
 		#Check if remaining order size is sufficient:
 		assert message.fiatAmount <= self.order.amount
 
@@ -423,11 +430,8 @@ class OrderTask:
 
 			paymentHash = message.paymentHash,
 			)
-		self.transaction = BuyTransaction(self.storage, buyTransactionID)
-
-		log('Received incoming Lightning transaction')
-
 		self.order.setAmount(self.order.amount - message.fiatAmount)
+		self.transaction = BuyTransaction(self.storage, buyTransactionID)
 
 		await self.sendFundsOnBL4P()
 
@@ -445,8 +449,10 @@ class OrderTask:
 		assert sha256(sendResult.paymentPreimage) == self.transaction.paymentHash
 		log('We got the preimage from BL4P')
 
-		self.transaction.paymentPreimage = sendResult.paymentPreimage
-		self.transaction.status = STATUS_FINISHED
+		self.transaction.update(
+			paymentPreimage = sendResult.paymentPreimage,
+			status = STATUS_FINISHED,
+			)
 
 		await self.finishTransactionOnLightning()
 
