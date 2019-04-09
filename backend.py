@@ -134,3 +134,7 @@ class Backend(messages.Handler):
 		localID = message.localOrderID
 		self.orderTasks[localID].setCallResult(message)
 
+
+	def handleOrderTaskFinished(self, ID):
+		del self.orderTasks[ID]
+

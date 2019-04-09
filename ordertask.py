@@ -208,6 +208,8 @@ class OrderTask:
 			log('Exception in order task:')
 			logException()
 
+		self.client.backend.handleOrderTaskFinished(self.order.ID)
+
 
 	async def doOfferSearch(self):
 		while True: #TODO: quit once the order is finished
