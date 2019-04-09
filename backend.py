@@ -33,6 +33,7 @@ class Backend(messages.Handler):
 		messages.Handler.__init__(self, {
 			messages.BuyCommand : self.handleBuyCommand,
 			messages.SellCommand: self.handleSellCommand,
+			messages.ListCommand: self.handleListCommand,
 
 			messages.BL4PStartResult      : self.handleBL4PResult,
 			messages.BL4PSendResult       : self.handleBL4PResult,
@@ -90,6 +91,13 @@ class Backend(messages.Handler):
 	def addOrder(self, order):
 		self.orderTasks[order.ID] = ordertask.OrderTask(self.client, self.storage, order)
 		self.orderTasks[order.ID].startup()
+
+
+	def handleListCommand(self, cmd):
+		self.client.handleOutgoingMessage(messages.PluginCommandResult(
+			commandID = cmd.commandID,
+			result = {'sell': [], 'buy': []}
+			))
 
 
 	def handleBL4PResult(self, result):

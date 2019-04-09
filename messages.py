@@ -20,14 +20,27 @@ from simplestruct import Struct
 
 
 
-class BuyCommand(Struct):
+class PluginCommand(Struct):
+	commandID = 0
+
+
+class BuyCommand(PluginCommand):
 	amount = 0
 	limitRate = 0
 
 
-class SellCommand(Struct):
+class SellCommand(PluginCommand):
 	amount = 0
 	limitRate = 0
+
+
+class ListCommand(PluginCommand):
+	pass
+
+
+class PluginCommandResult(Struct):
+	commandID = 0
+	result = None
 
 
 class BL4PRequest(Struct):

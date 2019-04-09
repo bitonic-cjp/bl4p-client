@@ -50,6 +50,8 @@ class PluginInterface(JSONRPC, messages.Handler):
 		messages.Handler.__init__(self, {
 			messages.LNFinish: self.sendFinish,
 			messages.LNFail  : self.sendFail,
+
+			messages.PluginCommandResult: self.sendPluginCommandResult,
 			})
 		self.client = client
 
@@ -72,6 +74,7 @@ class PluginInterface(JSONRPC, messages.Handler):
 		'bl4p.getcryptocurrency': (self.getCryptoCurrency , MethodType.RPCMETHOD),
 		'bl4p.buy'              : (self.buy               , MethodType.RPCMETHOD),
 		'bl4p.sell'             : (self.sell              , MethodType.RPCMETHOD),
+		'bl4p.list'             : (self.list              , MethodType.RPCMETHOD),
 
 		'htlc_accepted'         : (self.handleHTLCAccepted, MethodType.HOOK),
 		}
@@ -210,6 +213,18 @@ class PluginInterface(JSONRPC, messages.Handler):
 			))
 
 
+	def list(self, **kwargs):
+		'List active orders'
+
+		self.client.handleIncomingMessage(messages.ListCommand(
+			commandID = self.currentRequestID,
+			))
+
+		#Don't send a response now:
+		#It was already sent by the ListCommand handler
+		return NO_RESPONSE
+
+
 	def handleHTLCAccepted(self, onion, htlc, **kwargs):
 		'''
 		Parameter format:
@@ -281,4 +296,9 @@ class PluginInterface(JSONRPC, messages.Handler):
 		self.sendOngoingRequestResponse(ID, {
 			'result': 'fail',
 			})
+
+
+	def sendPluginCommandResult(self, message):
+		self.sendResponse(message.commandID,
+			message.result)
 

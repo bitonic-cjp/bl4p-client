@@ -36,7 +36,8 @@ cryptoName    = cryptoCurrency['name']
 cryptoDivisor = cryptoCurrency['divisor']
 
 
-def buy():
+def cmd_buy():
+	'Add a buy order'
 	limitRate = input('Limit exchange rate (%s/%s)? ' % (fiatName, cryptoName))
 	limitRate = int(decimal.Decimal(limitRate) * fiatDivisor)
 	amount = input('Maximum amount (%s)? ' % fiatName)
@@ -44,7 +45,8 @@ def buy():
 	return rpc.call('bl4p.buy', {'limit_rate': limitRate, 'amount': amount})
 
 
-def sell():
+def cmd_sell():
+	'Add a sell order'
 	limitRate = input('Limit exchange rate (%s/%s)? ' % (fiatName, cryptoName))
 	limitRate = int(decimal.Decimal(limitRate) * fiatDivisor)
 	amount = input('Maximum amount (%s)? ' % cryptoName)
@@ -52,12 +54,17 @@ def sell():
 	return rpc.call('bl4p.sell', {'limit_rate': limitRate, 'amount': amount})
 
 
-def stop():
+def cmd_list():
+	'List open orders'
+	return rpc.call('bl4p.list', {})
+
+
+def cmd_stop():
 	'Terminate application.'
 	sys.exit()
 
 
-def help():
+def cmd_help():
 	'Display this message.'
 	names = list(commands.keys())
 	names.sort()
@@ -68,7 +75,7 @@ def help():
 		print('%s: %s' % (printedName, description))
 
 
-def license():
+def cmd_license():
 	'Display licensing information.'
 	print('''BL4P Client is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -86,13 +93,14 @@ along with BL4P Client. If not, see <http://www.gnu.org/licenses/>.''')
 
 commands = \
 {
-'exit'    : stop,
-'stop'    : stop,
-'quit'    : stop,
-'help'    : help,
-'license' : license,
-'buy'     : buy,
-'sell'    : sell,
+'exit'    : cmd_stop,
+'stop'    : cmd_stop,
+'quit'    : cmd_stop,
+'help'    : cmd_help,
+'license' : cmd_license,
+'buy'     : cmd_buy,
+'sell'    : cmd_sell,
+'list'    : cmd_list,
 }
 
 def handleCommand(cmd):
