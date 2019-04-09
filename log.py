@@ -28,7 +28,7 @@ logFile = sys.stderr
 def setLogFile(filename):
 	global logFile
 	logFile = open(filename, 'a')
-	log('Opened the log file')
+	log('\n\n\n\nOpened the log file')
 
 
 def log(s):
