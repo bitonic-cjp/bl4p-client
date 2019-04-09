@@ -94,9 +94,21 @@ class Backend(messages.Handler):
 
 
 	def handleListCommand(self, cmd):
+		sell = []
+		buy = []
+		for ID, task in self.orderTasks.items():
+			order = {'limitRate': task.order.limitRate, 'amount': task.order.amount}
+			if isinstance(task.order, SellOrder):
+				sell.append(order)
+			elif isinstance(task.order, BuyOrder):
+				buy.append(order)
+			else:
+				raise Exception('Found an order of unknown type')
+			
+
 		self.client.handleOutgoingMessage(messages.PluginCommandResult(
 			commandID = cmd.commandID,
-			result = {'sell': [], 'buy': []}
+			result = {'sell': sell, 'buy': buy}
 			))
 
 
