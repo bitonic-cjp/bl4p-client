@@ -24,7 +24,7 @@ import time
 import traceback
 
 from json_rpc import JSONRPC
-from log import log
+from log import log, logException
 from simplestruct import Struct
 
 
@@ -135,6 +135,8 @@ class Node:
 		self.bl4pLogFile = bl4pLogFile
 		self.bl4pDBFile = bl4pDBFile
 
+		self.startupFinished = False
+
 		self.pluginResultCallbacks = {} #ID -> (function(result), function(error))
 
 		#This is for RPC calls that have started, but for which no return data
@@ -173,6 +175,7 @@ class Node:
 			'bl4p.logfile': self.bl4pLogFile,
 			'bl4p.dbfile': self.bl4pDBFile,
 			})
+		self.startupFinished = True
 
 
 	async def RPCConnection(self, reader, writer):
@@ -308,7 +311,12 @@ class Node:
 			)
 
 		global nodes
-		nodes[tx.destID].handleIncomingTransaction(tx)
+		try:
+			nodes[tx.destID].handleIncomingTransaction(tx)
+		except:
+			logException()
+			log('Failing the LN transaction because of the exception')
+			self.finishOutgoingTransaction(tx.paymentHash, None)
 
 
 	def waitSendPay(self, payment_hash):
@@ -332,6 +340,10 @@ class Node:
 
 
 	def handleIncomingTransaction(self, tx):
+		if not self.startupFinished:
+			raise Exception(
+				'Got an incoming transaction but initialization is not yet finished')
+
 		assert 'htlc_accepted' in self.pluginInterface.hooks
 
 		#TODO: per_hop is a fantasy interface, not yet in lightningd
