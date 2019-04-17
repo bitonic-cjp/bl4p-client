@@ -24,6 +24,7 @@ import time
 import traceback
 
 from json_rpc import JSONRPC
+from log import log
 from simplestruct import Struct
 
 
@@ -49,11 +50,22 @@ class RPCInterface(JSONRPC):
 
 
 	def handleRequest(self, ID, name, params):
+		log('%s RPC <== %d %s %s' % (self.node.nodeID, ID, name, params))
 		self.node.handleRPCCall(self, ID, name, params)
 
 
 	def handleNotification(self, name, params):
 		self.node.pluginInterface.sendNotification(name, params)
+
+
+	def sendResponse(self, ID, result):
+		log('%s RPC ==> %d %s' % (self.node.nodeID, ID, result))
+		return JSONRPC.sendResponse(self, ID, result)
+
+
+	def sendErrorResponse(self, ID, error):
+		log('%s RPC ==> %d ERROR %s' % (self.node.nodeID, ID, error))
+		return JSONRPC.sendErrorResponse(self, ID, error)
 
 
 
@@ -65,11 +77,12 @@ class PluginInterface(JSONRPC):
 
 
 	async def startup(self, options):
-		#print('PluginInterface startup')
+		log('%s > PluginInterface startup' % self.node.nodeID)
 		self.manifest = await self.synCall('getmanifest')
 		self.methods = [m['name'] for m in self.manifest['rpcmethods']]
 		self.hooks = self.manifest['hooks'][:]
-		#print(manifest)
+
+		log('%s Received manifest; calling init' % self.node.nodeID)
 
 		await self.synCall('init',
 			{
@@ -81,20 +94,29 @@ class PluginInterface(JSONRPC):
 				}
 			})
 
+		log('%s < PluginInterface startup' % self.node.nodeID)
+
 		return JSONRPC.startup(self)
 
 
 	def handleResult(self, ID, result):
+		log('%s plugin <== %d %s' % (self.node.nodeID, ID, result))
 		resultCB, errorCB = self.node.pluginResultCallbacks[ID]
 		del self.node.pluginResultCallbacks[ID]
 		resultCB(result)
 
 
 	def handleError(self, ID, error):
+		log('%s plugin <== %d ERROR %s' % (self.node.nodeID, ID, error))
 		resultCB, errorCB = self.node.pluginResultCallbacks[ID]
 		del self.node.pluginResultCallbacks[ID]
 		errorCB(error)
 
+
+	def sendRequest(self, name, params={}):
+		ID = JSONRPC.sendRequest(self, name, params)
+		log('%s plugin ==> %d %s %s' % (self.node.nodeID, ID, name, params))
+		return ID
 
 
 class DelayedResponse:
