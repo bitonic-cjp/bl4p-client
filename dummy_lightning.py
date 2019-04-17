@@ -119,8 +119,9 @@ class PluginInterface(JSONRPC):
 		return ID
 
 
-class DelayedResponse:
-	pass #Attributes will be added on an ad-hoc basis
+
+NO_RESPONSE = object() #Placeholder in case no response is to be sent
+DELAYED_RESPONSE = object() #Placeholder in case a delayed response is to be sent
 
 
 
@@ -135,7 +136,17 @@ class Node:
 		self.bl4pDBFile = bl4pDBFile
 
 		self.pluginResultCallbacks = {} #ID -> (function(result), function(error))
-		self.ongoingRequests = {} #ID -> (interface, methodname, message)
+
+		#This is for RPC calls that have started, but for which no return data
+		#has been sent yet:
+		self.ongoingRequests = {} #ID -> (interface, methodname, metadata)
+
+		#Is set to the request ID if we're inside an RPC call
+		self.currentRequestID = None
+
+		#This is for payments that have finished/failed, but for which
+		#waitsendpay was not yet called:
+		self.unprocessedPaymentResults = {} #paymentHash -> paymentPreimage or None
 
 
 	async def startup(self):
@@ -179,55 +190,80 @@ class Node:
 
 
 	def findOngoingRequest(self, name, func):
+		'''
+		Return the ID of an ongoing request
+		name: the name of the called function
+		func: a function evaluating the metadata of the request
+		'''
 		for ID, value in self.ongoingRequests.items():
-			interface, methodName, delayedResponse = value
-			if methodName == name and func(delayedResponse):
+			interface, methodName, metadata = value
+			if methodName == name and func(metadata):
 				return ID
 		raise IndexError()
 
 
+	def setOngoingRequestAttribute(self, name, value):
+		self.ongoingRequests[self.currentRequestID][2][name] = value
+
+
 	def sendDelayedResponse(self, ID, result):
+		'''
+		Send a response for an ongoing  request,
+		and remove the ongoing request, as it is now finished.
+		'''
 		interface = self.ongoingRequests[ID][0]
 		del self.ongoingRequests[ID]
 		interface.sendResponse(ID, result)
 
 
 	def sendDelayedErrorResponse(self, ID, error):
+		'''
+		Send an error response for an ongoing  request,
+		and remove the ongoing request, as it is now finished.
+		'''
 		interface = self.ongoingRequests[ID][0]
 		del self.ongoingRequests[ID]
 		interface.sendErrorResponse(ID, error)
 
 
 	def handleRPCCall(self, interface, ID, name, params):
-		#Plugin RPC pass-through:
-		if name in self.pluginInterface.methods:
-			outgoingID = self.pluginInterface.sendRequest(name, params)
+		self.currentRequestID = ID
+		try:
+			#Plugin RPC pass-through:
+			if name in self.pluginInterface.methods:
+				outgoingID = self.pluginInterface.sendRequest(name, params)
 
-			def resultCB(result):
-				#print(result)
+				def resultCB(result):
+					#print(result)
+					interface.sendResponse(ID, result)
+
+				def errorCB(error):
+					#print(error)
+					interface.sendErrorResponse(ID, error)
+
+				self.pluginResultCallbacks[outgoingID] = (resultCB, errorCB)
+				return
+
+			#Own methods
+			method = \
+			{
+			'getinfo': self.getInfo,
+			'getroute': self.getRoute,
+			'sendpay': self.sendPay,
+			'waitsendpay': self.waitSendPay,
+			}[name]
+
+			self.ongoingRequests[ID] = interface, name, {}
+
+			#TODO: exception handling
+			result = method(**params)
+
+			if result not in (NO_RESPONSE, DELAYED_RESPONSE):
 				interface.sendResponse(ID, result)
-
-			def errorCB(error):
-				#print(error)
-				interface.sendErrorResponse(ID, error)
-
-			self.pluginResultCallbacks[outgoingID] = (resultCB, errorCB)
-			return
-
-		#Own methods
-		method = \
-		{
-		'getinfo': self.getInfo,
-		'getroute': self.getRoute,
-		'sendpay': self.sendPay,
-		'waitsendpay': self.waitSendPay,
-		}[name]
-		#TODO: exception handling
-		result = method(**params)
-		if isinstance(result, DelayedResponse):
-			self.ongoingRequests[ID] = interface, name, result
-			return
-		interface.sendResponse(ID, result)
+			if result != DELAYED_RESPONSE and ID in self.ongoingRequests:
+				del self.ongoingRequests[ID]
+		finally:
+			self.currentRequestID = None
 
 
 	def getInfo(self, **kwargs):
@@ -276,9 +312,23 @@ class Node:
 
 
 	def waitSendPay(self, payment_hash):
-		ret = DelayedResponse()
-		ret.paymentHash = payment_hash
-		return ret
+
+		#This attribute will be used in finishOutgoingTransaction, either
+		#as called here (if the result is already in), or, if the result
+		#arrives later, whenever the result arrives.
+		self.setOngoingRequestAttribute('paymentHash', payment_hash)
+
+		if payment_hash in self.unprocessedPaymentResults:
+			#The result is already in:
+			result = self.unprocessedPaymentResults[payment_hash]
+			del self.unprocessedPaymentResults[payment_hash]
+			self.finishOutgoingTransaction(payment_hash, result)
+
+			#Response was already sent by finishOutgoingTransaction
+			return NO_RESPONSE
+
+		#Response will be sent later by finishOutgoingTransaction
+		return DELAYED_RESPONSE
 
 
 	def handleIncomingTransaction(self, tx):
@@ -307,9 +357,9 @@ class Node:
 
 			if result['result'] == 'resolve':
 				tx.paymentPreimage = result['payment_key']
-				nodes[tx.sourceID].finishOutgoingTransaction(tx)
+				nodes[tx.sourceID].finishOutgoingTransaction(tx.paymentHash, tx.paymentPreimage)
 			elif result['result'] == 'fail':
-				nodes[tx.sourceID].failOutgoingTransaction(tx)
+				nodes[tx.sourceID].finishOutgoingTransaction(tx.paymentHash, None)
 			#TODO: handle continue
 
 		def errorCB(error):
@@ -318,20 +368,27 @@ class Node:
 		self.pluginResultCallbacks[ID] = (resultCB, errorCB)
 
 
-	def finishOutgoingTransaction(self, tx):
-		ID = self.findOngoingRequest('waitsendpay', lambda x: x.paymentHash == tx.paymentHash)
-		self.sendDelayedResponse(ID,
-			{
-			'status': 'complete',
-			'payment_preimage': tx.paymentPreimage,
-			})
 
+	def finishOutgoingTransaction(self, paymentHash, paymentResult):
+		try:
+			ID = self.findOngoingRequest('waitsendpay', lambda x: x['paymentHash'] == paymentHash)
+		except IndexError:
+			#waitsendpay was not yet called - store results for
+			#whenever it does get called
+			self.unprocessedPaymentResults[paymentHash] = paymentResult
+			return
 
-	def failOutgoingTransaction(self, tx):
-		ID = self.findOngoingRequest('waitsendpay', lambda x: x.paymentHash == tx.paymentHash)
-		self.sendDelayedErrorResponse(ID,
-			203 #Permanent failure at destination
-			)
+		#Send the response to waitsendpay
+		if paymentResult is None:
+			self.sendDelayedErrorResponse(ID,
+				203 #Permanent failure at destination
+				)
+		else:
+			self.sendDelayedResponse(ID,
+				{
+				'status': 'complete',
+				'payment_preimage': paymentResult,
+				})
 
 
 
