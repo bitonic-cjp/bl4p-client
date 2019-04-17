@@ -80,10 +80,9 @@ class BL4PClient:
 		self.bl4pInterface = bl4p_interface.BL4PInterface(self)
 		await self.bl4pInterface.startup('ws://localhost:8000/', '3', '3')
 
-		self.backend.startup(self.pluginInterface.DBFile)
 		self.backend.setLNAddress(self.rpcInterface.nodeID)
 		self.backend.setBL4PAddress('BL4Pdummy') #TODO
-
+		self.backend.startup(self.pluginInterface.DBFile)
 
 		self.messageRouter.addHandler(self.backend)
 		self.messageRouter.addHandler(self.pluginInterface)

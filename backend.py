@@ -55,6 +55,18 @@ class Backend(messages.Handler):
 	def startup(self, DBFile):
 		self.storage = storage.Storage(DBFile)
 
+		#Loading existing orders and initializing order tasks:
+		def loadOrders(tableName, orderClass, address):
+			query = 'SELECT `ID` FROM `%s` WHERE `amount` > 0' % tableName
+			cursor = self.storage.execute(query)
+			for row in cursor:
+				ID = row[0]
+				order = orderClass(self.storage, ID, address)
+				self.addOrder(order)
+
+		loadOrders('sellOrders', SellOrder, self.BL4PAddress)
+		loadOrders('buyOrders' , BuyOrder , self.LNAddress  )
+
 
 	def shutdown(self):
 		self.storage.shutdown()
