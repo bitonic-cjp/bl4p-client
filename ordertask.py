@@ -58,7 +58,7 @@ Seller market taker:
 initial -> locked -> received_preimage -> finished
 
 Buyer market maker:
-locked -> finished
+initial -> finished
 '''
 STATUS_INITIAL = 0
 STATUS_LOCKED = 1
@@ -188,6 +188,7 @@ class OrderTask:
 	async def doTrading(self):
 		try:
 			if isinstance(self.order, BuyOrder):
+				await self.continueBuyTransaction()
 				await self.publishOffer()
 				while self.order.amount > 0:
 					await self.waitForIncomingTransaction()
@@ -195,6 +196,7 @@ class OrderTask:
 						str(self.order.amount))
 				log('Finished with buy order')
 			elif isinstance(self.order, SellOrder):
+				await self.continueSellTransaction()
 				while self.order.amount > 0:
 					await self.doOfferSearch()
 					log('Remaining in sell order: ' + \
@@ -255,6 +257,34 @@ class OrderTask:
 	########################################################################
 	# Seller side
 	########################################################################
+
+	async def continueSellTransaction(self):
+		cursor = self.storage.execute(
+			'SELECT ID from sellTransactions WHERE status != ?',
+			[STATUS_FINISHED]
+			)
+		IDs = [row[0] for row in cursor]
+		assert len(IDs) < 2 #TODO: properly report database inconsistency error
+		if len(IDs) == 0:
+			return #no transaction needs to be continued
+		ID = IDs[0]
+
+		log('Found an unfinished transaction with ID %d - loading it' % ID)
+
+		self.transaction = SellTransaction(self.storage, ID)
+		storedCounterOffer = CounterOffer(self.storage, self.transaction.counterOffer)
+		self.counterOffer = storedCounterOffer.counterOffer
+
+		if self.transaction.status == STATUS_INITIAL:
+			await self.startTransactionOnBL4P()
+		elif self.transaction.status == STATUS_LOCKED:
+			await self.doTransactionOnLightning()
+		elif self.transaction.status == STATUS_RECEIVED_PREIMAGE:
+			await self.receiveFiatFunds()
+		else:
+			#TODO: properly report database inconsistency error
+			raise Exception('Invalid transaction status value in unfinished transaction')
+
 
 	async def doTransaction(self):
 		assert isinstance(self.order, SellOrder) #TODO: enable buyer-initiated trade once supported
@@ -406,6 +436,28 @@ class OrderTask:
 	########################################################################
 	# Buyer side
 	########################################################################
+
+	async def continueBuyTransaction(self):
+		cursor = self.storage.execute(
+			'SELECT ID from buyTransactions WHERE status != ?',
+			[STATUS_FINISHED]
+			)
+		IDs = [row[0] for row in cursor]
+		assert len(IDs) < 2 #TODO: properly report database inconsistency error
+		if len(IDs) == 0:
+			return #no transaction needs to be continued
+		ID = IDs[0]
+
+		log('Found an unfinished transaction with ID %d - loading it' % ID)
+
+		self.transaction = BuyTransaction(self.storage, ID)
+
+		if self.transaction.status == STATUS_INITIAL:
+			await self.sendFundsOnBL4P()
+		else:
+			#TODO: properly report database inconsistency error
+			raise Exception('Invalid transaction status value in unfinished transaction')
+
 
 	async def waitForIncomingTransaction(self):
 		message = await self.waitForIncomingMessage(messages.LNIncoming)
