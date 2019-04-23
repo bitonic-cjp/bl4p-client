@@ -39,6 +39,21 @@ class BL4PInterface(bl4p.Bl4pApi, messages.Handler):
 		self.activeRequests = {}
 
 
+	async def startup(self, url, userid, password):
+		await bl4p.Bl4pApi.startup(self, url, userid, password)
+
+		#Get our currently active orders
+		result = await self.synCall(bl4p_pb2.BL4P_ListOffers())
+
+		#Remove them one by one.
+		#When appropriate, they will be re-added later.
+		for item in result.offers:
+			log('Removing offer that existed before startup with ID ' + str(item.offerID))
+			request = bl4p_pb2.BL4P_RemoveOffer()
+			request.offerID = item.offerID
+			await self.synCall(request)
+
+
 	def sendStart(self, message):
 		request = bl4p_pb2.BL4P_Start()
 		request.amount.amount = message.amount
