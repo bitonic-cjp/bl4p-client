@@ -154,7 +154,7 @@ class Storage:
 
 
 
-def main():
+def main(): #pragma: nocover
 	s = Storage('node0.bl4p.db')
 
 	ID = StoredObject.create(s, 'buyOrders', amount=0)
@@ -170,5 +170,5 @@ def main():
 
 
 if __name__ == "__main__":
-	main()
+	main() #pragma: nocover
 
