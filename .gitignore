@@ -106,3 +106,7 @@ venv.bak/
 # SQLite-files
 *.db
 
+#Python-coverage related
+.coverage
+coverage_html
+

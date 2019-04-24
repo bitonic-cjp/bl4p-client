@@ -1,0 +1,9 @@
+[run]
+branch = true
+
+#Omit test directory and system directories
+omit = ./*,/usr/*,*/lib/*
+
+[html]
+directory = coverage_html
+
