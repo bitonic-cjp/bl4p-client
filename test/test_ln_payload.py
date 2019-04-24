@@ -15,16 +15,31 @@
 #    You should have received a copy of the GNU General Public License
 #    along with BL4P Client. If not, see <http://www.gnu.org/licenses/>.
 
-.PHONY: all test
+import sys
+import unittest
 
-all: test
+sys.path.append('..')
 
-test:
-	python3-coverage run -p test_ln_payload.py
-	python3-coverage run -p test_log.py
-	python3-coverage run -p test_storage.py
-	python3-coverage run -p test_simplestruct.py
-	python3-coverage combine
-	python3-coverage html
-	python3-coverage report
+import ln_payload
+
+
+
+class TestPayload(unittest.TestCase):
+	def test_payload(self):
+		p1 = ln_payload.Payload(fiatAmount=0xf1f2f3f4f5f6f7f8, offerID=0xc1c2c3c4)
+		self.assertEqual(p1.fiatAmount, 0xf1f2f3f4f5f6f7f8)
+		self.assertEqual(p1.offerID, 0xc1c2c3c4)
+
+		s = p1.encode()
+		self.assertTrue(isinstance(s, bytes))
+		self.assertEqual(s, b'\xf1\xf2\xf3\xf4\xf5\xf6\xf7\xf8\xc1\xc2\xc3\xc4')
+
+		p2 = ln_payload.Payload.decode(s)
+		self.assertEqual(p2.fiatAmount, 0xf1f2f3f4f5f6f7f8)
+		self.assertEqual(p2.offerID, 0xc1c2c3c4)
+
+
+
+if __name__ == '__main__':
+	unittest.main(verbosity=2)
 
