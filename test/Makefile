@@ -22,6 +22,7 @@ all: test
 test:
 	python3-coverage run -p test_log.py
 	python3-coverage run -p test_storage.py
+	python3-coverage run -p test_simplestruct.py
 	python3-coverage combine
 	python3-coverage html
 	python3-coverage report
