@@ -15,19 +15,48 @@
 #    You should have received a copy of the GNU General Public License
 #    along with BL4P Client. If not, see <http://www.gnu.org/licenses/>.
 
-.PHONY: all test
+import sys
+import unittest
+from unittest.mock import Mock
 
-all: test
+sys.path.append('..')
 
-test:
-	python3-coverage run -p test_decodedbuffer.py
-	python3-coverage run -p test_json_rpc.py
-	python3-coverage run -p test_ln_payload.py
-	python3-coverage run -p test_log.py
-	python3-coverage run -p test_messages.py
-	python3-coverage run -p test_storage.py
-	python3-coverage run -p test_simplestruct.py
-	python3-coverage combine
-	python3-coverage html
-	python3-coverage report
+import messages
+
+
+
+class Dummy:
+	pass
+
+
+
+class TestMessages(unittest.TestCase):
+	def test_Handler(self):
+		m = Mock()
+		h = messages.Handler({Dummy: m})
+
+		obj = Dummy()
+		h.handleMessage(obj)
+		m.assert_called_once_with(obj)
+
+
+	def test_Router(self):
+		m = Mock()
+		h = messages.Handler({Dummy: m})
+		r = messages.Router()
+		r.addHandler(h)
+
+		obj = Dummy()
+		r.handleMessage(obj)
+		m.assert_called_once_with(obj)
+
+		#Cannot have two handlers handling the same message class:
+		h2 = messages.Handler({Dummy: m})
+		with self.assertRaises(Exception):
+			r.addHandler(h2)
+
+
+
+if __name__ == '__main__':
+	unittest.main(verbosity=2)
 
