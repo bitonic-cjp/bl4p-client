@@ -19,6 +19,7 @@
 import asyncio
 import json
 
+import decodedbuffer
 from log import log, logException
 
 
@@ -33,7 +34,7 @@ class JSONRPC:
 		self.inputStream = inputStream
 		self.outputStream = outputStream
 
-		self.inputBuffer = b''
+		self.inputBuffer = decodedbuffer.DecodedBuffer('UTF-8')
 		self.outgoingRequestID = 0
 		self.decoder = json.JSONDecoder()
 
@@ -73,22 +74,21 @@ class JSONRPC:
 	async def getNextJSON(self):
 		while True:
 			try:
-				#log('Input buffer: ' + str(self.inputBuffer))
-				request, length = self.decoder.raw_decode(self.inputBuffer.decode("UTF-8"))
+				#log('Input buffer: ' + self.inputBuffer.get())
+				request, length = self.decoder.raw_decode(self.inputBuffer.get())
 			except ValueError:
 				#probably the buffer is incomplete
 				newData = await self.inputStream.read(1024)
 				if not newData: #EOF
 					return None
-				self.inputBuffer += newData
-				if len(self.inputBuffer) > MAX_BUFFER_LENGTH:
+				self.inputBuffer.append(newData)
+				if len(self.inputBuffer.get()) > MAX_BUFFER_LENGTH:
 					log('JSON RPC error: maximum buffer length exceeded. We\'re probably not receiving valid JSON.')
-					self.inputBuffer = b''
+					self.inputBuffer = decodedbuffer.DecodedBuffer('UTF-8') #replace with empty buffer
 					raise Exception('Maximum receive buffer length exceeded - throwing away data')
 				continue
 
-			#TODO: length in chars may be different from length in bytes
-			self.inputBuffer = self.inputBuffer[length:].lstrip()
+			self.inputBuffer.set(self.inputBuffer.get()[length:].lstrip())
 
 			#log('<-- ' + str(request))
 			return request
