@@ -119,7 +119,13 @@ class JSONRPC:
 	def sendRequest(self, name, params={}):
 		ID = self.outgoingRequestID
 		self.outgoingRequestID += 1
-		msg = {'id': ID, 'method': name, 'params': params}
+		msg = \
+		{
+			'jsonrpc': '2.0',
+			'id': ID,
+			'method': name,
+			'params': params,
+		}
 		self.writeJSON(msg)
 		return ID
 
@@ -129,7 +135,7 @@ class JSONRPC:
 			{
 			'jsonrpc': '2.0',
 			'id': ID,
-			'result': result
+			'result': result,
 			}
 		self.writeJSON(response)
 
@@ -145,7 +151,12 @@ class JSONRPC:
 
 
 	def sendNotification(self, name, params):
-		msg = {'method': name, 'params': params}
+		msg = \
+		{
+			'jsonrpc': '2.0',
+			'method': name,
+			'params': params,
+		}
 		self.writeJSON(msg)
 
 
