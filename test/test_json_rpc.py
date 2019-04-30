@@ -192,6 +192,11 @@ class TestJSONRPC(unittest.TestCase):
 		result = await self.rpc.synCall('foo', {'baz': 0})
 		self.assertEqual(result, 'bar')
 
+		self.input.buffer = b'{"id": 43, "error": "bar"}\n\n'
+		with self.assertRaises(Exception) as r:
+			await self.rpc.synCall('foo', {'baz': 0})
+		self.assertEqual(str(r.exception), 'bar')
+
 
 
 if __name__ == '__main__':

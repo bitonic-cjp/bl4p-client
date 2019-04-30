@@ -109,8 +109,13 @@ class JSONRPC:
 		ID = self.sendRequest(name, params)
 		while True:
 			message = await self.getNextJSON()
+
+			#These are ours:
 			if 'result' in message and 'id' in message and message['id'] == ID:
-				break #it's ours
+				break
+			if 'error' in message and 'id' in message and message['id'] == ID:
+				raise Exception(message['error'])
+
 			#Generic processing of messages that are not ours
 			self.handleJSON(message)
 		return message['result']
