@@ -23,6 +23,11 @@ from log import log, logException
 
 
 
+#DoS prevention measure:
+MAX_BUFFER_LENGTH = 1024*1024
+
+
+
 class JSONRPC:
 	def __init__(self, inputStream, outputStream):
 		self.inputStream = inputStream
@@ -76,6 +81,10 @@ class JSONRPC:
 				if not newData: #EOF
 					return None
 				self.inputBuffer += newData
+				if len(self.inputBuffer) > MAX_BUFFER_LENGTH:
+					log('JSON RPC error: maximum buffer length exceeded. We\'re probably not receiving valid JSON.')
+					self.inputBuffer = b''
+					raise Exception('Maximum receive buffer length exceeded - throwing away data')
 				continue
 
 			#TODO: length in chars may be different from length in bytes

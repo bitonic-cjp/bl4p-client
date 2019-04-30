@@ -151,6 +151,12 @@ class TestJSONRPC(unittest.TestCase):
 			await self.rpc.handleIncomingData()
 			m.assert_called_once_with()
 
+		self.input.buffer = b'{' * (1024*1024+1)
+		m = Mock(return_value=None)
+		with patch.object(json_rpc, 'logException', m):
+			await self.rpc.handleIncomingData()
+			m.assert_called_once_with()
+
 
 	@asynciotest
 	async def test_defaultHandlerMethods(self):
