@@ -15,20 +15,14 @@
 #    You should have received a copy of the GNU General Public License
 #    along with BL4P Client. If not, see <http://www.gnu.org/licenses/>.
 
-.PHONY: all test
+import asyncio
 
-all: test
 
-test:
-	python3-coverage run -p test_decodedbuffer.py
-	python3-coverage run -p test_json_rpc.py
-	python3-coverage run -p test_ln_payload.py
-	python3-coverage run -p test_log.py
-	python3-coverage run -p test_messages.py
-	python3-coverage run -p test_rpc_interface.py
-	python3-coverage run -p test_storage.py
-	python3-coverage run -p test_simplestruct.py
-	python3-coverage combine
-	python3-coverage html
-	python3-coverage report
+
+def asynciotest(oldMethod):
+	def newMethod(self):
+		loop = asyncio.get_event_loop()
+		return loop.run_until_complete(oldMethod(self))
+
+	return newMethod
 

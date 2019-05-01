@@ -21,6 +21,8 @@ import sys
 import unittest
 from unittest.mock import Mock, patch
 
+from utils import asynciotest
+
 sys.path.append('..')
 
 import json_rpc
@@ -45,15 +47,6 @@ class DummyReader:
 		ret = self.buffer[:n]
 		self.buffer = self.buffer[n:]
 		return ret
-
-
-
-def asynciotest(oldMethod):
-	def newMethod(self):
-		loop = asyncio.get_event_loop()
-		return loop.run_until_complete(oldMethod(self))
-
-	return newMethod
 
 
 
