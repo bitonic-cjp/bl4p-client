@@ -21,32 +21,11 @@ import sys
 import unittest
 from unittest.mock import Mock, patch
 
-from utils import asynciotest
+from utils import asynciotest, DummyReader, DummyWriter
 
 sys.path.append('..')
 
 import json_rpc
-
-
-
-class DummyWriter:
-	def __init__(self):
-		self.buffer = b''
-
-
-	def write(self, data):
-		self.buffer += data
-
-
-class DummyReader:
-	def __init__(self):
-		self.buffer = b''
-
-
-	async def read(self, n):
-		ret = self.buffer[:n]
-		self.buffer = self.buffer[n:]
-		return ret
 
 
 

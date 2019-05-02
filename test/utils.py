@@ -26,3 +26,25 @@ def asynciotest(oldMethod):
 
 	return newMethod
 
+
+
+class DummyWriter:
+	def __init__(self):
+		self.buffer = b''
+
+
+	def write(self, data):
+		self.buffer += data
+
+
+
+class DummyReader:
+	def __init__(self):
+		self.buffer = b''
+
+
+	async def read(self, n):
+		ret = self.buffer[:n]
+		self.buffer = self.buffer[n:]
+		return ret
+
