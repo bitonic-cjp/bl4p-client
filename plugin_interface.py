@@ -156,7 +156,7 @@ class PluginInterface(JSONRPC, messages.Handler):
 
 			doc = inspect.getdoc(func)
 			if not doc:
-				self.log(
+				log(
 				'RPC method \'{}\' does not have a docstring.'.format(name)
 				)
 				doc = "Undocumented RPC method from a plugin."
