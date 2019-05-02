@@ -61,10 +61,20 @@ class PluginInterface(JSONRPC, messages.Handler):
 		self.DBFile = None
 
 		self.options = \
+		[
 		{
-		'bl4p.logfile': 'bl4p.log',
-		'bl4p.dbfile' : 'bl4p.db',
-		}
+		'name'       : 'bl4p.logfile',
+		'default'    : 'bl4p.log',
+		'description': 'BL4P plug-in log file',
+		'type'       : 'string',
+		},
+		{
+		'name'       : 'bl4p.dbfile',
+		'default'    : 'bl4p.db',
+		'description': 'BL4P plug-in database file',
+		'type'       : 'string',
+		},
+		]
 		self.methods = \
 		{
 		'getmanifest': (self.getManifest, MethodType.RPCMETHOD),
@@ -168,7 +178,7 @@ class PluginInterface(JSONRPC, messages.Handler):
 				})
 
 		return {
-			'options': list(self.options.values()),
+			'options': self.options,
 			'rpcmethods': methods,
 			'subscriptions': list(self.subscriptions.keys()),
 			'hooks': hooks,
