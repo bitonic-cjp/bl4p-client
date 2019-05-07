@@ -2,7 +2,7 @@
 branch = true
 
 #Omit test directory and system directories
-omit = ./*,/usr/*,*/lib/*
+omit = ./*,../bl4p_api/*,/usr/*,*/lib/*
 
 [html]
 directory = coverage_html
