@@ -26,6 +26,7 @@ test:
 	python3-coverage run -p test_ln_payload.py
 	python3-coverage run -p test_log.py
 	python3-coverage run -p test_messages.py
+	python3-coverage run -p test_order.py
 	python3-coverage run -p test_plugin_interface.py
 	python3-coverage run -p test_rpc_interface.py
 	python3-coverage run -p test_storage.py
