@@ -29,23 +29,21 @@ class Order(offer.Offer, StoredObject):
 	It consists of an offer (the data given to external parties),
 	with added data that is used locally.
 
-	Attributes:
+	Attribute:          Source:                                     Unit (typical buy):   Unit (typical sell):
 
-	Offer:
+	[Class: Offer]
 	ID                  stored
 	bid,ask
-		max_amount  determined from Order attributes
+		max_amount  determined from Order attributes            mCent,mSatoshi        mSatoshi,mCent
 		currency    determined from settings (must not change!)
 		exchange    determined from settings (must not change!)
 	address             determined from LN
 	conditions          determined from settings
 
-	Order:
-	limitRate           stored
-	amount              stored (was: totalBidAmount)
-
-	perTxMaxAmount      = totalBidAmount
-	perTxMaxAmountSide  = BID
+	[Class: Order]
+	limitRate           stored                                      mCent/BTC             mCent/BTC
+	amount              stored                                      mCent                 mSatoshi
+	perTxMaxAmount      = amount (for now)                          mCent                 mSatoshi
 	limitRateInverted   determined by derived class
 	remoteOfferID       determined on publishing
 	'''
@@ -67,6 +65,12 @@ class Order(offer.Offer, StoredObject):
 
 
 	def updateOfferMaxAmounts(self):
+		'''
+		Variable:                                               Unit (typical buy):   Unit (typical sell):
+		limitRate                                               mCent/mSatoshi        mSatoshi/mCent
+		amount                                                  mCent                 mSatoshi
+		'''
+
 		#From integer attributes to Decimal:
 		limitRate = decimal.Decimal(self.limitRate) / settings.cryptoDivisor
 		if self.limitRateInverted:
