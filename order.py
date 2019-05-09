@@ -23,12 +23,6 @@ from storage import StoredObject
 
 
 
-#Side constants
-BID = True
-ASK = False
-
-
-
 class Order(offer.Offer, StoredObject):
 	'''
 	An order is executed by the local trading engine.
@@ -63,7 +57,6 @@ class Order(offer.Offer, StoredObject):
 		self.remoteOfferID = None
 
 		self.perTxMaxAmount = self.amount #TODO
-		self.perTxMaxAmountSide = BID
 		self.limitRateInverted = limitRateInverted
 		self.updateOfferMaxAmounts()
 
@@ -84,13 +77,9 @@ class Order(offer.Offer, StoredObject):
 		offerAskAmount = amount / limitRate
 		offerBidAmount = amount
 
-		if self.perTxMaxAmountSide == BID and perTxMaxAmount < offerBidAmount:
+		if perTxMaxAmount < offerBidAmount:
 			offerAskAmount = perTxMaxAmount / limitRate
 			offerBidAmount = perTxMaxAmount
-
-		if self.perTxMaxAmountSide == ASK and perTxMaxAmount < offerAskAmount:
-			offerAskAmount = perTxMaxAmount
-			offerBidAmount = perTxMaxAmount * limitRate
 
 		self.bid.max_amount = int(offerBidAmount)
 		self.ask.max_amount = int(offerAskAmount) + 1 # + 1 should be insignificant; it's here to make sure we don't round down
