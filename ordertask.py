@@ -300,6 +300,7 @@ class OrderTask:
 			fiatAmountDivisor * self.counterOffer.bid.max_amount // self.counterOffer.bid.max_amount_divisor
 			)
 		assert senderFiatAmount > 0
+		log('senderFiatAmount = ' + str(senderFiatAmount))
 
 		#Minimum: this is what the other wants
 		#btc = eur * (btc / eur)
@@ -312,11 +313,13 @@ class OrderTask:
 		receiverCryptoAmount = \
 			(cryptoAmountDivisor * senderFiatAmount  * self.counterOffer.ask.max_amount         * self.counterOffer.bid.max_amount_divisor) // \
 			(                      fiatAmountDivisor * self.counterOffer.ask.max_amount_divisor * self.counterOffer.bid.max_amount)
+		log('receiverCryptoAmount = ' + str(receiverCryptoAmount))
+		assert receiverCryptoAmount >= 0
 		#Maximum: this is what we are prepared to pay
 		maxSenderCryptoAmount = \
 			(cryptoAmountDivisor * senderFiatAmount  * self.order.bid.max_amount         * self.order.ask.max_amount_divisor) // \
 			(                      fiatAmountDivisor * self.order.bid.max_amount_divisor * self.order.ask.max_amount)
-		assert receiverCryptoAmount >= 0
+		log('maxSenderCryptoAmount = ' + str(maxSenderCryptoAmount))
 		assert maxSenderCryptoAmount >= receiverCryptoAmount
 
 		#Choose the sender timeout limit as small as possible
