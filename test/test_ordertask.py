@@ -90,8 +90,8 @@ class MockStorage:
 			keys = list(data.keys())
 			values = [data[k] for k in keys]
 			return MockCursor([values], description=[(k,) for k in keys])
-		elif query == 'SELECT ID from buyTransactions WHERE status != ?':
-			self.test.assertEqual(data, [ordertask.STATUS_FINISHED])
+		elif query == 'SELECT ID from buyTransactions WHERE buyOrder = ? AND status != ?':
+			self.test.assertEqual(data[1:], [ordertask.STATUS_FINISHED])
 			return MockCursor([])
 
 		elif query.startswith('INSERT INTO buyOrders'):
@@ -138,8 +138,8 @@ class MockStorage:
 			keys = list(data.keys())
 			values = [data[k] for k in keys]
 			return MockCursor([values], description=[(k,) for k in keys])
-		elif query == 'SELECT ID from sellTransactions WHERE status != ?':
-			self.test.assertEqual(data, [ordertask.STATUS_FINISHED])
+		elif query == 'SELECT ID from sellTransactions WHERE sellOrder = ? AND status != ?':
+			self.test.assertEqual(data[1:], [ordertask.STATUS_FINISHED])
 			return MockCursor([])
 
 		elif query.startswith('INSERT INTO sellOrders'):

@@ -260,8 +260,8 @@ class OrderTask:
 
 	async def continueSellTransaction(self):
 		cursor = self.storage.execute(
-			'SELECT ID from sellTransactions WHERE status != ?',
-			[STATUS_FINISHED]
+			'SELECT ID from sellTransactions WHERE sellOrder = ? AND status != ?',
+			[self.order.ID, STATUS_FINISHED]
 			)
 		IDs = [row[0] for row in cursor]
 		assert len(IDs) < 2 #TODO: properly report database inconsistency error
@@ -442,8 +442,8 @@ class OrderTask:
 
 	async def continueBuyTransaction(self):
 		cursor = self.storage.execute(
-			'SELECT ID from buyTransactions WHERE status != ?',
-			[STATUS_FINISHED]
+			'SELECT ID from buyTransactions WHERE buyOrder = ? AND status != ?',
+			[self.order.ID, STATUS_FINISHED]
 			)
 		IDs = [row[0] for row in cursor]
 		assert len(IDs) < 2 #TODO: properly report database inconsistency error
