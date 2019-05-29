@@ -20,6 +20,8 @@
 all: test
 
 test:
+	-rm -rf coverage-html
+	python3-coverage erase
 	python3-coverage run -p test_bl4p_interface.py
 	python3-coverage run -p test_decodedbuffer.py
 	python3-coverage run -p test_json_rpc.py
