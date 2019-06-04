@@ -92,7 +92,13 @@ class MockStorage:
 			return MockCursor([values], description=[(k,) for k in keys])
 		elif query == 'SELECT ID from buyTransactions WHERE buyOrder = ? AND status != ?':
 			self.test.assertEqual(data[1:], [ordertask.STATUS_FINISHED])
-			return MockCursor([])
+			values = \
+			[
+			[tx['ID']]
+			for tx in self.buyTransactions.values()
+			if tx['buyOrder'] == data[0] and tx['status'] != ordertask.STATUS_FINISHED
+			]
+			return MockCursor(values)
 
 		elif query.startswith('INSERT INTO buyOrders'):
 			names = query[query.index('(')+1:query.index(')')]
@@ -140,7 +146,13 @@ class MockStorage:
 			return MockCursor([values], description=[(k,) for k in keys])
 		elif query == 'SELECT ID from sellTransactions WHERE sellOrder = ? AND status != ?':
 			self.test.assertEqual(data[1:], [ordertask.STATUS_FINISHED])
-			return MockCursor([])
+			values = \
+			[
+			[tx['ID']]
+			for tx in self.sellTransactions.values()
+			if tx['sellOrder'] == data[0] and tx['status'] != ordertask.STATUS_FINISHED
+			]
+			return MockCursor(values)
 
 		elif query.startswith('INSERT INTO sellOrders'):
 			names = query[query.index('(')+1:query.index(')')]
@@ -177,6 +189,11 @@ class MockStorage:
 			}
 			self.counter += 1
 			return MockCursor([], lastrowid=self.counter-1)
+		elif query == 'SELECT * from counterOffers WHERE `ID` = ?':
+			data = self.counterOffers[data[0]]
+			keys = list(data.keys())
+			values = [data[k] for k in keys]
+			return MockCursor([values], description=[(k,) for k in keys])
 
 		raise Exception('Query not recognized: ' + str(query))
 
@@ -417,6 +434,66 @@ class TestOrderTask(unittest.TestCase):
 
 
 	@asynciotest
+	async def test_continueBuyTransaction(self):
+		storage = MockStorage(self, startCount=42)
+
+		orderID = ordertask.BuyOrder.create(storage,
+			190000,   #mCent / BTC = 1.9 EUR/BTC
+			123400000 #mCent    = 1234 EUR
+			)
+		order = ordertask.BuyOrder(storage, orderID, 'buyerAddress')
+
+		outgoingMessages = asyncio.Queue()
+
+		def handleOutgoingMessage(msg):
+			outgoingMessages.put_nowait(msg)
+		client = Mock()
+		client.handleOutgoingMessage = handleOutgoingMessage
+
+		storage.buyTransactions = \
+		{
+		41:
+			{
+			'ID': 41,
+			'buyOrder': orderID,
+			'status': 0,
+
+			'fiatAmount': 100000000,
+
+			'paymentHash': b'foo',
+			}
+		}
+
+		task = ordertask.OrderTask(client, storage, order)
+		task.startup()
+
+		msg = await outgoingMessages.get()
+		self.assertEqual(msg, messages.BL4PSend(
+			localOrderID=42,
+
+			amount = 100000000,
+			paymentHash = b'foo',
+			))
+
+		await task.shutdown()
+
+		#Database inconsistency exception:
+		storage.buyTransactions = \
+		{
+		41:
+			{
+			'ID': 41,
+			'buyOrder': orderID,
+			'status': 4,
+			}
+		}
+
+		task = ordertask.OrderTask(client, storage, order)
+		with self.assertRaises(Exception):
+			await task.continueBuyTransaction()
+
+
+	@asynciotest
 	async def test_seller_goodFlow(self):
 		storage = MockStorage(self, startCount=42)
 
@@ -628,6 +705,117 @@ class TestOrderTask(unittest.TestCase):
 				}})
 
 		await task.waitFinished()
+
+
+	@asynciotest
+	async def test_continueSellTransaction(self):
+		storage = MockStorage(self, startCount=42)
+
+		orderID = ordertask.SellOrder.create(storage,
+			190000,         #mCent / BTC = 1.9 EUR/BTC
+			123400000000000 #mSatoshi    = 1234 BTC
+			)
+		order = ordertask.SellOrder(storage, orderID, 'sellerAddress')
+
+		ID = ordertask.BuyOrder.create(storage,
+			210000,         #mCent / BTC = 2.1 EUR/BTC
+			100000          #mCent       = 1000 EUR
+			)
+
+		originalCounterOffer = ordertask.BuyOrder(storage, ID, 'buyerAddress')
+		storage.counterOffers = \
+		{40:
+			{
+			'ID': 40,
+			'blob': originalCounterOffer.toPB2().SerializeToString()
+			}
+		}
+
+		outgoingMessages = asyncio.Queue()
+
+		def handleOutgoingMessage(msg):
+			outgoingMessages.put_nowait(msg)
+		client = Mock()
+		client.handleOutgoingMessage = handleOutgoingMessage
+
+		#status -> message:
+		expectedMessages = \
+		{
+		0: messages.BL4PStart(
+				localOrderID=42,
+
+				amount = 1200,
+				sender_timeout_delta_ms = 34,
+				locked_timeout_delta_s = 56,
+				receiver_pays_fee = True,
+				),
+		1: messages.LNPay(
+				localOrderID=42,
+
+		                destinationNodeID     = 'buyerAddress',
+		                offerID               = 43,
+
+		                recipientCryptoAmount = 10000,
+		                maxSenderCryptoAmount = 11000,
+		                fiatAmount            = 1200,
+
+		                minCLTVExpiryDelta    = 78,
+
+		                paymentHash           = b'foo',
+				),
+		2: messages.BL4PReceive(
+				localOrderID=42,
+
+				paymentPreimage = b'bar',
+				),
+		}
+
+		for status, expectedMessage in expectedMessages.items():
+			storage.sellTransactions = \
+			{
+			41:
+				{
+				'ID': 41,
+				'sellOrder': orderID,
+				'counterOffer': 40,
+				'status': status,
+
+				'senderFiatAmount': 1200,
+				'receiverCryptoAmount': 10000,
+				'maxSenderCryptoAmount': 11000,
+
+				'senderTimeoutDelta': 34,
+				'lockedTimeoutDelta': 56,
+				'CLTVExpiryDelta'   : 78,
+
+				'paymentHash': b'foo',
+				'paymentPreimage': b'bar',
+				}
+			}
+
+			task = ordertask.OrderTask(client, storage, order)
+			task.startup()
+
+			msg = await outgoingMessages.get()
+			self.assertEqual(msg, expectedMessage)
+
+			await task.shutdown()
+
+		#Database inconsistency exception:
+		storage.sellTransactions = \
+		{
+		41:
+			{
+			'ID': 41,
+			'sellOrder': orderID,
+			'counterOffer': 40,
+			'status': 4,
+			}
+		}
+
+		task = ordertask.OrderTask(client, storage, order)
+		with self.assertRaises(Exception):
+			await task.continueSellTransaction()
 
 
 	@asynciotest
