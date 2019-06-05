@@ -503,6 +503,7 @@ class OrderTask:
 			),
 			messages.BL4PSendResult)
 
+		#TODO: handle the case where we're too late and we don't get the preimage
 		assert sha256(sendResult.paymentPreimage) == self.transaction.paymentHash
 		log('We got the preimage from BL4P')
 

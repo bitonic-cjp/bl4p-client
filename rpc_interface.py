@@ -62,6 +62,9 @@ class RPCInterface(JSONRPC, messages.Handler):
 
 
 	def sendPay(self, message):
+		#TODO: check if we're already sending out funds on this payment hash.
+		#This can be the case, for instance, after a restart.
+
 		self.sendStoredRequest(message, 'getroute',
 			{
 			    "id": message.destinationNodeID,
