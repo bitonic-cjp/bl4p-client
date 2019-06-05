@@ -200,6 +200,17 @@ class MockStorage:
 
 
 class TestOrderTask(unittest.TestCase):
+	def setUp(self):
+		self.storage = MockStorage(self, startCount=42)
+
+		self.outgoingMessages = asyncio.Queue()
+
+		def handleOutgoingMessage(msg):
+			self.outgoingMessages.put_nowait(msg)
+		self.client = Mock()
+		self.client.handleOutgoingMessage = handleOutgoingMessage
+
+
 	def test_BuyTransaction(self):
 		with patch.object(ordertask.StoredObject, 'create', Mock(return_value=43)):
 			self.assertEqual(ordertask.BuyTransaction.create('foo', 'baa', 'bab', 'bac', 'bad'), 43)
@@ -333,28 +344,19 @@ class TestOrderTask(unittest.TestCase):
 
 	@asynciotest
 	async def test_buyer_goodFlow(self):
-		storage = MockStorage(self, startCount=42)
+		orderID = ordertask.BuyOrder.create(self.storage, 2, 1234)
+		order = ordertask.BuyOrder(self.storage, orderID, 'lnAddress')
 
-		orderID = ordertask.BuyOrder.create(storage, 2, 1234)
-		order = ordertask.BuyOrder(storage, orderID, 'lnAddress')
-
-		outgoingMessages = asyncio.Queue()
-
-		def handleOutgoingMessage(msg):
-			outgoingMessages.put_nowait(msg)
-		client = Mock()
-		client.handleOutgoingMessage = handleOutgoingMessage
-
-		task = ordertask.OrderTask(client, storage, order)
+		task = ordertask.OrderTask(self.client, self.storage, order)
 		task.startup()
 
 		remainingAmount = order.amount
 		for txAmount in [1000, 234]:
-			storage.reset(startCount=43) #clean up from previous iteration
+			self.storage.reset(startCount=43) #clean up from previous iteration
 			order.setAmount = Mock() #Replace mock object with a fresh one
 
 			#Offer gets published
-			msg = await outgoingMessages.get()
+			msg = await self.outgoingMessages.get()
 			self.assertEqual(msg, messages.BL4PAddOffer(
 				localOrderID=42,
 
@@ -376,12 +378,12 @@ class TestOrderTask(unittest.TestCase):
 				paymentHash=paymentHash,
 				))
 
-			msg = await outgoingMessages.get()
+			msg = await self.outgoingMessages.get()
 
 			remainingAmount -= txAmount
 			order.setAmount.assert_called_once_with(remainingAmount)
 			order.amount = remainingAmount
-			self.assertEqual(storage.buyTransactions, {43: {
+			self.assertEqual(self.storage.buyTransactions, {43: {
 				'ID': 43,
 				'status': ordertask.STATUS_INITIAL,
 				'buyOrder': 42,
@@ -402,9 +404,9 @@ class TestOrderTask(unittest.TestCase):
 				paymentPreimage=paymentPreimage,
 				))
 
-			msg = await outgoingMessages.get()
+			msg = await self.outgoingMessages.get()
 
-			self.assertEqual(storage.buyTransactions, {43: {
+			self.assertEqual(self.storage.buyTransactions, {43: {
 				'ID': 43,
 				'status': ordertask.STATUS_FINISHED,
 				'buyOrder': 42,
@@ -421,7 +423,7 @@ class TestOrderTask(unittest.TestCase):
 				))
 
 			#Old offer gets removed
-			msg = await outgoingMessages.get()
+			msg = await self.outgoingMessages.get()
 			self.assertEqual(msg, messages.BL4PRemoveOffer(
 				localOrderID=42,
 
@@ -435,22 +437,13 @@ class TestOrderTask(unittest.TestCase):
 
 	@asynciotest
 	async def test_continueBuyTransaction(self):
-		storage = MockStorage(self, startCount=42)
-
-		orderID = ordertask.BuyOrder.create(storage,
+		orderID = ordertask.BuyOrder.create(self.storage,
 			190000,   #mCent / BTC = 1.9 EUR/BTC
 			123400000 #mCent    = 1234 EUR
 			)
-		order = ordertask.BuyOrder(storage, orderID, 'buyerAddress')
+		order = ordertask.BuyOrder(self.storage, orderID, 'buyerAddress')
 
-		outgoingMessages = asyncio.Queue()
-
-		def handleOutgoingMessage(msg):
-			outgoingMessages.put_nowait(msg)
-		client = Mock()
-		client.handleOutgoingMessage = handleOutgoingMessage
-
-		storage.buyTransactions = \
+		self.storage.buyTransactions = \
 		{
 		41:
 			{
@@ -464,10 +457,10 @@ class TestOrderTask(unittest.TestCase):
 			}
 		}
 
-		task = ordertask.OrderTask(client, storage, order)
+		task = ordertask.OrderTask(self.client, self.storage, order)
 		task.startup()
 
-		msg = await outgoingMessages.get()
+		msg = await self.outgoingMessages.get()
 		self.assertEqual(msg, messages.BL4PSend(
 			localOrderID=42,
 
@@ -478,7 +471,7 @@ class TestOrderTask(unittest.TestCase):
 		await task.shutdown()
 
 		#Database inconsistency exception:
-		storage.buyTransactions = \
+		self.storage.buyTransactions = \
 		{
 		41:
 			{
@@ -488,29 +481,20 @@ class TestOrderTask(unittest.TestCase):
 			}
 		}
 
-		task = ordertask.OrderTask(client, storage, order)
+		task = ordertask.OrderTask(self.client, self.storage, order)
 		with self.assertRaises(Exception):
 			await task.continueBuyTransaction()
 
 
 	@asynciotest
 	async def test_seller_goodFlow(self):
-		storage = MockStorage(self, startCount=42)
-
-		orderID = ordertask.SellOrder.create(storage,
+		orderID = ordertask.SellOrder.create(self.storage,
 			190000,         #mCent / BTC = 1.9 EUR/BTC
 			123400000000000 #mSatoshi    = 1234 BTC
 			)
-		order = ordertask.SellOrder(storage, orderID, 'sellerAddress')
+		order = ordertask.SellOrder(self.storage, orderID, 'sellerAddress')
 
-		outgoingMessages = asyncio.Queue()
-
-		def handleOutgoingMessage(msg):
-			outgoingMessages.put_nowait(msg)
-		client = Mock()
-		client.handleOutgoingMessage = handleOutgoingMessage
-
-		task = ordertask.OrderTask(client, storage, order)
+		task = ordertask.OrderTask(self.client, self.storage, order)
 		task.startup()
 
 		o1 = Mock()
@@ -528,7 +512,7 @@ class TestOrderTask(unittest.TestCase):
 
 		remainingAmount = order.amount
 		for i in range(2):
-			storage.reset(startCount=43) #clean up from previous iteration
+			self.storage.reset(startCount=43) #clean up from previous iteration
 			order.setAmount = Mock() #Replace mock object with a fresh one
 
 			#Expected data:
@@ -559,7 +543,7 @@ class TestOrderTask(unittest.TestCase):
 			][i]
 
 			#Offers get found
-			msg = await outgoingMessages.get()
+			msg = await self.outgoingMessages.get()
 			self.assertEqual(msg, messages.BL4PFindOffers(
 				localOrderID=42,
 
@@ -569,17 +553,17 @@ class TestOrderTask(unittest.TestCase):
 				offers=[o1, Mock()],
 				))
 
-			msg = await outgoingMessages.get()
+			msg = await self.outgoingMessages.get()
 
 			#For now, behavior is to always select the first:
 			self.assertEqual(task.counterOffer, o1)
 
-			self.assertEqual(storage.counterOffers, {43:
+			self.assertEqual(self.storage.counterOffers, {43:
 				{
 				'ID': 43,
 				'blob': b'bar',
 				}})
-			self.assertEqual(storage.sellTransactions, {44:
+			self.assertEqual(self.storage.sellTransactions, {44:
 				{
 				'ID': 44,
 				'sellOrder': 42,
@@ -614,9 +598,9 @@ class TestOrderTask(unittest.TestCase):
 				paymentHash=paymentHash,
 				))
 
-			msg = await outgoingMessages.get()
+			msg = await self.outgoingMessages.get()
 
-			self.assertEqual(storage.sellTransactions, {44:
+			self.assertEqual(self.storage.sellTransactions, {44:
 				{
 				'ID': 44,
 				'sellOrder': 42,
@@ -651,9 +635,9 @@ class TestOrderTask(unittest.TestCase):
 				paymentPreimage=paymentPreimage,
 				))
 
-			msg = await outgoingMessages.get()
+			msg = await self.outgoingMessages.get()
 
-			self.assertEqual(storage.sellTransactions, {44:
+			self.assertEqual(self.storage.sellTransactions, {44:
 				{
 				'ID': 44,
 				'sellOrder': 42,
@@ -686,7 +670,7 @@ class TestOrderTask(unittest.TestCase):
 
 			await asyncio.sleep(0.1)
 
-			self.assertEqual(storage.sellTransactions, {44:
+			self.assertEqual(self.storage.sellTransactions, {44:
 				{
 				'ID': 44,
 				'sellOrder': 42,
@@ -709,34 +693,25 @@ class TestOrderTask(unittest.TestCase):
 
 	@asynciotest
 	async def test_continueSellTransaction(self):
-		storage = MockStorage(self, startCount=42)
-
-		orderID = ordertask.SellOrder.create(storage,
+		orderID = ordertask.SellOrder.create(self.storage,
 			190000,         #mCent / BTC = 1.9 EUR/BTC
 			123400000000000 #mSatoshi    = 1234 BTC
 			)
-		order = ordertask.SellOrder(storage, orderID, 'sellerAddress')
+		order = ordertask.SellOrder(self.storage, orderID, 'sellerAddress')
 
-		ID = ordertask.BuyOrder.create(storage,
+		ID = ordertask.BuyOrder.create(self.storage,
 			210000,         #mCent / BTC = 2.1 EUR/BTC
 			100000          #mCent       = 1000 EUR
 			)
 
-		originalCounterOffer = ordertask.BuyOrder(storage, ID, 'buyerAddress')
-		storage.counterOffers = \
+		originalCounterOffer = ordertask.BuyOrder(self.storage, ID, 'buyerAddress')
+		self.storage.counterOffers = \
 		{40:
 			{
 			'ID': 40,
 			'blob': originalCounterOffer.toPB2().SerializeToString()
 			}
 		}
-
-		outgoingMessages = asyncio.Queue()
-
-		def handleOutgoingMessage(msg):
-			outgoingMessages.put_nowait(msg)
-		client = Mock()
-		client.handleOutgoingMessage = handleOutgoingMessage
 
 		#status -> message:
 		expectedMessages = \
@@ -771,7 +746,7 @@ class TestOrderTask(unittest.TestCase):
 		}
 
 		for status, expectedMessage in expectedMessages.items():
-			storage.sellTransactions = \
+			self.storage.sellTransactions = \
 			{
 			41:
 				{
@@ -793,16 +768,16 @@ class TestOrderTask(unittest.TestCase):
 				}
 			}
 
-			task = ordertask.OrderTask(client, storage, order)
+			task = ordertask.OrderTask(self.client, self.storage, order)
 			task.startup()
 
-			msg = await outgoingMessages.get()
+			msg = await self.outgoingMessages.get()
 			self.assertEqual(msg, expectedMessage)
 
 			await task.shutdown()
 
 		#Database inconsistency exception:
-		storage.sellTransactions = \
+		self.storage.sellTransactions = \
 		{
 		41:
 			{
@@ -813,7 +788,7 @@ class TestOrderTask(unittest.TestCase):
 			}
 		}
 
-		task = ordertask.OrderTask(client, storage, order)
+		task = ordertask.OrderTask(self.client, self.storage, order)
 		with self.assertRaises(Exception):
 			await task.continueSellTransaction()
 
@@ -846,9 +821,8 @@ class TestOrderTask(unittest.TestCase):
 			logException.assert_called_once_with()
 
 		#Canceled exception:
-		storage = MockStorage(self, startCount=42)
-		orderID = ordertask.BuyOrder.create(storage, 2, 1234)
-		order = ordertask.BuyOrder(storage, orderID, 'lnAddress')
+		orderID = ordertask.BuyOrder.create(self.storage, 2, 1234)
+		order = ordertask.BuyOrder(self.storage, orderID, 'lnAddress')
 		task = ordertask.OrderTask(Mock(), None, order)
 
 		async def continueBuyTransaction():
@@ -861,17 +835,10 @@ class TestOrderTask(unittest.TestCase):
 
 	@asynciotest
 	async def test_doOfferSearch_loop(self):
-		outgoingMessages = asyncio.Queue()
-
-		def handleOutgoingMessage(msg):
-			outgoingMessages.put_nowait(msg)
-		client = Mock()
-		client.handleOutgoingMessage = handleOutgoingMessage
-
 		order = Mock()
 		order.ID = 42
 		order.remoteOfferID = None
-		task = ordertask.OrderTask(client, None, order)
+		task = ordertask.OrderTask(self.client, None, order)
 
 		done = []
 		async def doTransaction():
@@ -882,7 +849,7 @@ class TestOrderTask(unittest.TestCase):
 		searchTask = asyncio.ensure_future(task.doOfferSearch())
 
 		#No results:
-		msg = await outgoingMessages.get()
+		msg = await self.outgoingMessages.get()
 		self.assertEqual(msg, messages.BL4PFindOffers(
 			localOrderID=42,
 
@@ -893,7 +860,7 @@ class TestOrderTask(unittest.TestCase):
 			))
 
 		#Offer gets published:
-		msg = await outgoingMessages.get()
+		msg = await self.outgoingMessages.get()
 		self.assertEqual(msg, messages.BL4PAddOffer(
 			localOrderID=42,
 
@@ -905,7 +872,7 @@ class TestOrderTask(unittest.TestCase):
 
 		#No results again:
 		t0 = time.time()
-		msg = await outgoingMessages.get()
+		msg = await self.outgoingMessages.get()
 		t1 = time.time()
 		self.assertAlmostEqual(t1-t0, 1.0, places=2)
 		self.assertEqual(msg, messages.BL4PFindOffers(
@@ -919,7 +886,7 @@ class TestOrderTask(unittest.TestCase):
 		self.assertEqual(order.remoteOfferID, 6)
 
 		#Multiple results:
-		msg = await outgoingMessages.get()
+		msg = await self.outgoingMessages.get()
 		self.assertEqual(msg, messages.BL4PFindOffers(
 			localOrderID=42,
 
