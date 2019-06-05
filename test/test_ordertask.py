@@ -794,6 +794,83 @@ class TestOrderTask(unittest.TestCase):
 
 
 	@asynciotest
+	async def test_canceledSellTransaction(self):
+		orderID = ordertask.SellOrder.create(self.storage,
+			190000,         #mCent / BTC = 1.9 EUR/BTC
+			123400000000000 #mSatoshi    = 1234 BTC
+			)
+		order = ordertask.SellOrder(self.storage, orderID, 'sellerAddress')
+
+		ID = ordertask.BuyOrder.create(self.storage,
+			210000,         #mCent / BTC = 2.1 EUR/BTC
+			100000          #mCent       = 1000 EUR
+			)
+
+		originalCounterOffer = ordertask.BuyOrder(self.storage, ID, 'buyerAddress')
+		self.storage.counterOffers = \
+		{40:
+			{
+			'ID': 40,
+			'blob': originalCounterOffer.toPB2().SerializeToString()
+			}
+		}
+
+		#An ongoing tx that is just about to be sent over Lightning:
+		self.storage.sellTransactions = \
+		{
+		41:
+			{
+			'ID': 41,
+			'sellOrder': orderID,
+			'counterOffer': 40,
+			'status': 1,
+
+			'senderFiatAmount': 1200,
+			'receiverCryptoAmount': 10000,
+			'maxSenderCryptoAmount': 11000,
+
+			'senderTimeoutDelta': 34,
+			'lockedTimeoutDelta': 56,
+			'CLTVExpiryDelta'   : 78,
+
+			'paymentHash': b'foo',
+			}
+		}
+
+		task = ordertask.OrderTask(self.client, self.storage, order)
+		task.startup()
+
+		msg = await self.outgoingMessages.get()
+		self.assertEqual(msg, messages.LNPay(
+				localOrderID=42,
+
+		                destinationNodeID     = 'buyerAddress',
+		                offerID               = 43,
+
+		                recipientCryptoAmount = 10000,
+		                maxSenderCryptoAmount = 11000,
+		                fiatAmount            = 1200,
+
+		                minCLTVExpiryDelta    = 78,
+
+		                paymentHash           = b'foo',
+				))
+
+		#Lightning tx ends up canceled:
+		task.setCallResult(messages.LNPayResult(
+			senderCryptoAmount=10500,
+			paymentPreimage=None,
+			))
+
+		msg = await self.outgoingMessages.get()
+
+		self.assertEqual(task.transaction, None)
+		#TODO: check that transaction is marked canceled
+
+		await task.shutdown()
+
+
+	@asynciotest
 	async def test_setCallResult_exceptions(self):
 		task = ordertask.OrderTask(None, None, None)
 		with self.assertRaises(ordertask.UnexpectedResult):
