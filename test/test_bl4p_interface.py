@@ -242,11 +242,9 @@ class TestBL4PInterface(unittest.TestCase):
 		self.assertEqual(msg.offers[0], o1)
 		self.assertEqual(msg.offers[1], o2)
 
-
-	def test_handleResult_error(self):
-		#Just testing coverage without exceptions
 		msg = bl4p_pb2.Error()
-		self.interface.handleResult(msg)
+		msg = testSingleMessage(msg)
+		self.assertTrue(isinstance(msg, messages.BL4PError))
 
 
 	def test_handleResult_unrecognized(self):

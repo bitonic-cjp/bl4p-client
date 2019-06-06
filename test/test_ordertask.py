@@ -90,13 +90,13 @@ class MockStorage:
 			keys = list(data.keys())
 			values = [data[k] for k in keys]
 			return MockCursor([values], description=[(k,) for k in keys])
-		elif query == 'SELECT ID from buyTransactions WHERE buyOrder = ? AND status != ?':
-			self.test.assertEqual(data[1:], [ordertask.STATUS_FINISHED])
+		elif query == 'SELECT ID from buyTransactions WHERE buyOrder = ? AND status != ? AND status != ?':
+			self.test.assertEqual(data[1:], [ordertask.STATUS_FINISHED, ordertask.STATUS_CANCELED])
 			values = \
 			[
 			[tx['ID']]
 			for tx in self.buyTransactions.values()
-			if tx['buyOrder'] == data[0] and tx['status'] != ordertask.STATUS_FINISHED
+			if tx['buyOrder'] == data[0] and tx['status'] not in [ordertask.STATUS_FINISHED, ordertask.STATUS_CANCELED]
 			]
 			return MockCursor(values)
 
@@ -144,13 +144,13 @@ class MockStorage:
 			keys = list(data.keys())
 			values = [data[k] for k in keys]
 			return MockCursor([values], description=[(k,) for k in keys])
-		elif query == 'SELECT ID from sellTransactions WHERE sellOrder = ? AND status != ?':
-			self.test.assertEqual(data[1:], [ordertask.STATUS_FINISHED])
+		elif query == 'SELECT ID from sellTransactions WHERE sellOrder = ? AND status != ? AND status != ?':
+			self.test.assertEqual(data[1:], [ordertask.STATUS_FINISHED, ordertask.STATUS_CANCELED])
 			values = \
 			[
 			[tx['ID']]
 			for tx in self.sellTransactions.values()
-			if tx['sellOrder'] == data[0] and tx['status'] != ordertask.STATUS_FINISHED
+			if tx['sellOrder'] == data[0] and tx['status'] not in [ordertask.STATUS_FINISHED, ordertask.STATUS_CANCELED]
 			]
 			return MockCursor(values)
 
@@ -477,13 +477,78 @@ class TestOrderTask(unittest.TestCase):
 			{
 			'ID': 41,
 			'buyOrder': orderID,
-			'status': 4,
+			'status': 100,
 			}
 		}
 
 		task = ordertask.OrderTask(self.client, self.storage, order)
 		with self.assertRaises(Exception):
 			await task.continueBuyTransaction()
+
+
+	@asynciotest
+	async def test_failedBuyTransaction(self):
+		orderID = ordertask.BuyOrder.create(self.storage,
+			190000,   #mCent / BTC = 1.9 EUR/BTC
+			123400000 #mCent    = 1234 EUR
+			)
+		order = ordertask.BuyOrder(self.storage, orderID, 'buyerAddress')
+		order.remoteOfferID = 6
+		order.setAmount = Mock()
+
+		self.storage.buyTransactions = \
+		{
+		41:
+			{
+			'ID': 41,
+			'buyOrder': orderID,
+			'status': 0,
+			'fiatAmount': 100000000,
+			'paymentHash': b'foo',
+			}
+		}
+
+		task = ordertask.OrderTask(self.client, self.storage, order)
+		task.startup()
+
+		msg = await self.outgoingMessages.get()
+		self.assertEqual(msg, messages.BL4PSend(
+			localOrderID=42,
+
+			amount = 100000000,
+			paymentHash = b'foo',
+			))
+		task.setCallResult(messages.BL4PError())
+
+		#LN transaction gets canceled
+		msg = await self.outgoingMessages.get()
+		self.assertEqual(msg, messages.LNFail(
+			paymentHash = b'foo',
+			))
+
+		order.setAmount.assert_called_once_with(223400000)
+		self.assertEqual(self.storage.buyTransactions, {41: {
+			'ID': 41,
+			'status': ordertask.STATUS_CANCELED,
+			'buyOrder': orderID,
+			'fiatAmount': 100000000,
+			'paymentHash': b'foo',
+			}})
+
+		#Old offer gets removed
+		msg = await self.outgoingMessages.get()
+		self.assertTrue(isinstance(msg, messages.BL4PRemoveOffer))
+		task.setCallResult(messages.BL4PRemoveOfferResult())
+
+		#New offer gets added
+		msg = await self.outgoingMessages.get()
+		self.assertTrue(isinstance(msg, messages.BL4PAddOffer))
+		task.setCallResult(messages.BL4PAddOfferResult())
+
+		#Continues to next iteration:
+		await asyncio.sleep(0.1)
+
+		await task.shutdown()
 
 
 	@asynciotest
@@ -784,7 +849,7 @@ class TestOrderTask(unittest.TestCase):
 			'ID': 41,
 			'sellOrder': orderID,
 			'counterOffer': 40,
-			'status': 4,
+			'status': 100,
 			}
 		}
 

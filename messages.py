@@ -105,6 +105,10 @@ class BL4PFindOffersResult(BL4PResult):
 	offers = []
 
 
+class BL4PError(BL4PResult):
+	pass
+
+
 class LNPay(Struct):
 	localOrderID = 0 #not transmitted - for local use only
 

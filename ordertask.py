@@ -56,14 +56,17 @@ State transitions:
 
 Seller market taker:
 initial -> locked -> received_preimage -> finished
+                  -> canceled
 
 Buyer market maker:
 initial -> finished
+        -> canceled
 '''
 STATUS_INITIAL = 0
 STATUS_LOCKED = 1
 STATUS_RECEIVED_PREIMAGE = 2
 STATUS_FINISHED = 3
+STATUS_CANCELED = 4
 
 
 
@@ -144,9 +147,12 @@ class UnexpectedResult(Exception):
 
 
 
+class BL4PError(Exception):
+	pass
+
+
+
 class OrderTask:
-
-
 	def __init__(self, client, storage, order):
 		self.client = client
 		self.storage = storage
@@ -177,7 +183,7 @@ class OrderTask:
 				'Received a call result while no call was going on: ' + \
 				str(result)
 				)
-		if not isinstance(result, self.expectedCallResultType):
+		if not isinstance(result, (self.expectedCallResultType, messages.BL4PError)):
 			raise UnexpectedResult(
 				'Received a call result of unexpected type: ' + \
 				str(result)
@@ -260,8 +266,8 @@ class OrderTask:
 
 	async def continueSellTransaction(self):
 		cursor = self.storage.execute(
-			'SELECT ID from sellTransactions WHERE sellOrder = ? AND status != ?',
-			[self.order.ID, STATUS_FINISHED]
+			'SELECT ID from sellTransactions WHERE sellOrder = ? AND status != ? AND status != ?',
+			[self.order.ID, STATUS_FINISHED, STATUS_CANCELED]
 			)
 		IDs = [row[0] for row in cursor]
 		assert len(IDs) < 2 #TODO: properly report database inconsistency error
@@ -442,8 +448,8 @@ class OrderTask:
 
 	async def continueBuyTransaction(self):
 		cursor = self.storage.execute(
-			'SELECT ID from buyTransactions WHERE buyOrder = ? AND status != ?',
-			[self.order.ID, STATUS_FINISHED]
+			'SELECT ID from buyTransactions WHERE buyOrder = ? AND status != ? AND status != ?',
+			[self.order.ID, STATUS_FINISHED, STATUS_CANCELED]
 			)
 		IDs = [row[0] for row in cursor]
 		assert len(IDs) < 2 #TODO: properly report database inconsistency error
@@ -494,16 +500,25 @@ class OrderTask:
 
 
 	async def sendFundsOnBL4P(self):
-		#Lock fiat funds:
-		sendResult = await self.call(messages.BL4PSend(
-			localOrderID = self.order.ID,
+		try:
+			#Lock fiat funds:
+			sendResult = await self.call(messages.BL4PSend(
+				localOrderID = self.order.ID,
 
-			amount      = self.transaction.fiatAmount,
-			paymentHash = self.transaction.paymentHash,
-			),
-			messages.BL4PSendResult)
+				amount      = self.transaction.fiatAmount,
+				paymentHash = self.transaction.paymentHash,
+				),
+				messages.BL4PSendResult)
+		except BL4PError:
+			log('Error received from BL4P - transaction canceled')
+			self.order.setAmount(self.order.amount + self.transaction.fiatAmount)
+			self.transaction.update(
+				status = STATUS_CANCELED,
+				)
+			await self.cancelTransactionOnLightning()
+			return
 
-		#TODO: handle the case where we're too late and we don't get the preimage
+		#TODO: what if this asserion fails?
 		assert sha256(sendResult.paymentPreimage) == self.transaction.paymentHash
 		log('We got the preimage from BL4P')
 
@@ -523,6 +538,15 @@ class OrderTask:
 			))
 
 		log('Buy transaction is finished')
+		await self.updateOrderAfterTransaction()
+
+
+	async def cancelTransactionOnLightning(self):
+		self.client.handleOutgoingMessage(messages.LNFail(
+			paymentHash=self.transaction.paymentHash,
+			))
+
+		log('Buy transaction is canceled')
 		await self.updateOrderAfterTransaction()
 
 
@@ -558,6 +582,13 @@ class OrderTask:
 		self.expectedCallResultType = expectedResultType
 		await self.callResult
 		ret = self.callResult.result()
+
+		#Special case for BL4P exceptions
+		if isinstance(ret, messages.BL4PError):
+			self.callResult = None
+			self.expectedCallResultType = None
+			raise BL4PError()
+
 		assert isinstance(ret, expectedResultType)
 		self.callResult = None
 		self.expectedCallResultType = None

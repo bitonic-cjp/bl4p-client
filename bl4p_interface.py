@@ -129,9 +129,8 @@ class BL4PInterface(bl4p.Bl4pApi, messages.Handler):
 				])
 
 		elif isinstance(result, bl4p_pb2.Error):
-			#TODO: act appropriately
-			log('Got BL4P error (reason = %d) - ignored' % result.reason)
-			return
+			log('Got BL4P error (reason = %d)' % result.reason)
+			message = messages.BL4PError()
 
 		else:
 			log('Ignoring unrecognized message type from BL4P: ' + \
