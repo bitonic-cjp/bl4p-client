@@ -21,6 +21,7 @@ all: test
 
 test:
 	-rm -rf coverage-html
+	-rm -rf .coverage
 	python3-coverage erase
 	python3-coverage run -p test_bl4p_interface.py
 	python3-coverage run -p test_decodedbuffer.py
