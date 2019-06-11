@@ -290,8 +290,14 @@ class PluginInterface(JSONRPC, messages.Handler):
 
 
 	def sendFinish(self, message):
-		ID = self.findOngoingRequest('htlc_accepted',
-			lambda x: x.paymentHash == message.paymentHash)
+		try:
+			ID = self.findOngoingRequest('htlc_accepted',
+				lambda x: x.paymentHash == message.paymentHash)
+		except IndexError:
+			log('Cannot finish the Lightning transaction right now, because lightningd didn\'t give it to us.')
+			log('This may be caused by a restart during an ongoing transaction.')
+			log('Now we have to wait until lightningd gives it to us again.')
+			return
 
 		self.sendOngoingRequestResponse(ID, {
 			'result': 'resolve',
@@ -300,8 +306,14 @@ class PluginInterface(JSONRPC, messages.Handler):
 
 
 	def sendFail(self, message):
-		ID = self.findOngoingRequest('htlc_accepted',
-			lambda x: x.paymentHash == message.paymentHash)
+		try:
+			ID = self.findOngoingRequest('htlc_accepted',
+				lambda x: x.paymentHash == message.paymentHash)
+		except IndexError:
+			log('Cannot fail the Lightning transaction right now, because lightningd didn\'t give it to us.')
+			log('This may be caused by a restart during an ongoing transaction.')
+			log('Now we have to wait until lightningd gives it to us again.')
+			return
 
 		self.sendOngoingRequestResponse(ID, {
 			'result': 'fail',

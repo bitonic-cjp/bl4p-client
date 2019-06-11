@@ -349,6 +349,23 @@ class TestPluginInterface(unittest.TestCase):
 			})
 
 
+	def test_sendFinish_withoutCall(self):
+		#This must be a NOP:
+		self.interface.handleMessage(messages.LNFinish(
+			paymentHash = b'\xca\xfe\xca\xfe',
+			paymentPreimage = b'\xb0\x0b\x13',
+			))
+		self.assertEqual(self.output.buffer, b'')
+
+
+	def test_sendFail_withoutCall(self):
+		#This must be a NOP:
+		self.interface.handleMessage(messages.LNFail(
+			paymentHash = b'\xca\xfe\xca\xfe',
+			))
+		self.assertEqual(self.output.buffer, b'')
+
+
 	def test_handleNotification(self):
 		#Just for coverage
 		self.interface.handleNotification('test', {})
