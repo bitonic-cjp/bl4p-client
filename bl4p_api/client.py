@@ -77,6 +77,12 @@ class Bl4pApi:
 		return result.sender_amount.amount, result.receiver_amount.amount, result.payment_hash.data
 
 
+	def cancelStart(self, payment_hash):
+		request = bl4p_pb2.BL4P_CancelStart()
+		request.payment_hash.data = payment_hash
+		self.apiCall(request)
+
+
 	def send(self, sender_amount, payment_hash):
 		request = bl4p_pb2.BL4P_Send()
 		request.sender_amount.amount = sender_amount
@@ -102,6 +108,7 @@ class Bl4pApi:
 		bl4p_pb2._sender_timeout      : 'sender_timeout',
 		bl4p_pb2._receiver_timeout    : 'receiver_timeout',
 		bl4p_pb2._completed           : 'completed',
+		bl4p_pb2._canceled            : 'canceled',
 		}[result.status]
 
 

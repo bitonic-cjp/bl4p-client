@@ -21,7 +21,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   name='bl4p.proto',
   package='',
   syntax='proto3',
-  serialized_pb=_b('\n\nbl4p.proto\x1a\x0boffer.proto\"\x1d\n\x0b\x42L4P_Amount\x12\x0e\n\x06\x61mount\x18\x01 \x01(\x04\"\x1f\n\x0f\x42L4P_CryptoData\x12\x0c\n\x04\x64\x61ta\x18\x01 \x01(\x0c\"6\n\x05\x45rror\x12\x0f\n\x07request\x18\x01 \x01(\x04\x12\x1c\n\x06reason\x18\x02 \x01(\x0e\x32\x0c.ErrorReason\"\x97\x01\n\nBL4P_Start\x12\x0f\n\x07request\x18\x01 \x01(\x04\x12\x1c\n\x06\x61mount\x18\x02 \x01(\x0b\x32\x0c.BL4P_Amount\x12\x1f\n\x17sender_timeout_delta_ms\x18\x03 \x01(\r\x12\x1e\n\x16locked_timeout_delta_s\x18\x04 \x01(\r\x12\x19\n\x11receiver_pays_fee\x18\x05 \x01(\x08\"\x97\x01\n\x10\x42L4P_StartResult\x12\x0f\n\x07request\x18\x01 \x01(\x04\x12#\n\rsender_amount\x18\x02 \x01(\x0b\x32\x0c.BL4P_Amount\x12%\n\x0freceiver_amount\x18\x03 \x01(\x0b\x32\x0c.BL4P_Amount\x12&\n\x0cpayment_hash\x18\x04 \x01(\x0b\x32\x10.BL4P_CryptoData\"i\n\tBL4P_Send\x12\x0f\n\x07request\x18\x01 \x01(\x04\x12#\n\rsender_amount\x18\x02 \x01(\x0b\x32\x0c.BL4P_Amount\x12&\n\x0cpayment_hash\x18\x03 \x01(\x0b\x32\x10.BL4P_CryptoData\"N\n\x0f\x42L4P_SendResult\x12\x0f\n\x07request\x18\x01 \x01(\x04\x12*\n\x10payment_preimage\x18\x02 \x01(\x0b\x32\x10.BL4P_CryptoData\"K\n\x0c\x42L4P_Receive\x12\x0f\n\x07request\x18\x01 \x01(\x04\x12*\n\x10payment_preimage\x18\x02 \x01(\x0b\x32\x10.BL4P_CryptoData\"%\n\x12\x42L4P_ReceiveResult\x12\x0f\n\x07request\x18\x01 \x01(\x04\"I\n\x0e\x42L4P_GetStatus\x12\x0f\n\x07request\x18\x01 \x01(\x04\x12&\n\x0cpayment_hash\x18\x02 \x01(\x0b\x32\x10.BL4P_CryptoData\"P\n\x14\x42L4P_GetStatusResult\x12\x0f\n\x07request\x18\x01 \x01(\x04\x12\'\n\x06status\x18\x02 \x01(\x0e\x32\x17.BL4P_TransactionStatus\"7\n\rBL4P_AddOffer\x12\x0f\n\x07request\x18\x01 \x01(\x04\x12\x15\n\x05offer\x18\x02 \x01(\x0b\x32\x06.Offer\"7\n\x13\x42L4P_AddOfferResult\x12\x0f\n\x07request\x18\x01 \x01(\x04\x12\x0f\n\x07offerID\x18\x02 \x01(\x04\"\"\n\x0f\x42L4P_ListOffers\x12\x0f\n\x07request\x18\x01 \x01(\x04\"\x85\x01\n\x15\x42L4P_ListOffersResult\x12\x0f\n\x07request\x18\x01 \x01(\x04\x12+\n\x06offers\x18\x02 \x03(\x0b\x32\x1b.BL4P_ListOffersResult.Item\x1a.\n\x04Item\x12\x0f\n\x07offerID\x18\x01 \x01(\x04\x12\x15\n\x05offer\x18\x02 \x01(\x0b\x32\x06.Offer\"4\n\x10\x42L4P_RemoveOffer\x12\x0f\n\x07request\x18\x01 \x01(\x04\x12\x0f\n\x07offerID\x18\x02 \x01(\x04\")\n\x16\x42L4P_RemoveOfferResult\x12\x0f\n\x07request\x18\x01 \x01(\x04\"9\n\x0f\x42L4P_FindOffers\x12\x0f\n\x07request\x18\x01 \x01(\x04\x12\x15\n\x05query\x18\x02 \x01(\x0b\x32\x06.Offer\"@\n\x15\x42L4P_FindOffersResult\x12\x0f\n\x07request\x18\x01 \x01(\x04\x12\x16\n\x06offers\x18\x02 \x03(\x0b\x32\x06.Offer*\xcc\x03\n\x0bMessageType\x12\r\n\tMsg_Error\x10\x00\x12\x13\n\x0eMsg_BL4P_Start\x10\x80 \x12\x19\n\x14Msg_BL4P_StartResult\x10\x81 \x12\x12\n\rMsg_BL4P_Send\x10\x82 \x12\x18\n\x13Msg_BL4P_SendResult\x10\x83 \x12\x15\n\x10Msg_BL4P_Receive\x10\x84 \x12\x1b\n\x16Msg_BL4P_ReceiveResult\x10\x85 \x12\x17\n\x12Msg_BL4P_GetStatus\x10\x86 \x12\x1d\n\x18Msg_BL4P_GetStatusResult\x10\x87 \x12\x16\n\x11Msg_BL4P_AddOffer\x10\x80\"\x12\x1c\n\x17Msg_BL4P_AddOfferResult\x10\x81\"\x12\x18\n\x13Msg_BL4P_ListOffers\x10\x82\"\x12\x1e\n\x19Msg_BL4P_ListOffersResult\x10\x83\"\x12\x19\n\x14Msg_BL4P_RemoveOffer\x10\x84\"\x12\x1f\n\x1aMsg_BL4P_RemoveOfferResult\x10\x85\"\x12\x18\n\x13Msg_BL4P_FindOffers\x10\x86\"\x12\x1e\n\x19Msg_BL4P_FindOffersResult\x10\x87\"*\x91\x02\n\x0b\x45rrorReason\x12\x15\n\x11_MalformedRequest\x10\x00\x12\x11\n\r_NoSuchEngine\x10\x01\x12\x10\n\x0c_NoSuchOrder\x10\x02\x12\x13\n\x0f_InvalidAccount\x10\x03\x12\x12\n\x0e_InvalidFilter\x10\x04\x12\x10\n\x0c_InvalidPair\x10\x05\x12\x10\n\x0c_InvalidSide\x10\x06\x12\x18\n\x14_BalanceInsufficient\x10\x07\x12\x12\n\x0e_InvalidAmount\x10\x08\x12\x13\n\x0f_RequestTimeout\x10\t\x12\x15\n\x11_RequestQueueFull\x10\n\x12\x11\n\r_Unauthorized\x10\x0b\x12\x0c\n\x08_Unknown\x10\x0c*\x88\x01\n\x16\x42L4P_TransactionStatus\x12\x17\n\x13_waiting_for_sender\x10\x00\x12\x19\n\x15_waiting_for_receiver\x10\x01\x12\x13\n\x0f_sender_timeout\x10\x02\x12\x15\n\x11_receiver_timeout\x10\x03\x12\x0e\n\n_completed\x10\x04\x62\x06proto3')
+  serialized_pb=_b('\n\nbl4p.proto\x1a\x0boffer.proto\"\x1d\n\x0b\x42L4P_Amount\x12\x0e\n\x06\x61mount\x18\x01 \x01(\x04\"\x1f\n\x0f\x42L4P_CryptoData\x12\x0c\n\x04\x64\x61ta\x18\x01 \x01(\x0c\"6\n\x05\x45rror\x12\x0f\n\x07request\x18\x01 \x01(\x04\x12\x1c\n\x06reason\x18\x02 \x01(\x0e\x32\x0c.ErrorReason\"\x97\x01\n\nBL4P_Start\x12\x0f\n\x07request\x18\x01 \x01(\x04\x12\x1c\n\x06\x61mount\x18\x02 \x01(\x0b\x32\x0c.BL4P_Amount\x12\x1f\n\x17sender_timeout_delta_ms\x18\x03 \x01(\r\x12\x1e\n\x16locked_timeout_delta_s\x18\x04 \x01(\r\x12\x19\n\x11receiver_pays_fee\x18\x05 \x01(\x08\"\x97\x01\n\x10\x42L4P_StartResult\x12\x0f\n\x07request\x18\x01 \x01(\x04\x12#\n\rsender_amount\x18\x02 \x01(\x0b\x32\x0c.BL4P_Amount\x12%\n\x0freceiver_amount\x18\x03 \x01(\x0b\x32\x0c.BL4P_Amount\x12&\n\x0cpayment_hash\x18\x04 \x01(\x0b\x32\x10.BL4P_CryptoData\"K\n\x10\x42L4P_CancelStart\x12\x0f\n\x07request\x18\x01 \x01(\x04\x12&\n\x0cpayment_hash\x18\x02 \x01(\x0b\x32\x10.BL4P_CryptoData\")\n\x16\x42L4P_CancelStartResult\x12\x0f\n\x07request\x18\x01 \x01(\x04\"i\n\tBL4P_Send\x12\x0f\n\x07request\x18\x01 \x01(\x04\x12#\n\rsender_amount\x18\x02 \x01(\x0b\x32\x0c.BL4P_Amount\x12&\n\x0cpayment_hash\x18\x03 \x01(\x0b\x32\x10.BL4P_CryptoData\"N\n\x0f\x42L4P_SendResult\x12\x0f\n\x07request\x18\x01 \x01(\x04\x12*\n\x10payment_preimage\x18\x02 \x01(\x0b\x32\x10.BL4P_CryptoData\"K\n\x0c\x42L4P_Receive\x12\x0f\n\x07request\x18\x01 \x01(\x04\x12*\n\x10payment_preimage\x18\x02 \x01(\x0b\x32\x10.BL4P_CryptoData\"%\n\x12\x42L4P_ReceiveResult\x12\x0f\n\x07request\x18\x01 \x01(\x04\"I\n\x0e\x42L4P_GetStatus\x12\x0f\n\x07request\x18\x01 \x01(\x04\x12&\n\x0cpayment_hash\x18\x02 \x01(\x0b\x32\x10.BL4P_CryptoData\"P\n\x14\x42L4P_GetStatusResult\x12\x0f\n\x07request\x18\x01 \x01(\x04\x12\'\n\x06status\x18\x02 \x01(\x0e\x32\x17.BL4P_TransactionStatus\"7\n\rBL4P_AddOffer\x12\x0f\n\x07request\x18\x01 \x01(\x04\x12\x15\n\x05offer\x18\x02 \x01(\x0b\x32\x06.Offer\"7\n\x13\x42L4P_AddOfferResult\x12\x0f\n\x07request\x18\x01 \x01(\x04\x12\x0f\n\x07offerID\x18\x02 \x01(\x04\"\"\n\x0f\x42L4P_ListOffers\x12\x0f\n\x07request\x18\x01 \x01(\x04\"\x85\x01\n\x15\x42L4P_ListOffersResult\x12\x0f\n\x07request\x18\x01 \x01(\x04\x12+\n\x06offers\x18\x02 \x03(\x0b\x32\x1b.BL4P_ListOffersResult.Item\x1a.\n\x04Item\x12\x0f\n\x07offerID\x18\x01 \x01(\x04\x12\x15\n\x05offer\x18\x02 \x01(\x0b\x32\x06.Offer\"4\n\x10\x42L4P_RemoveOffer\x12\x0f\n\x07request\x18\x01 \x01(\x04\x12\x0f\n\x07offerID\x18\x02 \x01(\x04\")\n\x16\x42L4P_RemoveOfferResult\x12\x0f\n\x07request\x18\x01 \x01(\x04\"9\n\x0f\x42L4P_FindOffers\x12\x0f\n\x07request\x18\x01 \x01(\x04\x12\x15\n\x05query\x18\x02 \x01(\x0b\x32\x06.Offer\"@\n\x15\x42L4P_FindOffersResult\x12\x0f\n\x07request\x18\x01 \x01(\x04\x12\x16\n\x06offers\x18\x02 \x03(\x0b\x32\x06.Offer*\x88\x04\n\x0bMessageType\x12\r\n\tMsg_Error\x10\x00\x12\x13\n\x0eMsg_BL4P_Start\x10\x80 \x12\x19\n\x14Msg_BL4P_StartResult\x10\x81 \x12\x19\n\x14Msg_BL4P_CancelStart\x10\x82 \x12\x1f\n\x1aMsg_BL4P_CancelStartResult\x10\x83 \x12\x12\n\rMsg_BL4P_Send\x10\x84 \x12\x18\n\x13Msg_BL4P_SendResult\x10\x85 \x12\x15\n\x10Msg_BL4P_Receive\x10\x86 \x12\x1b\n\x16Msg_BL4P_ReceiveResult\x10\x87 \x12\x17\n\x12Msg_BL4P_GetStatus\x10\x88 \x12\x1d\n\x18Msg_BL4P_GetStatusResult\x10\x89 \x12\x16\n\x11Msg_BL4P_AddOffer\x10\x80\"\x12\x1c\n\x17Msg_BL4P_AddOfferResult\x10\x81\"\x12\x18\n\x13Msg_BL4P_ListOffers\x10\x82\"\x12\x1e\n\x19Msg_BL4P_ListOffersResult\x10\x83\"\x12\x19\n\x14Msg_BL4P_RemoveOffer\x10\x84\"\x12\x1f\n\x1aMsg_BL4P_RemoveOfferResult\x10\x85\"\x12\x18\n\x13Msg_BL4P_FindOffers\x10\x86\"\x12\x1e\n\x19Msg_BL4P_FindOffersResult\x10\x87\"*\x91\x02\n\x0b\x45rrorReason\x12\x15\n\x11_MalformedRequest\x10\x00\x12\x11\n\r_NoSuchEngine\x10\x01\x12\x10\n\x0c_NoSuchOrder\x10\x02\x12\x13\n\x0f_InvalidAccount\x10\x03\x12\x12\n\x0e_InvalidFilter\x10\x04\x12\x10\n\x0c_InvalidPair\x10\x05\x12\x10\n\x0c_InvalidSide\x10\x06\x12\x18\n\x14_BalanceInsufficient\x10\x07\x12\x12\n\x0e_InvalidAmount\x10\x08\x12\x13\n\x0f_RequestTimeout\x10\t\x12\x15\n\x11_RequestQueueFull\x10\n\x12\x11\n\r_Unauthorized\x10\x0b\x12\x0c\n\x08_Unknown\x10\x0c*\x97\x01\n\x16\x42L4P_TransactionStatus\x12\x17\n\x13_waiting_for_sender\x10\x00\x12\x19\n\x15_waiting_for_receiver\x10\x01\x12\x13\n\x0f_sender_timeout\x10\x02\x12\x15\n\x11_receiver_timeout\x10\x03\x12\x0e\n\n_completed\x10\x04\x12\r\n\t_canceled\x10\x05\x62\x06proto3')
   ,
   dependencies=[offer__pb2.DESCRIPTOR,])
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
@@ -45,66 +45,74 @@ _MESSAGETYPE = _descriptor.EnumDescriptor(
       options=None,
       type=None),
     _descriptor.EnumValueDescriptor(
-      name='Msg_BL4P_Send', index=3, number=4098,
+      name='Msg_BL4P_CancelStart', index=3, number=4098,
       options=None,
       type=None),
     _descriptor.EnumValueDescriptor(
-      name='Msg_BL4P_SendResult', index=4, number=4099,
+      name='Msg_BL4P_CancelStartResult', index=4, number=4099,
       options=None,
       type=None),
     _descriptor.EnumValueDescriptor(
-      name='Msg_BL4P_Receive', index=5, number=4100,
+      name='Msg_BL4P_Send', index=5, number=4100,
       options=None,
       type=None),
     _descriptor.EnumValueDescriptor(
-      name='Msg_BL4P_ReceiveResult', index=6, number=4101,
+      name='Msg_BL4P_SendResult', index=6, number=4101,
       options=None,
       type=None),
     _descriptor.EnumValueDescriptor(
-      name='Msg_BL4P_GetStatus', index=7, number=4102,
+      name='Msg_BL4P_Receive', index=7, number=4102,
       options=None,
       type=None),
     _descriptor.EnumValueDescriptor(
-      name='Msg_BL4P_GetStatusResult', index=8, number=4103,
+      name='Msg_BL4P_ReceiveResult', index=8, number=4103,
       options=None,
       type=None),
     _descriptor.EnumValueDescriptor(
-      name='Msg_BL4P_AddOffer', index=9, number=4352,
+      name='Msg_BL4P_GetStatus', index=9, number=4104,
       options=None,
       type=None),
     _descriptor.EnumValueDescriptor(
-      name='Msg_BL4P_AddOfferResult', index=10, number=4353,
+      name='Msg_BL4P_GetStatusResult', index=10, number=4105,
       options=None,
       type=None),
     _descriptor.EnumValueDescriptor(
-      name='Msg_BL4P_ListOffers', index=11, number=4354,
+      name='Msg_BL4P_AddOffer', index=11, number=4352,
       options=None,
       type=None),
     _descriptor.EnumValueDescriptor(
-      name='Msg_BL4P_ListOffersResult', index=12, number=4355,
+      name='Msg_BL4P_AddOfferResult', index=12, number=4353,
       options=None,
       type=None),
     _descriptor.EnumValueDescriptor(
-      name='Msg_BL4P_RemoveOffer', index=13, number=4356,
+      name='Msg_BL4P_ListOffers', index=13, number=4354,
       options=None,
       type=None),
     _descriptor.EnumValueDescriptor(
-      name='Msg_BL4P_RemoveOfferResult', index=14, number=4357,
+      name='Msg_BL4P_ListOffersResult', index=14, number=4355,
       options=None,
       type=None),
     _descriptor.EnumValueDescriptor(
-      name='Msg_BL4P_FindOffers', index=15, number=4358,
+      name='Msg_BL4P_RemoveOffer', index=15, number=4356,
       options=None,
       type=None),
     _descriptor.EnumValueDescriptor(
-      name='Msg_BL4P_FindOffersResult', index=16, number=4359,
+      name='Msg_BL4P_RemoveOfferResult', index=16, number=4357,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='Msg_BL4P_FindOffers', index=17, number=4358,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='Msg_BL4P_FindOffersResult', index=18, number=4359,
       options=None,
       type=None),
   ],
   containing_type=None,
   options=None,
-  serialized_start=1424,
-  serialized_end=1884,
+  serialized_start=1544,
+  serialized_end=2064,
 )
 _sym_db.RegisterEnumDescriptor(_MESSAGETYPE)
 
@@ -170,8 +178,8 @@ _ERRORREASON = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   options=None,
-  serialized_start=1887,
-  serialized_end=2160,
+  serialized_start=2067,
+  serialized_end=2340,
 )
 _sym_db.RegisterEnumDescriptor(_ERRORREASON)
 
@@ -202,11 +210,15 @@ _BL4P_TRANSACTIONSTATUS = _descriptor.EnumDescriptor(
       name='_completed', index=4, number=4,
       options=None,
       type=None),
+    _descriptor.EnumValueDescriptor(
+      name='_canceled', index=5, number=5,
+      options=None,
+      type=None),
   ],
   containing_type=None,
   options=None,
-  serialized_start=2163,
-  serialized_end=2299,
+  serialized_start=2343,
+  serialized_end=2494,
 )
 _sym_db.RegisterEnumDescriptor(_BL4P_TRANSACTIONSTATUS)
 
@@ -214,12 +226,14 @@ BL4P_TransactionStatus = enum_type_wrapper.EnumTypeWrapper(_BL4P_TRANSACTIONSTAT
 Msg_Error = 0
 Msg_BL4P_Start = 4096
 Msg_BL4P_StartResult = 4097
-Msg_BL4P_Send = 4098
-Msg_BL4P_SendResult = 4099
-Msg_BL4P_Receive = 4100
-Msg_BL4P_ReceiveResult = 4101
-Msg_BL4P_GetStatus = 4102
-Msg_BL4P_GetStatusResult = 4103
+Msg_BL4P_CancelStart = 4098
+Msg_BL4P_CancelStartResult = 4099
+Msg_BL4P_Send = 4100
+Msg_BL4P_SendResult = 4101
+Msg_BL4P_Receive = 4102
+Msg_BL4P_ReceiveResult = 4103
+Msg_BL4P_GetStatus = 4104
+Msg_BL4P_GetStatusResult = 4105
 Msg_BL4P_AddOffer = 4352
 Msg_BL4P_AddOfferResult = 4353
 Msg_BL4P_ListOffers = 4354
@@ -246,6 +260,7 @@ _waiting_for_receiver = 1
 _sender_timeout = 2
 _receiver_timeout = 3
 _completed = 4
+_canceled = 5
 
 
 
@@ -460,6 +475,75 @@ _BL4P_STARTRESULT = _descriptor.Descriptor(
 )
 
 
+_BL4P_CANCELSTART = _descriptor.Descriptor(
+  name='BL4P_CancelStart',
+  full_name='BL4P_CancelStart',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='request', full_name='BL4P_CancelStart.request', index=0,
+      number=1, type=4, cpp_type=4, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='payment_hash', full_name='BL4P_CancelStart.payment_hash', index=1,
+      number=2, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=455,
+  serialized_end=530,
+)
+
+
+_BL4P_CANCELSTARTRESULT = _descriptor.Descriptor(
+  name='BL4P_CancelStartResult',
+  full_name='BL4P_CancelStartResult',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='request', full_name='BL4P_CancelStartResult.request', index=0,
+      number=1, type=4, cpp_type=4, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=532,
+  serialized_end=573,
+)
+
+
 _BL4P_SEND = _descriptor.Descriptor(
   name='BL4P_Send',
   full_name='BL4P_Send',
@@ -500,8 +584,8 @@ _BL4P_SEND = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=455,
-  serialized_end=560,
+  serialized_start=575,
+  serialized_end=680,
 )
 
 
@@ -538,8 +622,8 @@ _BL4P_SENDRESULT = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=562,
-  serialized_end=640,
+  serialized_start=682,
+  serialized_end=760,
 )
 
 
@@ -576,8 +660,8 @@ _BL4P_RECEIVE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=642,
-  serialized_end=717,
+  serialized_start=762,
+  serialized_end=837,
 )
 
 
@@ -607,8 +691,8 @@ _BL4P_RECEIVERESULT = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=719,
-  serialized_end=756,
+  serialized_start=839,
+  serialized_end=876,
 )
 
 
@@ -645,8 +729,8 @@ _BL4P_GETSTATUS = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=758,
-  serialized_end=831,
+  serialized_start=878,
+  serialized_end=951,
 )
 
 
@@ -683,8 +767,8 @@ _BL4P_GETSTATUSRESULT = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=833,
-  serialized_end=913,
+  serialized_start=953,
+  serialized_end=1033,
 )
 
 
@@ -721,8 +805,8 @@ _BL4P_ADDOFFER = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=915,
-  serialized_end=970,
+  serialized_start=1035,
+  serialized_end=1090,
 )
 
 
@@ -759,8 +843,8 @@ _BL4P_ADDOFFERRESULT = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=972,
-  serialized_end=1027,
+  serialized_start=1092,
+  serialized_end=1147,
 )
 
 
@@ -790,8 +874,8 @@ _BL4P_LISTOFFERS = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1029,
-  serialized_end=1063,
+  serialized_start=1149,
+  serialized_end=1183,
 )
 
 
@@ -828,8 +912,8 @@ _BL4P_LISTOFFERSRESULT_ITEM = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1153,
-  serialized_end=1199,
+  serialized_start=1273,
+  serialized_end=1319,
 )
 
 _BL4P_LISTOFFERSRESULT = _descriptor.Descriptor(
@@ -865,8 +949,8 @@ _BL4P_LISTOFFERSRESULT = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1066,
-  serialized_end=1199,
+  serialized_start=1186,
+  serialized_end=1319,
 )
 
 
@@ -903,8 +987,8 @@ _BL4P_REMOVEOFFER = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1201,
-  serialized_end=1253,
+  serialized_start=1321,
+  serialized_end=1373,
 )
 
 
@@ -934,8 +1018,8 @@ _BL4P_REMOVEOFFERRESULT = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1255,
-  serialized_end=1296,
+  serialized_start=1375,
+  serialized_end=1416,
 )
 
 
@@ -972,8 +1056,8 @@ _BL4P_FINDOFFERS = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1298,
-  serialized_end=1355,
+  serialized_start=1418,
+  serialized_end=1475,
 )
 
 
@@ -1010,8 +1094,8 @@ _BL4P_FINDOFFERSRESULT = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1357,
-  serialized_end=1421,
+  serialized_start=1477,
+  serialized_end=1541,
 )
 
 _ERROR.fields_by_name['reason'].enum_type = _ERRORREASON
@@ -1019,6 +1103,7 @@ _BL4P_START.fields_by_name['amount'].message_type = _BL4P_AMOUNT
 _BL4P_STARTRESULT.fields_by_name['sender_amount'].message_type = _BL4P_AMOUNT
 _BL4P_STARTRESULT.fields_by_name['receiver_amount'].message_type = _BL4P_AMOUNT
 _BL4P_STARTRESULT.fields_by_name['payment_hash'].message_type = _BL4P_CRYPTODATA
+_BL4P_CANCELSTART.fields_by_name['payment_hash'].message_type = _BL4P_CRYPTODATA
 _BL4P_SEND.fields_by_name['sender_amount'].message_type = _BL4P_AMOUNT
 _BL4P_SEND.fields_by_name['payment_hash'].message_type = _BL4P_CRYPTODATA
 _BL4P_SENDRESULT.fields_by_name['payment_preimage'].message_type = _BL4P_CRYPTODATA
@@ -1036,6 +1121,8 @@ DESCRIPTOR.message_types_by_name['BL4P_CryptoData'] = _BL4P_CRYPTODATA
 DESCRIPTOR.message_types_by_name['Error'] = _ERROR
 DESCRIPTOR.message_types_by_name['BL4P_Start'] = _BL4P_START
 DESCRIPTOR.message_types_by_name['BL4P_StartResult'] = _BL4P_STARTRESULT
+DESCRIPTOR.message_types_by_name['BL4P_CancelStart'] = _BL4P_CANCELSTART
+DESCRIPTOR.message_types_by_name['BL4P_CancelStartResult'] = _BL4P_CANCELSTARTRESULT
 DESCRIPTOR.message_types_by_name['BL4P_Send'] = _BL4P_SEND
 DESCRIPTOR.message_types_by_name['BL4P_SendResult'] = _BL4P_SENDRESULT
 DESCRIPTOR.message_types_by_name['BL4P_Receive'] = _BL4P_RECEIVE
@@ -1088,6 +1175,20 @@ BL4P_StartResult = _reflection.GeneratedProtocolMessageType('BL4P_StartResult', 
   # @@protoc_insertion_point(class_scope:BL4P_StartResult)
   ))
 _sym_db.RegisterMessage(BL4P_StartResult)
+
+BL4P_CancelStart = _reflection.GeneratedProtocolMessageType('BL4P_CancelStart', (_message.Message,), dict(
+  DESCRIPTOR = _BL4P_CANCELSTART,
+  __module__ = 'bl4p_pb2'
+  # @@protoc_insertion_point(class_scope:BL4P_CancelStart)
+  ))
+_sym_db.RegisterMessage(BL4P_CancelStart)
+
+BL4P_CancelStartResult = _reflection.GeneratedProtocolMessageType('BL4P_CancelStartResult', (_message.Message,), dict(
+  DESCRIPTOR = _BL4P_CANCELSTARTRESULT,
+  __module__ = 'bl4p_pb2'
+  # @@protoc_insertion_point(class_scope:BL4P_CancelStartResult)
+  ))
+_sym_db.RegisterMessage(BL4P_CancelStartResult)
 
 BL4P_Send = _reflection.GeneratedProtocolMessageType('BL4P_Send', (_message.Message,), dict(
   DESCRIPTOR = _BL4P_SEND,

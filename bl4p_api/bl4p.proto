@@ -72,14 +72,16 @@ enum MessageType {
     Msg_Error = 0;
 
     // The range 0x1000 to 0x2000 is reserved for Bl4p.
-    Msg_BL4P_Start           = 0x1000;
-    Msg_BL4P_StartResult     = 0x1001;
-    Msg_BL4P_Send            = 0x1002;
-    Msg_BL4P_SendResult      = 0x1003;
-    Msg_BL4P_Receive         = 0x1004;
-    Msg_BL4P_ReceiveResult   = 0x1005;
-    Msg_BL4P_GetStatus       = 0x1006;
-    Msg_BL4P_GetStatusResult = 0x1007;
+    Msg_BL4P_Start             = 0x1000;
+    Msg_BL4P_StartResult       = 0x1001;
+    Msg_BL4P_CancelStart       = 0x1002;
+    Msg_BL4P_CancelStartResult = 0x1003;
+    Msg_BL4P_Send              = 0x1004;
+    Msg_BL4P_SendResult        = 0x1005;
+    Msg_BL4P_Receive           = 0x1006;
+    Msg_BL4P_ReceiveResult     = 0x1007;
+    Msg_BL4P_GetStatus         = 0x1008;
+    Msg_BL4P_GetStatusResult   = 0x1009;
 
     Msg_BL4P_AddOffer          = 0x1100;
     Msg_BL4P_AddOfferResult    = 0x1101;
@@ -116,6 +118,7 @@ enum BL4P_TransactionStatus {
     _sender_timeout = 2;
     _receiver_timeout = 3;
     _completed = 4;
+    _canceled = 5;
 }
 
 message BL4P_Amount {
@@ -144,6 +147,15 @@ message BL4P_StartResult {
     BL4P_Amount sender_amount = 2;
     BL4P_Amount receiver_amount = 3;
     BL4P_CryptoData payment_hash = 4;
+}
+
+message BL4P_CancelStart {
+    uint64 request = 1;
+    BL4P_CryptoData payment_hash = 2;
+}
+
+message BL4P_CancelStartResult {
+    uint64 request = 1;
 }
 
 message BL4P_Send {
