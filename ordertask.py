@@ -408,9 +408,8 @@ class OrderTask:
 
 		if lightningResult.paymentPreimage is None:
 			#LN transaction failed, so revert everything we got so far
-			#TODO: cancel the incoming fiat funds on BL4P
 			log('Outgoing Lightning transaction failed; canceling the transaction')
-			self.transaction = None
+			await self.cancelIncomingFiatFunds()
 			return
 
 		assert sha256(lightningResult.paymentPreimage) == self.transaction.paymentHash
@@ -437,9 +436,27 @@ class OrderTask:
 		self.transaction.update(
 			status = STATUS_FINISHED,
 			)
+		self.transaction = None
 
 		log('Sell transaction is finished')
 		await self.updateOrderAfterTransaction()
+
+
+	async def cancelIncomingFiatFunds(self):
+		await self.call(messages.BL4PCancelStart(
+			localOrderID=self.order.ID,
+
+			paymentHash=self.transaction.paymentHash,
+			),
+			messages.BL4PCancelStartResult)
+
+		self.transaction.update(
+			status = STATUS_CANCELED,
+			)
+		self.transaction = None
+
+		log('Sell transaction is canceled')
+		#TODO: do we need to call updateOrderAfterTransaction()?
 
 
 	########################################################################
@@ -536,6 +553,7 @@ class OrderTask:
 			paymentHash=self.transaction.paymentHash,
 			paymentPreimage=self.transaction.paymentPreimage,
 			))
+		self.transaction = None
 
 		log('Buy transaction is finished')
 		await self.updateOrderAfterTransaction()
@@ -545,8 +563,11 @@ class OrderTask:
 		self.client.handleOutgoingMessage(messages.LNFail(
 			paymentHash=self.transaction.paymentHash,
 			))
+		self.transaction = None
 
 		log('Buy transaction is canceled')
+
+		#TODO: is this really needed?
 		await self.updateOrderAfterTransaction()
 
 

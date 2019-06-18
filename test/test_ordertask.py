@@ -415,6 +415,7 @@ class TestOrderTask(unittest.TestCase):
 				'paymentHash': paymentHash,
 				'paymentPreimage': paymentPreimage,
 				}})
+			self.assertEqual(task.transaction, None)
 
 			#LN transaction gets finished
 			self.assertEqual(msg, messages.LNFinish(
@@ -534,6 +535,7 @@ class TestOrderTask(unittest.TestCase):
 			'fiatAmount': 100000000,
 			'paymentHash': b'foo',
 			}})
+		self.assertEqual(task.transaction, None)
 
 		#Old offer gets removed
 		msg = await self.outgoingMessages.get()
@@ -752,6 +754,7 @@ class TestOrderTask(unittest.TestCase):
 				'paymentHash': paymentHash,
 				'paymentPreimage': paymentPreimage,
 				}})
+			self.assertEqual(task.transaction, None)
 
 		await task.waitFinished()
 
@@ -928,9 +931,33 @@ class TestOrderTask(unittest.TestCase):
 			))
 
 		msg = await self.outgoingMessages.get()
+		self.assertEqual(msg, messages.BL4PCancelStart(
+				localOrderID=42,
 
+				paymentHash = b'foo',
+				))
+
+		task.setCallResult(messages.BL4PCancelStartResult(
+			))
+
+		msg = await self.outgoingMessages.get()
+
+		self.maxDiff = None
+		self.assertEqual(self.storage.sellTransactions, {41:
+			{
+			'ID': 41,
+			'sellOrder': orderID,
+			'counterOffer': 40,
+			'status': 4,
+			'senderTimeoutDelta': 34,
+			'lockedTimeoutDelta': 56,
+			'CLTVExpiryDelta':    78,
+			'maxSenderCryptoAmount': 11000,
+			'receiverCryptoAmount': 10000,
+			'senderFiatAmount': 1200,
+			'paymentHash': b'foo',
+			}})
 		self.assertEqual(task.transaction, None)
-		#TODO: check that transaction is marked canceled
 
 		await task.shutdown()
 

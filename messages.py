@@ -54,6 +54,10 @@ class BL4PStart(BL4PRequest):
 	receiver_pays_fee = True
 
 
+class BL4PCancelStart(BL4PRequest):
+	paymentHash = b''
+
+
 class BL4PSend(BL4PRequest):
 	amount = 0
 	paymentHash = b''
@@ -83,6 +87,10 @@ class BL4PStartResult(BL4PResult):
 	senderAmount = 0
 	receiverAmount = 0
 	paymentHash = b''
+
+
+class BL4PCancelStartResult(BL4PResult):
+	pass
 
 
 class BL4PSendResult(BL4PResult):

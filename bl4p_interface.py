@@ -29,6 +29,7 @@ class BL4PInterface(bl4p.Bl4pApi, messages.Handler):
 		bl4p.Bl4pApi.__init__(self, log=log)
 		messages.Handler.__init__(self, {
 			messages.BL4PStart      : self.sendStart,
+			messages.BL4PCancelStart: self.sendCancelStart,
 			messages.BL4PSend       : self.sendSend,
 			messages.BL4PReceive    : self.sendReceive,
 			messages.BL4PAddOffer   : self.sendAddOffer,
@@ -60,6 +61,13 @@ class BL4PInterface(bl4p.Bl4pApi, messages.Handler):
 		request.sender_timeout_delta_ms = message.sender_timeout_delta_ms
 		request.locked_timeout_delta_s = message.locked_timeout_delta_s
 		request.receiver_pays_fee = message.receiver_pays_fee
+		requestID = self.sendRequest(request)
+		self.activeRequests[requestID] = message
+
+
+	def sendCancelStart(self, message):
+		request = bl4p_pb2.BL4P_CancelStart()
+		request.payment_hash.data = message.paymentHash
 		requestID = self.sendRequest(request)
 		self.activeRequests[requestID] = message
 
@@ -108,6 +116,8 @@ class BL4PInterface(bl4p.Bl4pApi, messages.Handler):
 				receiverAmount = result.receiver_amount.amount,
 				paymentHash = result.payment_hash.data
 				)
+		elif isinstance(result, bl4p_pb2.BL4P_CancelStartResult):
+			message = messages.BL4PCancelStartResult()
 		elif isinstance(result, bl4p_pb2.BL4P_SendResult):
 			message = messages.BL4PSendResult(
 				paymentPreimage = result.payment_preimage.data,

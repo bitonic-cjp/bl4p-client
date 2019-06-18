@@ -46,6 +46,7 @@ class TestBL4PInterface(unittest.TestCase):
 		self.assertEqual(self.interface.handlerMethods,
 			{
 			messages.BL4PStart      : self.interface.sendStart,
+			messages.BL4PCancelStart: self.interface.sendCancelStart,
 			messages.BL4PSend       : self.interface.sendSend,
 			messages.BL4PReceive    : self.interface.sendReceive,
 			messages.BL4PAddOffer   : self.interface.sendAddOffer,
@@ -112,6 +113,15 @@ class TestBL4PInterface(unittest.TestCase):
 		expectedMsgOut.sender_timeout_delta_ms = 100
 		expectedMsgOut.locked_timeout_delta_s = 1000000
 		expectedMsgOut.receiver_pays_fee = False
+		self.doSingleSendTest(msgIn, expectedMsgOut)
+
+
+	def test_sendCancelStart(self):
+		msgIn = messages.BL4PCancelStart(
+			paymentHash = b'foobar',
+			)
+		expectedMsgOut = bl4p_pb2.BL4P_CancelStart()
+		expectedMsgOut.payment_hash.data = b'foobar'
 		self.doSingleSendTest(msgIn, expectedMsgOut)
 
 
