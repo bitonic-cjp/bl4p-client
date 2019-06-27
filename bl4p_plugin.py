@@ -91,7 +91,7 @@ class BL4PClient:
 
 
 	async def shutdown(self):
-		self.backend.shutdown()
+		await self.backend.shutdown()
 		await self.bl4pInterface.shutdown()
 		await self.rpcInterface.shutdown()
 		await self.pluginInterface.shutdown()

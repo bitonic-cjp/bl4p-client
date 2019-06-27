@@ -20,7 +20,7 @@ import sys
 import unittest
 from unittest.mock import patch, Mock
 
-from utils import MockCursor, MockStorage
+from utils import asynciotest, MockCursor, MockStorage
 
 sys.path.append('..')
 
@@ -130,9 +130,21 @@ class TestBackend(unittest.TestCase):
 			self.assertEqual(self.backend.storage.buyOrders[ID]['limitRate'], self.backend.orderTasks[ID].order.limitRate)
 
 
-	def test_shutdown(self):
+	@asynciotest
+	async def test_shutdown(self):
+		count = []
+		async def taskShutdown():
+			count.append(1)
+		
+		self.backend.orderTasks = {41: Mock(), 42: Mock()}
+		self.backend.orderTasks[41].shutdown = taskShutdown
+		self.backend.orderTasks[42].shutdown = taskShutdown
+
 		self.backend.storage = Mock()
-		self.backend.shutdown()
+
+		await self.backend.shutdown()
+
+		self.assertEqual(len(count), 2)
 		self.backend.storage.shutdown.assert_called_with()
 
 

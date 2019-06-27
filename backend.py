@@ -73,8 +73,9 @@ class Backend(messages.Handler):
 		loadOrders('buyOrders' , BuyOrder , self.LNAddress  )
 
 
-	def shutdown(self):
-		#TODO: shut down all tasks!
+	async def shutdown(self):
+		for task in self.orderTasks.values():
+			await task.shutdown()
 		self.storage.shutdown()
 
 
