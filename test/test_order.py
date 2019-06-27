@@ -106,7 +106,7 @@ class TestOrder(unittest.TestCase):
 
 	def test_BuyOrder(self):
 		self.assertEqual(order.BuyOrder.create('foo', 'bar', 'baz'), 43)
-		order.StoredObject.create.assert_called_once_with('foo', 'buyOrders', limitRate='bar', amount='baz')
+		order.StoredObject.create.assert_called_once_with('foo', 'buyOrders', limitRate='bar', amount='baz', status=0)
 
 		buy = order.BuyOrder(self.storage, 42, 'foo')
 		self.assertEqual(buy.ID, 42)
@@ -130,7 +130,7 @@ class TestOrder(unittest.TestCase):
 
 	def test_SellOrder(self):
 		self.assertEqual(order.SellOrder.create('foo', 'bar', 'baz'), 43)
-		order.StoredObject.create.assert_called_once_with('foo', 'sellOrders', limitRate='bar', amount='baz')
+		order.StoredObject.create.assert_called_once_with('foo', 'sellOrders', limitRate='bar', amount='baz', status=0)
 
 		sell = order.SellOrder(self.storage, 42, 'foo')
 		self.assertEqual(sell.ID, 42)

@@ -58,16 +58,14 @@ class Backend(messages.Handler):
 		self.storage = storage.Storage(DBFile)
 
 		#Loading existing orders and initializing order tasks:
-		#TODO: This is wrong:
-		#There may be orders where amount = 0, but there are still ongoing transactions.
-		#These must be activated too.
 		def loadOrders(tableName, orderClass, address):
-			query = 'SELECT `ID` FROM `%s` WHERE `amount` > 0' % tableName
+			query = 'SELECT `ID` FROM `%s` WHERE `status` = %d' % \
+				(tableName, order.STATUS_ACTIVE)
 			cursor = self.storage.execute(query)
 			for row in cursor:
 				ID = row[0]
-				order = orderClass(self.storage, ID, address)
-				self.addOrder(order)
+				orderObj = orderClass(self.storage, ID, address)
+				self.addOrder(orderObj)
 
 		loadOrders('sellOrders', SellOrder, self.BL4PAddress)
 		loadOrders('buyOrders' , BuyOrder , self.LNAddress  )

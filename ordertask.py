@@ -210,6 +210,9 @@ class OrderTask:
 				log('Finished with sell order')
 			else:
 				raise Exception('Unsupported order type - cannot use it in trade')
+
+			self.order.update(status=order.STATUS_COMPLETED)
+
 		except asyncio.CancelledError:
 			pass #We're cancelled, so just quit the function
 		except:

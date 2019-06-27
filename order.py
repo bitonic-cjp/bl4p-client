@@ -21,6 +21,13 @@ from bl4p_api import offer
 import settings
 from storage import StoredObject
 
+'''
+Order status
+Active -> Completed
+'''
+STATUS_ACTIVE = 0
+STATUS_COMPLETED = 1
+
 
 
 class Order(offer.Offer, StoredObject):
@@ -43,6 +50,7 @@ class Order(offer.Offer, StoredObject):
 	[Class: Order]
 	limitRate           stored                                      mCent/BTC             mCent/BTC
 	amount              stored                                      mCent                 mSatoshi
+	status              stored
 	perTxMaxAmount      = amount (for now)                          mCent                 mSatoshi
 	limitRateInverted   determined by derived class
 	remoteOfferID       determined on publishing
@@ -104,6 +112,7 @@ class BuyOrder(Order):
 		return StoredObject.create(storage, 'buyOrders',
 			limitRate = limitRate,
 			amount = amount,
+			status = STATUS_ACTIVE,
 			)
 
 
@@ -147,6 +156,7 @@ class SellOrder(Order):
 		return StoredObject.create(storage, 'sellOrders',
 			limitRate = limitRate,
 			amount = amount,
+			status = STATUS_ACTIVE,
 			)
 
 	def __init__(self, storage, ID, Bl4PAddress):

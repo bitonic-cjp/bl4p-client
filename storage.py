@@ -90,6 +90,7 @@ class Storage:
 			'	`ID`        INTEGER,'
 			'	`limitRate` INTEGER,'
 			'	`amount`    INTEGER,'
+			'	`status`    INTEGER,'
 			'	PRIMARY KEY(`ID`)'
 			')'
 			)
@@ -98,6 +99,7 @@ class Storage:
 			'	`ID`        INTEGER,'
 			'	`limitRate` INTEGER,'
 			'	`amount`    INTEGER,'
+			'	`status`    INTEGER,'
 			'	PRIMARY KEY(`ID`)'
 			')'
 			)

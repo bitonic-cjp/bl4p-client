@@ -135,7 +135,16 @@ class MockStorage:
 			self.buyOrders[self.counter]['ID'] = self.counter
 			self.counter += 1
 			return MockCursor([], lastrowid=self.counter-1)
-		elif query == 'SELECT `ID` FROM `buyOrders` WHERE `amount` > 0':
+		elif query.startswith('UPDATE buyOrders SET'):
+			ID = data[-1]
+			data = data[:-1]
+			names = query[query.index('(')+1:query.index(')')]
+			names = names.replace('`','').split(',')
+			self.test.assertEqual(len(names), len(data))
+			for i in range(len(names)):
+				self.buyOrders[ID][names[i]] = data[i]
+			return MockCursor([])
+		elif query == 'SELECT `ID` FROM `buyOrders` WHERE `status` = 0':
 			self.test.assertEqual(data, [])
 			return [[x] for x in self.buyOrders.keys()]
 		elif query == 'SELECT * from buyOrders WHERE `ID` = ?':
@@ -201,7 +210,7 @@ class MockStorage:
 			for i in range(len(names)):
 				self.sellOrders[ID][names[i]] = data[i]
 			return MockCursor([])
-		elif query == 'SELECT `ID` FROM `sellOrders` WHERE `amount` > 0':
+		elif query == 'SELECT `ID` FROM `sellOrders` WHERE `status` = 0':
 			self.test.assertEqual(data, [])
 			return [[x] for x in self.sellOrders.keys()]
 		elif query == 'SELECT * from sellOrders WHERE `ID` = ?':

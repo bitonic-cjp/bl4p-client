@@ -53,8 +53,8 @@ class TestStorage(unittest.TestCase):
 			tables[name] = sql
 
 		#Ignore the presence of other tables
-		self.assertEqual(tables['buyOrders'],        'CREATE TABLE `buyOrders` ( `ID` INTEGER, `limitRate` INTEGER, `amount` INTEGER, PRIMARY KEY(`ID`))')
-		self.assertEqual(tables['sellOrders'],       'CREATE TABLE `sellOrders` ( `ID` INTEGER, `limitRate` INTEGER, `amount` INTEGER, PRIMARY KEY(`ID`))')
+		self.assertEqual(tables['buyOrders'],        'CREATE TABLE `buyOrders` ( `ID` INTEGER, `limitRate` INTEGER, `amount` INTEGER, `status` INTEGER, PRIMARY KEY(`ID`))')
+		self.assertEqual(tables['sellOrders'],       'CREATE TABLE `sellOrders` ( `ID` INTEGER, `limitRate` INTEGER, `amount` INTEGER, `status` INTEGER, PRIMARY KEY(`ID`))')
 		self.assertEqual(tables['counterOffers'],    'CREATE TABLE `counterOffers` ( `ID` INTEGER, `blob` BLOB, PRIMARY KEY(`ID`))')
 		self.assertEqual(tables['buyTransactions'],  'CREATE TABLE `buyTransactions` ( `ID` INTEGER, `buyOrder` INTEGER, `status` INTEGER, `fiatAmount` INTEGER, `cryptoAmount` INTEGER, `paymentHash` BLOB, `paymentPreimage` BLOB, PRIMARY KEY(`ID`), FOREIGN KEY(`buyOrder`) REFERENCES buyOrders(ID))')
 		self.assertEqual(tables['sellTransactions'], 'CREATE TABLE `sellTransactions` ( `ID` INTEGER, `sellOrder` INTEGER, `counterOffer` INTEGER, `status` INTEGER, `senderFiatAmount` INTEGER, `receiverFiatAmount` INTEGER, `maxSenderCryptoAmount` INTEGER, `senderCryptoAmount` INTEGER, `receiverCryptoAmount` INTEGER, `senderTimeoutDelta` INTEGER, `lockedTimeoutDelta` INTEGER, `CLTVExpiryDelta` INTEGER, `paymentHash` BLOB, `paymentPreimage` BLOB, PRIMARY KEY(`ID`), FOREIGN KEY(`sellOrder`) REFERENCES sellOrders(ID), FOREIGN KEY(`counterOffer`) REFERENCES counterOffers(ID))')

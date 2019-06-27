@@ -191,6 +191,7 @@ class TestOrderTask(unittest.TestCase):
 		remainingAmount = order.amount
 		for txAmount in [1000, 234]:
 			self.storage.reset(startCount=43) #clean up from previous iteration
+			self.storage.buyOrders[orderID] = {}
 			order.setAmount = Mock() #Replace mock object with a fresh one
 
 			#Offer gets published
@@ -272,6 +273,8 @@ class TestOrderTask(unittest.TestCase):
 				))
 
 		await task.waitFinished()
+
+		self.assertEqual(self.storage.buyOrders[orderID]['status'], 1) #completed
 
 
 	@asynciotest
@@ -418,6 +421,7 @@ class TestOrderTask(unittest.TestCase):
 		remainingAmount = order.amount
 		for i in range(2):
 			self.storage.reset(startCount=43) #clean up from previous iteration
+			self.storage.sellOrders[orderID] = {}
 			order.setAmount = Mock() #Replace mock object with a fresh one
 
 			#Expected data:
@@ -595,6 +599,8 @@ class TestOrderTask(unittest.TestCase):
 			self.assertEqual(task.transaction, None)
 
 		await task.waitFinished()
+
+		self.assertEqual(self.storage.sellOrders[orderID]['status'], 1) #completed
 
 
 	@asynciotest
