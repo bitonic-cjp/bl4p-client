@@ -58,6 +58,9 @@ class Backend(messages.Handler):
 		self.storage = storage.Storage(DBFile)
 
 		#Loading existing orders and initializing order tasks:
+		#TODO: This is wrong:
+		#There may be orders where amount = 0, but there are still ongoing transactions.
+		#These must be activated too.
 		def loadOrders(tableName, orderClass, address):
 			query = 'SELECT `ID` FROM `%s` WHERE `amount` > 0' % tableName
 			cursor = self.storage.execute(query)
@@ -71,6 +74,7 @@ class Backend(messages.Handler):
 
 
 	def shutdown(self):
+		#TODO: shut down all tasks!
 		self.storage.shutdown()
 
 
