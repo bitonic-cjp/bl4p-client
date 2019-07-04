@@ -19,116 +19,79 @@ import decimal
 
 from bl4p_api import offer
 import settings
+from storage import StoredObject
 
-
-
-#Side constants
-BID = True
-ASK = False
-
-#Order status constants
 '''
-State transitions:
-
-idle -> trading
-trading -> completed
-trading -> idle
+Order status
+Active -> Completed
 '''
-STATUS_IDLE = 0
-STATUS_TRADING = 1
-STATUS_COMPLETED = 2
+STATUS_ACTIVE = 0
+STATUS_COMPLETED = 1
 
 
 
-class Order(offer.Offer):
+class Order(offer.Offer, StoredObject):
 	'''
 	An order is executed by the local trading engine.
 	It consists of an offer (the data given to external parties),
 	with added data that is used locally.
+
+	Attribute:          Source:                                     Unit (typical buy):   Unit (typical sell):
+
+	[Class: Offer]
+	ID                  stored
+	bid,ask
+		max_amount  determined from Order attributes            mCent,mSatoshi        mSatoshi,mCent
+		currency    determined from settings (must not change!)
+		exchange    determined from settings (must not change!)
+	address             determined from LN
+	conditions          determined from settings
+
+	[Class: Order]
+	limitRate           stored                                      mCent/BTC             mCent/BTC
+	amount              stored                                      mCent                 mSatoshi
+	status              stored
+	perTxMaxAmount      = amount (for now)                          mCent                 mSatoshi
+	limitRateInverted   determined by derived class
+	remoteOfferID       determined on publishing
 	'''
 
-	def __init__(self,
-			limitRate, #bid / ask, so fiat/crypto for buy, crypto/fiat for sell
-			totalBidAmount, #bid amount, so fiat for buy, crypto for sell
-			settings,
-			**kwargs):
+	def __init__(self, storage, tableName, ID, limitRateInverted, **kwargs):
+		offer.Offer.__init__(self, ID=ID, **kwargs)
+		StoredObject.__init__(self, storage, tableName, ID)
 
-		offer.Offer.__init__(self, **kwargs)
-		self.limitRate = limitRate
-		self.totalBidAmount = totalBidAmount
-		self.perTxMaxAmount = totalBidAmount #TODO
-		self.perTxMaxAmountSide = BID
 		self.remoteOfferID = None
-		self.status = STATUS_IDLE
 
-		self.settings = settings
+		self.perTxMaxAmount = self.amount #TODO
+		self.limitRateInverted = limitRateInverted
 		self.updateOfferMaxAmounts()
 
 
-	def getCondition(self, condition, index):
-		return self.conditions[condition][index]
-
-
-	def setCondition(self, condition, index, value):
-		old = self.conditions[condition]
-		self.conditions[condition] = \
-			(int(value), old[1]) \
-			if index == 0 else \
-			(old[0], int(value))
-
-
-	def getTotalBidAmount(self):
-		return '%s %s' % (
-			str(decimal.Decimal(self.totalBidAmount) / self.bid.max_amount_divisor),
-			self.bid.currency
-			)
-
-
-	def setTotalBidAmount(self, value):
-		self.totalBidAmount = decimal.Decimal(value) * self.bid.max_amount_divisor
+	def setAmount(self, value):
+		self.update(amount = value) #sets attribute and stores to disk
 		self.updateOfferMaxAmounts()
-
-
-	def getPerTxMaxAmount(self):
-		asset = self.bid if self.perTxMaxAmountSide == BID else self.ask
-		return '%s %s' % (
-			str(decimal.Decimal(self.perTxMaxAmount) / asset.max_amount_divisor),
-			asset.currency
-			)
-
-
-	def setPerTxMaxAmount(self, value):
-		self.perTxMaxAmount, self.perTxMaxAmountSide = value
-		self.updateOfferMaxAmounts()
-
-
-	def listSettings(self):
-		ret = {}
-		for k, v in self.settings.items():
-			getter = v[0]
-			extraArgs = v[2:]
-			ret[k] = getter(*extraArgs)
-		return ret
-
-
-	def setSetting(self, name, value):
-		definition = self.settings[name]
-		setter = definition[1]
-		extraArgs = definition[2:]
-		setter(*extraArgs, value)
 
 
 	def updateOfferMaxAmounts(self):
-		offerAskAmount = self.totalBidAmount / self.limitRate
-		offerBidAmount = self.totalBidAmount
+		'''
+		Variable:                                               Unit (typical buy):   Unit (typical sell):
+		limitRate                                               mCent/mSatoshi        mSatoshi/mCent
+		amount                                                  mCent                 mSatoshi
+		'''
 
-		if self.perTxMaxAmountSide == BID and self.perTxMaxAmount < offerBidAmount:
-			offerAskAmount = self.perTxMaxAmount / self.limitRate
-			offerBidAmount = self.perTxMaxAmount
+		#From integer attributes to Decimal:
+		limitRate = decimal.Decimal(self.limitRate) / settings.cryptoDivisor
+		if self.limitRateInverted:
+			limitRate = 1 / limitRate
+		amount = decimal.Decimal(self.amount)
+		perTxMaxAmount = decimal.Decimal(self.perTxMaxAmount)
 
-		if self.perTxMaxAmountSide == ASK and self.perTxMaxAmount < offerAskAmount:
-			offerAskAmount = self.perTxMaxAmount
-			offerBidAmount = self.perTxMaxAmount * self.limitRate
+		offerAskAmount = amount / limitRate
+		offerBidAmount = amount
+
+		if perTxMaxAmount < offerBidAmount:
+			offerAskAmount = perTxMaxAmount / limitRate
+			offerBidAmount = perTxMaxAmount
 
 		self.bid.max_amount = int(offerBidAmount)
 		self.ask.max_amount = int(offerAskAmount) + 1 # + 1 should be insignificant; it's here to make sure we don't round down
@@ -140,24 +103,25 @@ class BuyOrder(Order):
 	Buy crypto on LN, sell fiat on BL4P
 	'''
 
-	def __init__(self,
-		LNAddress,
-		limitRate,     # fiat / crypto
-		totalBidAmount # fiat
+	@staticmethod
+	def create(
+		storage,
+		limitRate, # fiat / crypto
+		amount,    # fiat
 		):
+		return StoredObject.create(storage, 'buyOrders',
+			limitRate = limitRate,
+			amount = amount,
+			status = STATUS_ACTIVE,
+			)
 
+
+	def __init__(self, storage, ID, LNAddress):
 		Order.__init__(self,
-			limitRate=limitRate,
-			totalBidAmount=totalBidAmount,
-			settings=\
-			{
-			'limitRate'       : (self.getLimitRate, self.setLimitRate),
-			'totalBidAmount'  : (self.getTotalBidAmount, self.setTotalBidAmount),
-			'perTxMaxAmount'  : (self.getPerTxMaxAmount, self.setPerTxMaxAmount),
-			'minCLTV'         : (self.getCondition, self.setCondition, offer.Condition.CLTV_EXPIRY_DELTA, 0),
-			'maxSenderTimeout': (self.getCondition, self.setCondition, offer.Condition.SENDER_TIMEOUT, 1),
-			'maxLockedTimeout': (self.getCondition, self.setCondition, offer.Condition.LOCKED_TIMEOUT, 1),
-			},
+			storage, 'buyOrders', ID,
+			limitRateInverted=False,
+
+			address=LNAddress,
 
 			bid=offer.Asset(
 				max_amount=0, max_amount_divisor=settings.fiatDivisor, currency=settings.fiatName, exchange='bl3p.eu'
@@ -165,33 +129,16 @@ class BuyOrder(Order):
 			ask=offer.Asset(
 				max_amount=0, max_amount_divisor=settings.cryptoDivisor, currency=settings.cryptoName, exchange='ln'
 				),
-			address=LNAddress,
-			ID=None, #To be filled in later
 
 			#We require a minimum CLTV time for incoming funds
 			cltv_expiry_delta = (12, offer.CONDITION_NO_MAX),
 
 			#We require a maximum sender timeout for outgoming funds
-			sender_timeout = (10, 10000), #milliseconds
+			sender_timeout = (100, 10000), #milliseconds
 
 			#We require a maximum lock timeout for outgoing funds
 			locked_timeout = (0, 3600*24*14)
 			)
-
-
-	def getLimitRate(self):
-		return '%s %s/%s' % (
-			str(decimal.Decimal(self.limitRate) * \
-				self.ask.max_amount_divisor /
-				self.bid.max_amount_divisor),
-			self.bid.currency, self.ask.currency
-			)
-
-
-	def setLimitRate(self, value):
-		self.limitRate = decimal.Decimal(value) * \
-			self.bid.max_amount_divisor / self.ask.max_amount_divisor
-		self.updateOfferMaxAmounts()
 
 
 
@@ -200,24 +147,24 @@ class SellOrder(Order):
 	Sell crypto on LN, buy fiat on BL4P
 	'''
 
-	def __init__(self,
-		Bl4PAddress,
-		limitRate,     # fiat / crypto
-		totalBidAmount # crypto
+	@staticmethod
+	def create(
+		storage,
+		limitRate, # fiat / crypto
+		amount,    # fiat
 		):
+		return StoredObject.create(storage, 'sellOrders',
+			limitRate = limitRate,
+			amount = amount,
+			status = STATUS_ACTIVE,
+			)
 
+	def __init__(self, storage, ID, Bl4PAddress):
 		Order.__init__(self,
-			limitRate=1/limitRate,
-			totalBidAmount=totalBidAmount,
-			settings=\
-			{
-			'limitRate'       : (self.getLimitRate, self.setLimitRate),
-			'totalBidAmount'  : (self.getTotalBidAmount, self.setTotalBidAmount),
-			'perTxMaxAmount'  : (self.getPerTxMaxAmount, self.setPerTxMaxAmount),
-			'maxCLTV'         : (self.getCondition, self.setCondition, offer.Condition.CLTV_EXPIRY_DELTA, 1),
-			'maxSenderTimeout': (self.getCondition, self.setCondition, offer.Condition.SENDER_TIMEOUT, 1),
-			'minLockedTimeout': (self.getCondition, self.setCondition, offer.Condition.LOCKED_TIMEOUT, 0),
-			},
+			storage, 'sellOrders', ID,
+			limitRateInverted=True,
+
+			address=Bl4PAddress,
 
 			bid=offer.Asset(
 				max_amount=0, max_amount_divisor=settings.cryptoDivisor, currency=settings.cryptoName, exchange='ln'
@@ -225,33 +172,15 @@ class SellOrder(Order):
 			ask=offer.Asset(
 				max_amount=0, max_amount_divisor=settings.fiatDivisor, currency=settings.fiatName, exchange='bl3p.eu'
 				),
-			address=Bl4PAddress,
-			ID=None, #To be filled in later
 
 			#We require a maximum CLTV time for outgoing funds
 			cltv_expiry_delta = (0, 144),
 
 			#We require a maximum sender timeout for incoming funds
-			sender_timeout = (10, 10000), #milliseconds
+			sender_timeout = (100, 10000), #milliseconds
 
 			#We require a minimum lock timeout for incoming funds
 			#TODO: We MUST NEVER make Lightning routes with a longer time than the lock timeout
 			locked_timeout = (3600*24, offer.CONDITION_NO_MAX),
 			)
-
-
-	def getLimitRate(self):
-		return '%s %s/%s' % (
-			str(1 / decimal.Decimal(self.limitRate) * \
-				self.bid.max_amount_divisor /
-				self.ask.max_amount_divisor),
-			self.ask.currency, self.bid.currency
-			)
-
-
-	def setLimitRate(self, value):
-		self.limitRate = (1 / decimal.Decimal(value)) * \
-			self.bid.max_amount_divisor / self.ask.max_amount_divisor
-		self.updateOfferMaxAmounts()
-
 

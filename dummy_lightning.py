@@ -24,6 +24,7 @@ import time
 import traceback
 
 from json_rpc import JSONRPC
+from log import log, logException
 from simplestruct import Struct
 
 
@@ -49,11 +50,22 @@ class RPCInterface(JSONRPC):
 
 
 	def handleRequest(self, ID, name, params):
+		log('%s RPC <== %d %s %s' % (self.node.nodeID, ID, name, params))
 		self.node.handleRPCCall(self, ID, name, params)
 
 
 	def handleNotification(self, name, params):
 		self.node.pluginInterface.sendNotification(name, params)
+
+
+	def sendResponse(self, ID, result):
+		log('%s RPC ==> %d %s' % (self.node.nodeID, ID, result))
+		return JSONRPC.sendResponse(self, ID, result)
+
+
+	def sendErrorResponse(self, ID, error):
+		log('%s RPC ==> %d ERROR %s' % (self.node.nodeID, ID, error))
+		return JSONRPC.sendErrorResponse(self, ID, error)
 
 
 
@@ -64,16 +76,17 @@ class PluginInterface(JSONRPC):
 		self.manifest = None
 
 
-	async def startup(self):
-		#print('PluginInterface startup')
+	async def startup(self, options):
+		log('%s > PluginInterface startup' % self.node.nodeID)
 		self.manifest = await self.synCall('getmanifest')
 		self.methods = [m['name'] for m in self.manifest['rpcmethods']]
 		self.hooks = self.manifest['hooks'][:]
-		#print(manifest)
+
+		log('%s Received manifest; calling init' % self.node.nodeID)
 
 		await self.synCall('init',
 			{
-			'options': {},
+			'options': options,
 			'configuration': \
 				{
 				'lightning-dir': self.node.directory,
@@ -81,36 +94,61 @@ class PluginInterface(JSONRPC):
 				}
 			})
 
+		log('%s < PluginInterface startup' % self.node.nodeID)
+
 		return JSONRPC.startup(self)
 
 
 	def handleResult(self, ID, result):
+		log('%s plugin <== %d %s' % (self.node.nodeID, ID, result))
 		resultCB, errorCB = self.node.pluginResultCallbacks[ID]
 		del self.node.pluginResultCallbacks[ID]
 		resultCB(result)
 
 
 	def handleError(self, ID, error):
+		log('%s plugin <== %d ERROR %s' % (self.node.nodeID, ID, error))
 		resultCB, errorCB = self.node.pluginResultCallbacks[ID]
 		del self.node.pluginResultCallbacks[ID]
 		errorCB(error)
 
 
+	def sendRequest(self, name, params={}):
+		ID = JSONRPC.sendRequest(self, name, params)
+		log('%s plugin ==> %d %s %s' % (self.node.nodeID, ID, name, params))
+		return ID
 
-class DelayedResponse:
-	pass #Attributes will be added on an ad-hoc basis
+
+
+NO_RESPONSE = object() #Placeholder in case no response is to be sent
+DELAYED_RESPONSE = object() #Placeholder in case a delayed response is to be sent
 
 
 
 class Node:
-	def __init__(self, nodeID, RPCFile):
+	def __init__(self, nodeID, RPCFile, bl4pLogFile, bl4pDBFile):
 		self.nodeID = nodeID
 
 		abspath = os.path.abspath(RPCFile)
 		self.directory, self.RPCFile = os.path.split(abspath)
 
+		self.bl4pLogFile = bl4pLogFile
+		self.bl4pDBFile = bl4pDBFile
+
+		self.startupFinished = False
+
 		self.pluginResultCallbacks = {} #ID -> (function(result), function(error))
-		self.ongoingRequests = {} #ID -> (interface, methodname, message)
+
+		#This is for RPC calls that have started, but for which no return data
+		#has been sent yet:
+		self.ongoingRequests = {} #ID -> (interface, methodname, metadata)
+
+		#Is set to the request ID if we're inside an RPC call
+		self.currentRequestID = None
+
+		#This is for payments that have finished/failed, but for which
+		#waitsendpay was not yet called:
+		self.unprocessedPaymentResults = {} #paymentHash -> paymentPreimage or None
 
 
 	async def startup(self):
@@ -131,8 +169,13 @@ class Node:
 			)
 
 		self.pluginInterface = PluginInterface(self,
-			self.pluginProcess.stdout, self.pluginProcess.stdin)
-		await self.pluginInterface.startup()
+			self.pluginProcess.stdout, self.pluginProcess.stdin,
+			)
+		await self.pluginInterface.startup({
+			'bl4p.logfile': self.bl4pLogFile,
+			'bl4p.dbfile': self.bl4pDBFile,
+			})
+		self.startupFinished = True
 
 
 	async def RPCConnection(self, reader, writer):
@@ -150,50 +193,80 @@ class Node:
 
 
 	def findOngoingRequest(self, name, func):
+		'''
+		Return the ID of an ongoing request
+		name: the name of the called function
+		func: a function evaluating the metadata of the request
+		'''
 		for ID, value in self.ongoingRequests.items():
-			interface, methodName, delayedResponse = value
-			if methodName == name and func(delayedResponse):
+			interface, methodName, metadata = value
+			if methodName == name and func(metadata):
 				return ID
 		raise IndexError()
 
 
+	def setOngoingRequestAttribute(self, name, value):
+		self.ongoingRequests[self.currentRequestID][2][name] = value
+
+
 	def sendDelayedResponse(self, ID, result):
-		#TODO: have a way to send delayed error responses
+		'''
+		Send a response for an ongoing  request,
+		and remove the ongoing request, as it is now finished.
+		'''
 		interface = self.ongoingRequests[ID][0]
 		del self.ongoingRequests[ID]
 		interface.sendResponse(ID, result)
 
 
+	def sendDelayedErrorResponse(self, ID, error):
+		'''
+		Send an error response for an ongoing  request,
+		and remove the ongoing request, as it is now finished.
+		'''
+		interface = self.ongoingRequests[ID][0]
+		del self.ongoingRequests[ID]
+		interface.sendErrorResponse(ID, error)
+
+
 	def handleRPCCall(self, interface, ID, name, params):
-		#Plugin RPC pass-through:
-		if name in self.pluginInterface.methods:
-			outgoingID = self.pluginInterface.sendRequest(name, params)
+		self.currentRequestID = ID
+		try:
+			#Plugin RPC pass-through:
+			if name in self.pluginInterface.methods:
+				outgoingID = self.pluginInterface.sendRequest(name, params)
 
-			def resultCB(result):
-				#print(result)
+				def resultCB(result):
+					#print(result)
+					interface.sendResponse(ID, result)
+
+				def errorCB(error):
+					#print(error)
+					interface.sendErrorResponse(ID, error)
+
+				self.pluginResultCallbacks[outgoingID] = (resultCB, errorCB)
+				return
+
+			#Own methods
+			method = \
+			{
+			'getinfo': self.getInfo,
+			'getroute': self.getRoute,
+			'sendpay': self.sendPay,
+			'waitsendpay': self.waitSendPay,
+			}[name]
+
+			self.ongoingRequests[ID] = interface, name, {}
+
+			#TODO: exception handling
+			result = method(**params)
+
+			if result not in (NO_RESPONSE, DELAYED_RESPONSE):
 				interface.sendResponse(ID, result)
-
-			def errorCB(error):
-				#print(error)
-				interface.sendErrorResponse(ID, error)
-
-			self.pluginResultCallbacks[outgoingID] = (resultCB, errorCB)
-			return
-
-		#Own methods
-		method = \
-		{
-		'getinfo': self.getInfo,
-		'getroute': self.getRoute,
-		'sendpay': self.sendPay,
-		'waitsendpay': self.waitSendPay,
-		}[name]
-		#TODO: exception handling
-		result = method(**params)
-		if isinstance(result, DelayedResponse):
-			self.ongoingRequests[ID] = interface, name, result
-			return
-		interface.sendResponse(ID, result)
+			if result != DELAYED_RESPONSE and ID in self.ongoingRequests:
+				del self.ongoingRequests[ID]
+		finally:
+			self.currentRequestID = None
 
 
 	def getInfo(self, **kwargs):
@@ -238,16 +311,39 @@ class Node:
 			)
 
 		global nodes
-		nodes[tx.destID].handleIncomingTransaction(tx)
+		try:
+			nodes[tx.destID].handleIncomingTransaction(tx)
+		except:
+			logException()
+			log('Failing the LN transaction because of the exception')
+			self.finishOutgoingTransaction(tx.paymentHash, None)
 
 
 	def waitSendPay(self, payment_hash):
-		ret = DelayedResponse()
-		ret.paymentHash = payment_hash
-		return ret
+
+		#This attribute will be used in finishOutgoingTransaction, either
+		#as called here (if the result is already in), or, if the result
+		#arrives later, whenever the result arrives.
+		self.setOngoingRequestAttribute('paymentHash', payment_hash)
+
+		if payment_hash in self.unprocessedPaymentResults:
+			#The result is already in:
+			result = self.unprocessedPaymentResults[payment_hash]
+			del self.unprocessedPaymentResults[payment_hash]
+			self.finishOutgoingTransaction(payment_hash, result)
+
+			#Response was already sent by finishOutgoingTransaction
+			return NO_RESPONSE
+
+		#Response will be sent later by finishOutgoingTransaction
+		return DELAYED_RESPONSE
 
 
 	def handleIncomingTransaction(self, tx):
+		if not self.startupFinished:
+			raise Exception(
+				'Got an incoming transaction but initialization is not yet finished')
+
 		assert 'htlc_accepted' in self.pluginInterface.hooks
 
 		#TODO: per_hop is a fantasy interface, not yet in lightningd
@@ -273,8 +369,10 @@ class Node:
 
 			if result['result'] == 'resolve':
 				tx.paymentPreimage = result['payment_key']
-				nodes[tx.sourceID].finishOutgoingTransaction(tx)
-			#TODO: handle fail and continue
+				nodes[tx.sourceID].finishOutgoingTransaction(tx.paymentHash, tx.paymentPreimage)
+			elif result['result'] == 'fail':
+				nodes[tx.sourceID].finishOutgoingTransaction(tx.paymentHash, None)
+			#TODO: handle continue
 
 		def errorCB(error):
 			print(error) #TODO
@@ -282,19 +380,34 @@ class Node:
 		self.pluginResultCallbacks[ID] = (resultCB, errorCB)
 
 
-	def finishOutgoingTransaction(self, tx):
-		ID = self.findOngoingRequest('waitsendpay', lambda x: x.paymentHash == tx.paymentHash)
-		self.sendDelayedResponse(ID,
-			{
-			'status': 'complete',
-			'payment_preimage': tx.paymentPreimage,
-			})
+
+	def finishOutgoingTransaction(self, paymentHash, paymentResult):
+		try:
+			ID = self.findOngoingRequest('waitsendpay', lambda x: x['paymentHash'] == paymentHash)
+		except IndexError:
+			#waitsendpay was not yet called - store results for
+			#whenever it does get called
+			self.unprocessedPaymentResults[paymentHash] = paymentResult
+			return
+
+		#Send the response to waitsendpay
+		if paymentResult is None:
+			self.sendDelayedErrorResponse(ID,
+				203 #Permanent failure at destination
+				)
+		else:
+			self.sendDelayedResponse(ID,
+				{
+				'status': 'complete',
+				'payment_preimage': paymentResult,
+				})
+
 
 
 nodes = \
 {
-	'node0': Node(nodeID='node0', RPCFile='node0-rpc'),
-	'node1': Node(nodeID='node1', RPCFile='node1-rpc'),
+	'node0': Node(nodeID='node0', RPCFile='node0-rpc', bl4pLogFile='node0.bl4p.log', bl4pDBFile='node0.bl4p.db'),
+	'node1': Node(nodeID='node1', RPCFile='node1-rpc', bl4pLogFile='node1.bl4p.log', bl4pDBFile='node1.bl4p.db'),
 }
 
 

@@ -20,44 +20,62 @@ from simplestruct import Struct
 
 
 
-class BuyCommand(Struct):
+class PluginCommand(Struct):
+	commandID = 0
+
+
+class BuyCommand(PluginCommand):
 	amount = 0
 	limitRate = 0
 
 
-class SellCommand(Struct):
+class SellCommand(PluginCommand):
 	amount = 0
 	limitRate = 0
 
 
-class BL4PStart(Struct):
-	localTransactionID = 0 #not transmitted - for local use only
+class ListCommand(PluginCommand):
+	pass
 
+
+class PluginCommandResult(Struct):
+	commandID = 0
+	result = None
+
+
+class BL4PRequest(Struct):
+	localOrderID = 0 #not transmitted - for local use only
+
+
+class BL4PStart(BL4PRequest):
 	amount = 0
 	sender_timeout_delta_ms = 0
 	locked_timeout_delta_s = 0
 	receiver_pays_fee = True
 
 
-class BL4PSend(Struct):
-	localTransactionID = 0 #not transmitted - for local use only
+class BL4PCancelStart(BL4PRequest):
+	paymentHash = b''
 
+
+class BL4PSend(BL4PRequest):
 	amount = 0
 	paymentHash = b''
 
 
-class BL4PReceive(Struct):
-	localTransactionID = 0 #not transmitted - for local use only
-
-
+class BL4PReceive(BL4PRequest):
 	paymentPreimage = b''
 
 
-class BL4PAddOffer(Struct):
+class BL4PAddOffer(BL4PRequest):
 	offer = None
 
 
-class BL4PFindOffers(Struct):
+class BL4PRemoveOffer(BL4PRequest):
+	offerID = 0
+
+
+class BL4PFindOffers(BL4PRequest):
 	query = None
 
 
@@ -69,6 +87,10 @@ class BL4PStartResult(BL4PResult):
 	senderAmount = 0
 	receiverAmount = 0
 	paymentHash = b''
+
+
+class BL4PCancelStartResult(BL4PResult):
+	pass
 
 
 class BL4PSendResult(BL4PResult):
@@ -83,11 +105,21 @@ class BL4PAddOfferResult(BL4PResult):
 	ID = 0
 
 
+class BL4PRemoveOfferResult(BL4PResult):
+	pass
+
+
 class BL4PFindOffersResult(BL4PResult):
 	offers = []
 
 
+class BL4PError(BL4PResult):
+	pass
+
+
 class LNPay(Struct):
+	localOrderID = 0 #not transmitted - for local use only
+
 	destinationNodeID = ''
 	paymentHash = b''
 	recipientCryptoAmount = 0
@@ -110,9 +142,16 @@ class LNFinish(Struct):
 	paymentPreimage = b''
 
 
-class LNOutgoingFinished(Struct):
+class LNFail(Struct):
 	paymentHash = b''
-	paymentPreimage = b''
+
+
+class LNPayResult(Struct):
+	localOrderID = 0
+
+	senderCryptoAmount = 0
+	paymentHash = b''
+	paymentPreimage = None #None indicates a failed payment
 
 
 class Handler:

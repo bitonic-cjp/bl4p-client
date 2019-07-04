@@ -24,10 +24,9 @@ import sys
 import backend
 import bl4p_interface
 import messages
-from log import log
+from log import log, setLogFile
 import plugin_interface
 import rpc_interface
-import trader
 
 
 
@@ -63,15 +62,16 @@ async def stdio():
 
 class BL4PClient:
 	def __init__(self):
-		self.backend = backend.Backend()
-		self.trader = trader.Trader(self)
+		self.backend = backend.Backend(self)
 		self.messageRouter = messages.Router()
 
 
 	async def startup(self):
 		stdin, stdout = await stdio()
 		self.pluginInterface = plugin_interface.PluginInterface(self, stdin, stdout)
-		await self.pluginInterface.startup() #Guarantees that RPCPath is set
+		await self.pluginInterface.startup() #Guarantees that init is called
+
+		setLogFile(self.pluginInterface.logFile)
 
 		reader, writer = await asyncio.open_unix_connection(path=self.pluginInterface.RPCPath)
 		self.rpcInterface = rpc_interface.RPCInterface(self, reader, writer)
@@ -82,18 +82,16 @@ class BL4PClient:
 
 		self.backend.setLNAddress(self.rpcInterface.nodeID)
 		self.backend.setBL4PAddress('BL4Pdummy') #TODO
-
-		self.trader.startup()
+		self.backend.startup(self.pluginInterface.DBFile)
 
 		self.messageRouter.addHandler(self.backend)
-		self.messageRouter.addHandler(self.trader)
 		self.messageRouter.addHandler(self.pluginInterface)
 		self.messageRouter.addHandler(self.bl4pInterface)
 		self.messageRouter.addHandler(self.rpcInterface)
 
 
 	async def shutdown(self):
-		await self.trader.shutdown()
+		await self.backend.shutdown()
 		await self.bl4pInterface.shutdown()
 		await self.rpcInterface.shutdown()
 		await self.pluginInterface.shutdown()
@@ -103,16 +101,6 @@ class BL4PClient:
 		#Process a single incoming message:
 		log('<== ' + str(message))
 		self.messageRouter.handleMessage(message)
-
-		#Process queue of outgoing messages:
-		while True:
-			try:
-				#TODO: keep in queue if transmission fails
-				message = self.backend.getNextOutgoingMessage()
-			except IndexError:
-				break #no more outgoing messages
-
-			self.handleOutgoingMessage(message)
 
 
 	def handleOutgoingMessage(self, message):
@@ -127,15 +115,21 @@ def terminateSignalHandler():
 	loop.stop()
 
 
-client = BL4PClient()
-loop = asyncio.get_event_loop()
+def main():
+	client = BL4PClient()
+	loop = asyncio.get_event_loop()
 
-loop.run_until_complete(client.startup())
+	loop.run_until_complete(client.startup())
 
-loop.add_signal_handler(signal.SIGINT , terminateSignalHandler)
-loop.add_signal_handler(signal.SIGTERM, terminateSignalHandler)
-loop.run_forever()
+	loop.add_signal_handler(signal.SIGINT , terminateSignalHandler)
+	loop.add_signal_handler(signal.SIGTERM, terminateSignalHandler)
+	loop.run_forever()
 
-loop.run_until_complete(client.shutdown())
-loop.close()
+	loop.run_until_complete(client.shutdown())
+	loop.close()
+
+
+
+if __name__ == "__main__":
+	main() #pragma: nocover
 

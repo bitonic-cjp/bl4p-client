@@ -103,3 +103,23 @@ class Bl4pApi:
 		self.sendQueue.put_nowait(serialize(message))
 		return message.request
 
+
+	async def synCall(self, message):
+		callResult = asyncio.Future()
+
+		requestID = self.sendRequest(message)
+
+		oldhandleResult = self.handleResult
+		try:
+			def newHandleResult(message):
+				assert message.request == requestID
+				callResult.set_result(message)
+
+			#Temporarily hack the handleResult method to get our data:
+			self.handleResult = newHandleResult
+
+			await callResult
+			return callResult.result()
+		finally:
+			self.handleResult = oldhandleResult
+

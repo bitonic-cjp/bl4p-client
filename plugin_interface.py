@@ -36,8 +36,11 @@ class MethodType(Enum):
 
 
 
-class DelayedResponse:
+class OngoingRequest:
 	pass #Attributes will be added on an ad-hoc basis
+
+
+NO_RESPONSE = object() #Placeholder in case no response is to be sent
 
 
 
@@ -46,11 +49,32 @@ class PluginInterface(JSONRPC, messages.Handler):
 		JSONRPC.__init__(self, inputStream, outputStream)
 		messages.Handler.__init__(self, {
 			messages.LNFinish: self.sendFinish,
+			messages.LNFail  : self.sendFail,
+
+			messages.PluginCommandResult: self.sendPluginCommandResult,
 			})
 		self.client = client
-		self.RPCPath = None
 
-		self.options = {}
+		#Output from the init method:
+		self.RPCPath = None
+		self.logFile = None
+		self.DBFile = None
+
+		self.options = \
+		[
+		{
+		'name'       : 'bl4p.logfile',
+		'default'    : 'bl4p.log',
+		'description': 'BL4P plug-in log file',
+		'type'       : 'string',
+		},
+		{
+		'name'       : 'bl4p.dbfile',
+		'default'    : 'bl4p.db',
+		'description': 'BL4P plug-in database file',
+		'type'       : 'string',
+		},
+		]
 		self.methods = \
 		{
 		'getmanifest': (self.getManifest, MethodType.RPCMETHOD),
@@ -60,6 +84,7 @@ class PluginInterface(JSONRPC, messages.Handler):
 		'bl4p.getcryptocurrency': (self.getCryptoCurrency , MethodType.RPCMETHOD),
 		'bl4p.buy'              : (self.buy               , MethodType.RPCMETHOD),
 		'bl4p.sell'             : (self.sell              , MethodType.RPCMETHOD),
+		'bl4p.list'             : (self.list              , MethodType.RPCMETHOD),
 
 		'htlc_accepted'         : (self.handleHTLCAccepted, MethodType.HOOK),
 		}
@@ -69,7 +94,8 @@ class PluginInterface(JSONRPC, messages.Handler):
 
 		self.subscriptions = {'test': testHandler}
 
-		self.ongoingRequests = {} #ID -> (methodname, DelayedResponse)
+		self.currentRequestID = None
+		self.ongoingRequests = {} #ID -> (methodname, OngoingRequest)
 
 
 	async def startup(self):
@@ -86,11 +112,11 @@ class PluginInterface(JSONRPC, messages.Handler):
 
 
 	def handleRequest(self, ID, name, params):
+		self.currentRequestID = ID
 		try:
 			func, _ = self.methods[name]
 			result = func(**params)
-			if isinstance(result, DelayedResponse):
-				self.ongoingRequests[ID] = name, result
+			if result == NO_RESPONSE:
 				return
 			self.sendResponse(ID, result)
 		except Exception as e:
@@ -99,17 +125,22 @@ class PluginInterface(JSONRPC, messages.Handler):
 				"Error while processing {}: {}".format(
 				name, repr(e)
 				))
+		self.currentRequestID = None
+
+
+	def storeOngoingRequest(self, name, request):
+		self.ongoingRequests[self.currentRequestID] = name, request
 
 
 	def findOngoingRequest(self, name, func):
 		for ID, value in self.ongoingRequests.items():
-			methodName, delayedResponse = value
-			if methodName == name and func(delayedResponse):
+			methodName, request = value
+			if methodName == name and func(request):
 				return ID
 		raise IndexError()
 
 
-	def sendDelayedResponse(self, ID, result):
+	def sendOngoingRequestResponse(self, ID, result):
 		#TODO: have a way to send delayed error responses
 		del self.ongoingRequests[ID]
 		self.sendResponse(ID, result)
@@ -135,7 +166,7 @@ class PluginInterface(JSONRPC, messages.Handler):
 
 			doc = inspect.getdoc(func)
 			if not doc:
-				self.log(
+				log(
 				'RPC method \'{}\' does not have a docstring.'.format(name)
 				)
 				doc = "Undocumented RPC method from a plugin."
@@ -147,7 +178,7 @@ class PluginInterface(JSONRPC, messages.Handler):
 				})
 
 		return {
-			'options': list(self.options.values()),
+			'options': self.options,
 			'rpcmethods': methods,
 			'subscriptions': list(self.subscriptions.keys()),
 			'hooks': hooks,
@@ -159,7 +190,10 @@ class PluginInterface(JSONRPC, messages.Handler):
 
 		filename = configuration['rpc-file']
 		lndir = configuration['lightning-dir']
+
 		self.RPCPath = os.path.join(lndir, filename)
+		self.logFile = options['bl4p.logfile']
+		self.DBFile = options['bl4p.dbfile']
 		#self.log('RPC path is ' + self.RPCPath)
 
 
@@ -189,6 +223,18 @@ class PluginInterface(JSONRPC, messages.Handler):
 			))
 
 
+	def list(self, **kwargs):
+		'List active orders'
+
+		self.client.handleIncomingMessage(messages.ListCommand(
+			commandID = self.currentRequestID,
+			))
+
+		#Don't send a response now:
+		#It was already sent by the ListCommand handler
+		return NO_RESPONSE
+
+
 	def handleHTLCAccepted(self, onion, htlc, **kwargs):
 		'''
 		Parameter format:
@@ -209,7 +255,6 @@ class PluginInterface(JSONRPC, messages.Handler):
 			'payment_hash': hex,
 			}
 		'''
-		log('handleHTLCAccepted got called')
 		realm = bytes.fromhex(onion['hop_data']['realm'])[0]
 		if realm != 254: #TODO
 			return {'result': 'continue'} #it's not handled by us
@@ -219,11 +264,16 @@ class PluginInterface(JSONRPC, messages.Handler):
 			payload = Payload.decode(
 				bytes.fromhex(onion['hop_data']['per_hop']))
 			cryptoAmount = htlc['msatoshi']
-			CLTVExpiryDelta = htlc['cltv_expiry'], #TODO: check if this is a relative or absolute value. For now, relative is used everywhere.
+			CLTVExpiryDelta = htlc['cltv_expiry'] #TODO: check if this is a relative or absolute value. For now, relative is used everywhere.
 		except:
 			log('Refused incoming transaction because there is something wrong with it:')
 			logException()
 			return {'result': 'fail'}
+
+		#We will have to send a response later, possibly after finishing this function
+		req = OngoingRequest()
+		req.paymentHash = paymentHash
+		self.storeOngoingRequest('htlc_accepted', req)
 
 		self.client.handleIncomingMessage(messages.LNIncoming(
 			paymentHash = paymentHash,
@@ -233,17 +283,44 @@ class PluginInterface(JSONRPC, messages.Handler):
 			offerID = payload.offerID,
 			))
 
-		ret = DelayedResponse()
-		ret.paymentHash = paymentHash
-		return ret
+		#Don't send a response now:
+		#either it was already sent by the LNIncoming handler,
+		#or we will send it later.
+		return NO_RESPONSE
 
 
 	def sendFinish(self, message):
-		ID = self.findOngoingRequest('htlc_accepted',
-			lambda x: x.paymentHash == message.paymentHash)
+		try:
+			ID = self.findOngoingRequest('htlc_accepted',
+				lambda x: x.paymentHash == message.paymentHash)
+		except IndexError:
+			log('Cannot finish the Lightning transaction right now, because lightningd didn\'t give it to us.')
+			log('This may be caused by a restart during an ongoing transaction.')
+			log('Now we have to wait until lightningd gives it to us again.')
+			return
 
-		self.sendDelayedResponse(ID, {
+		self.sendOngoingRequestResponse(ID, {
 			'result': 'resolve',
 			'payment_key': message.paymentPreimage.hex(),
 			})
+
+
+	def sendFail(self, message):
+		try:
+			ID = self.findOngoingRequest('htlc_accepted',
+				lambda x: x.paymentHash == message.paymentHash)
+		except IndexError:
+			log('Cannot fail the Lightning transaction right now, because lightningd didn\'t give it to us.')
+			log('This may be caused by a restart during an ongoing transaction.')
+			log('Now we have to wait until lightningd gives it to us again.')
+			return
+
+		self.sendOngoingRequestResponse(ID, {
+			'result': 'fail',
+			})
+
+
+	def sendPluginCommandResult(self, message):
+		self.sendResponse(message.commandID,
+			message.result)
 

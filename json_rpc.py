@@ -19,7 +19,13 @@
 import asyncio
 import json
 
+import decodedbuffer
 from log import log, logException
+
+
+
+#DoS prevention measure:
+MAX_BUFFER_LENGTH = 1024*1024
 
 
 
@@ -28,7 +34,7 @@ class JSONRPC:
 		self.inputStream = inputStream
 		self.outputStream = outputStream
 
-		self.inputBuffer = b''
+		self.inputBuffer = decodedbuffer.DecodedBuffer('UTF-8')
 		self.outgoingRequestID = 0
 		self.decoder = json.JSONDecoder()
 
@@ -68,18 +74,21 @@ class JSONRPC:
 	async def getNextJSON(self):
 		while True:
 			try:
-				#log('Input buffer: ' + str(self.inputBuffer))
-				request, length = self.decoder.raw_decode(self.inputBuffer.decode("UTF-8"))
+				#log('Input buffer: ' + self.inputBuffer.get())
+				request, length = self.decoder.raw_decode(self.inputBuffer.get())
 			except ValueError:
 				#probably the buffer is incomplete
 				newData = await self.inputStream.read(1024)
 				if not newData: #EOF
 					return None
-				self.inputBuffer += newData
+				self.inputBuffer.append(newData)
+				if len(self.inputBuffer.get()) > MAX_BUFFER_LENGTH:
+					log('JSON RPC error: maximum buffer length exceeded. We\'re probably not receiving valid JSON.')
+					self.inputBuffer = decodedbuffer.DecodedBuffer('UTF-8') #replace with empty buffer
+					raise Exception('Maximum receive buffer length exceeded - throwing away data')
 				continue
 
-			#TODO: length in chars may be different from length in bytes
-			self.inputBuffer = self.inputBuffer[length:].lstrip()
+			self.inputBuffer.set(self.inputBuffer.get()[length:].lstrip())
 
 			#log('<-- ' + str(request))
 			return request
@@ -109,8 +118,13 @@ class JSONRPC:
 		ID = self.sendRequest(name, params)
 		while True:
 			message = await self.getNextJSON()
+
+			#These are ours:
 			if 'result' in message and 'id' in message and message['id'] == ID:
-				break #it's ours
+				break
+			if 'error' in message and 'id' in message and message['id'] == ID:
+				raise Exception(message['error'])
+
 			#Generic processing of messages that are not ours
 			self.handleJSON(message)
 		return message['result']
@@ -119,7 +133,13 @@ class JSONRPC:
 	def sendRequest(self, name, params={}):
 		ID = self.outgoingRequestID
 		self.outgoingRequestID += 1
-		msg = {'id': ID, 'method': name, 'params': params}
+		msg = \
+		{
+			'jsonrpc': '2.0',
+			'id': ID,
+			'method': name,
+			'params': params,
+		}
 		self.writeJSON(msg)
 		return ID
 
@@ -129,7 +149,7 @@ class JSONRPC:
 			{
 			'jsonrpc': '2.0',
 			'id': ID,
-			'result': result
+			'result': result,
 			}
 		self.writeJSON(response)
 
@@ -145,7 +165,12 @@ class JSONRPC:
 
 
 	def sendNotification(self, name, params):
-		msg = {'method': name, 'params': params}
+		msg = \
+		{
+			'jsonrpc': '2.0',
+			'method': name,
+			'params': params,
+		}
 		self.writeJSON(msg)
 
 

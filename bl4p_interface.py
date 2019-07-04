@@ -28,14 +28,31 @@ class BL4PInterface(bl4p.Bl4pApi, messages.Handler):
 	def __init__(self, client):
 		bl4p.Bl4pApi.__init__(self, log=log)
 		messages.Handler.__init__(self, {
-			messages.BL4PStart     : self.sendStart,
-			messages.BL4PSend      : self.sendSend,
-			messages.BL4PReceive   : self.sendReceive,
-			messages.BL4PAddOffer  : self.sendAddOffer,
-			messages.BL4PFindOffers: self.sendFindOffers,
+			messages.BL4PStart      : self.sendStart,
+			messages.BL4PCancelStart: self.sendCancelStart,
+			messages.BL4PSend       : self.sendSend,
+			messages.BL4PReceive    : self.sendReceive,
+			messages.BL4PAddOffer   : self.sendAddOffer,
+			messages.BL4PRemoveOffer: self.sendRemoveOffer,
+			messages.BL4PFindOffers : self.sendFindOffers,
 			})
 		self.client = client
 		self.activeRequests = {}
+
+
+	async def startup(self, url, userid, password):
+		await bl4p.Bl4pApi.startup(self, url, userid, password)
+
+		#Get our currently active orders
+		result = await self.synCall(bl4p_pb2.BL4P_ListOffers())
+
+		#Remove them one by one.
+		#When appropriate, they will be re-added later.
+		for item in result.offers:
+			log('Removing offer that existed before startup with ID ' + str(item.offerID))
+			request = bl4p_pb2.BL4P_RemoveOffer()
+			request.offerID = item.offerID
+			await self.synCall(request)
 
 
 	def sendStart(self, message):
@@ -44,6 +61,13 @@ class BL4PInterface(bl4p.Bl4pApi, messages.Handler):
 		request.sender_timeout_delta_ms = message.sender_timeout_delta_ms
 		request.locked_timeout_delta_s = message.locked_timeout_delta_s
 		request.receiver_pays_fee = message.receiver_pays_fee
+		requestID = self.sendRequest(request)
+		self.activeRequests[requestID] = message
+
+
+	def sendCancelStart(self, message):
+		request = bl4p_pb2.BL4P_CancelStart()
+		request.payment_hash.data = message.paymentHash
 		requestID = self.sendRequest(request)
 		self.activeRequests[requestID] = message
 
@@ -70,6 +94,13 @@ class BL4PInterface(bl4p.Bl4pApi, messages.Handler):
 		self.activeRequests[requestID] = message
 
 
+	def sendRemoveOffer(self, message):
+		request = bl4p_pb2.BL4P_RemoveOffer()
+		request.offerID = message.offerID
+		requestID = self.sendRequest(request)
+		self.activeRequests[requestID] = message
+
+
 	def sendFindOffers(self, message):
 		request = bl4p_pb2.BL4P_FindOffers()
 		request.query.CopyFrom(message.query.toPB2())
@@ -85,6 +116,8 @@ class BL4PInterface(bl4p.Bl4pApi, messages.Handler):
 				receiverAmount = result.receiver_amount.amount,
 				paymentHash = result.payment_hash.data
 				)
+		elif isinstance(result, bl4p_pb2.BL4P_CancelStartResult):
+			message = messages.BL4PCancelStartResult()
 		elif isinstance(result, bl4p_pb2.BL4P_SendResult):
 			message = messages.BL4PSendResult(
 				paymentPreimage = result.payment_preimage.data,
@@ -95,12 +128,20 @@ class BL4PInterface(bl4p.Bl4pApi, messages.Handler):
 			message = messages.BL4PAddOfferResult(
 				ID=result.offerID,
 				)
+		elif isinstance(result, bl4p_pb2.BL4P_RemoveOfferResult):
+			message = messages.BL4PRemoveOfferResult(
+				)
 		elif isinstance(result, bl4p_pb2.BL4P_FindOffersResult):
 			message = messages.BL4PFindOffersResult(offers = \
 				[
 				offer.Offer.fromPB2(offer_PB2)
 				for offer_PB2 in result.offers
 				])
+
+		elif isinstance(result, bl4p_pb2.Error):
+			log('Got BL4P error (reason = %d)' % result.reason)
+			message = messages.BL4PError()
+
 		else:
 			log('Ignoring unrecognized message type from BL4P: ' + \
 				str(result.__class__))
@@ -110,5 +151,4 @@ class BL4PInterface(bl4p.Bl4pApi, messages.Handler):
 		del self.activeRequests[result.request]
 		self.client.handleIncomingMessage(message)
 
-	#TODO: handle error results
 

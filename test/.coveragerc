@@ -1,0 +1,10 @@
+[run]
+branch = true
+parallel = true
+
+#Omit test directory and system directories
+omit = ./*,../bl4p_api/*,/usr/*,*/lib/*
+
+[html]
+directory = coverage_html
+

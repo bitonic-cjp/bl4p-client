@@ -55,7 +55,16 @@ class RPCInterface(JSONRPC, messages.Handler):
 		self.handleStoredRequestResult(message, name, result)
 
 
+	def handleError(self, ID, error):
+		name, message = self.ongoingRequests[ID]
+		del self.ongoingRequests[ID]
+		self.handleStoredRequestError(message, name, error)
+
+
 	def sendPay(self, message):
+		#TODO: check if we're already sending out funds on this payment hash.
+		#This can be the case, for instance, after a restart.
+
 		self.sendStoredRequest(message, 'getroute',
 			{
 			    "id": message.destinationNodeID,
@@ -75,8 +84,8 @@ class RPCInterface(JSONRPC, messages.Handler):
 		if (name, messageClass) == ('getroute', messages.LNPay):
 			route = result['route']
 
-			senderCryptoAmount = route[0]["msatoshi"]
-			if senderCryptoAmount > message.maxSenderCryptoAmount:
+			message.senderCryptoAmount = route[0]["msatoshi"]
+			if message.senderCryptoAmount > message.maxSenderCryptoAmount:
 				#TODO: proper handling of this
 				raise Exception('maxSenderCryptoAmount exceeded')
 
@@ -100,7 +109,10 @@ class RPCInterface(JSONRPC, messages.Handler):
 		elif (name, messageClass) == ('waitsendpay', messages.LNPay):
 			assert result['status'] == 'complete' #TODO: what else?
 			paymentPreimage = bytes.fromhex(result['payment_preimage'])
-			self.client.handleIncomingMessage(messages.LNOutgoingFinished(
+			self.client.handleIncomingMessage(messages.LNPayResult(
+				localOrderID = message.localOrderID,
+
+				senderCryptoAmount = message.senderCryptoAmount,
 				paymentHash = message.paymentHash,
 				paymentPreimage = paymentPreimage,
 				))
@@ -108,6 +120,18 @@ class RPCInterface(JSONRPC, messages.Handler):
 			raise Exception('RPCInterface made an error in storing requests')
 
 
-	def handleError(self, ID, error):
-		pass #TODO
+	def handleStoredRequestError(self, message, name, error):
+		messageClass = message.__class__
+
+		if (name, messageClass, error) == ('waitsendpay', messages.LNPay, 203):
+			#Recipient refused the transaction
+			self.client.handleIncomingMessage(messages.LNPayResult(
+				localOrderID = message.localOrderID,
+
+				senderCryptoAmount = message.senderCryptoAmount,
+				paymentHash = message.paymentHash,
+				paymentPreimage = None, #indicates error
+				))
+		else:
+			log('Received an unhandled error from a Lightning RPC call!!!')
 
