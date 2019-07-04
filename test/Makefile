@@ -25,6 +25,7 @@ test:
 	python3-coverage erase
 	python3-coverage run -p test_backend.py
 	python3-coverage run -p test_bl4p_interface.py
+	python3-coverage run -p test_bl4p_plugin.py
 	python3-coverage run -p test_decodedbuffer.py
 	python3-coverage run -p test_json_rpc.py
 	python3-coverage run -p test_ln_payload.py

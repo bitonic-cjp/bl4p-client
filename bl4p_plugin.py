@@ -115,15 +115,21 @@ def terminateSignalHandler():
 	loop.stop()
 
 
-client = BL4PClient()
-loop = asyncio.get_event_loop()
+def main():
+	client = BL4PClient()
+	loop = asyncio.get_event_loop()
 
-loop.run_until_complete(client.startup())
+	loop.run_until_complete(client.startup())
 
-loop.add_signal_handler(signal.SIGINT , terminateSignalHandler)
-loop.add_signal_handler(signal.SIGTERM, terminateSignalHandler)
-loop.run_forever()
+	loop.add_signal_handler(signal.SIGINT , terminateSignalHandler)
+	loop.add_signal_handler(signal.SIGTERM, terminateSignalHandler)
+	loop.run_forever()
 
-loop.run_until_complete(client.shutdown())
-loop.close()
+	loop.run_until_complete(client.shutdown())
+	loop.close()
+
+
+
+if __name__ == "__main__":
+	main() #pragma: nocover
 
