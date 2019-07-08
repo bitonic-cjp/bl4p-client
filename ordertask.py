@@ -223,7 +223,12 @@ class OrderTask:
 
 
 	async def doOfferSearch(self):
-		while True: #TODO: quit once the order is finished
+		'''
+		Keeps searching for matching offers until it finds one.
+		Then, it performs a single transaction based on the found offer.
+		'''
+
+		while True:
 			queryResult = await self.call(messages.BL4PFindOffers(
 				localOrderID=self.order.ID,
 
@@ -241,7 +246,6 @@ class OrderTask:
 				#Start trade on the first in the list
 				self.counterOffer = queryResult.offers[0]
 				await self.doTransaction()
-				#TODO: maybe continue if the order is not yet complete
 				return
 
 			if self.order.remoteOfferID is None:
