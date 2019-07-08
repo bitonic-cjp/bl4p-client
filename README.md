@@ -55,7 +55,7 @@ For further instructions, consult the help command in bl4p_console.py.
 * Start `make test`
 
 ## Bugs
-Too many not-yet-implemented essential features. Do not use this software.
+See BUGS.md
 
 ## Development
 An overview of the source code is written in doc/Code overview.odp
