@@ -20,6 +20,14 @@ import struct
 
 
 
+'''
+The payload is as follows:
+8 byte big endian unsigned int: fiat amount
+4 byte big endian unsigned int: offer ID
+
+Note that this format forces the fiat amount to be non-negative.
+'''
+
 class Payload:
 	@staticmethod
 	def decode(data):

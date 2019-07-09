@@ -53,9 +53,9 @@ for instance their exchange rate.
 
 ## Denial of Service
 
-### Handling of negative transaction amount
-An incoming transaction with a negative amount will lead to an application
-termination.
+### Race condition between publishing buy order and receiving transactions
+On a buy order, if a Lightning transaction is received before the
+offer-publishing RPC call finishes, the plugin might terminate.
 
 
 ## Database storage growth

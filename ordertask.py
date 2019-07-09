@@ -499,9 +499,6 @@ class OrderTask:
 		#ongoing tx.
 		#In that case, simply send back the payment preimage again.
 
-		#TODO: proper handling of failing this condition:
-		assert self.order.amount > 0
-
 		#TODO: check if lntx conforms to our order
 
 		log('Received incoming Lightning transaction')
