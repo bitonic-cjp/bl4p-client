@@ -8,6 +8,11 @@ The main purpose of this list is to act as a reminder for developers on what
 has to be fixed.
 
 
+## Execution of arbitrary code
+
+(No known bugs in this category)
+
+
 ## Loss of funds (including trading beyond limits specified in orders)
 
 ### Offers returned by BL4P are not checked
