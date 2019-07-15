@@ -162,6 +162,7 @@ message BL4P_Send {
     uint64 request = 1;
     BL4P_Amount sender_amount = 2;
     BL4P_CryptoData payment_hash = 3;
+    //TODO: add maximum locked_timeout
 }
 
 message BL4P_SendResult {

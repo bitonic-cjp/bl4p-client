@@ -182,14 +182,17 @@ class TestOrderTask(unittest.TestCase):
 
 	@asynciotest
 	async def test_buyer_goodFlow(self):
-		orderID = ordertask.BuyOrder.create(self.storage, 2, 1234)
+		orderID = ordertask.BuyOrder.create(self.storage,
+			190000,   #mCent / BTC = 1.9 EUR/BTC
+			123400000 #mCent    = 1234 EUR
+			)
 		order = ordertask.BuyOrder(self.storage, orderID, 'lnAddress')
 
 		task = ordertask.OrderTask(self.client, self.storage, order)
 		task.startup()
 
 		remainingAmount = order.amount
-		for txAmount in [1000, 234]:
+		for txAmount in [100000000, 23400000]:
 			self.storage.reset(startCount=43) #clean up from previous iteration
 			self.storage.buyOrders[orderID] = {}
 			order.setAmount = Mock() #Replace mock object with a fresh one
@@ -213,7 +216,7 @@ class TestOrderTask(unittest.TestCase):
 			paymentHash = sha256(paymentPreimage)
 			task.setCallResult(messages.LNIncoming(
 				fiatAmount=txAmount,
-				cryptoAmount=500,
+				cryptoAmount=100000000000000,
 				paymentHash=paymentHash,
 				))
 
@@ -227,7 +230,7 @@ class TestOrderTask(unittest.TestCase):
 				'status': ordertask.STATUS_INITIAL,
 				'buyOrder': 42,
 				'fiatAmount': txAmount,
-				'cryptoAmount': 500,
+				'cryptoAmount': 100000000000000,
 				'paymentHash': paymentHash,
 				'paymentPreimage': None,
 				}})
@@ -250,7 +253,7 @@ class TestOrderTask(unittest.TestCase):
 				'status': ordertask.STATUS_FINISHED,
 				'buyOrder': 42,
 				'fiatAmount': txAmount,
-				'cryptoAmount': 500,
+				'cryptoAmount': 100000000000000,
 				'paymentHash': paymentHash,
 				'paymentPreimage': paymentPreimage,
 				}})
@@ -275,6 +278,49 @@ class TestOrderTask(unittest.TestCase):
 		await task.waitFinished()
 
 		self.assertEqual(self.storage.buyOrders[orderID]['status'], 1) #completed
+
+
+	@asynciotest
+	async def test_refusedBuyTransaction(self):
+		orderID = ordertask.BuyOrder.create(self.storage,
+			190000,   #mCent / BTC = 1.9 EUR/BTC
+			123400000 #mCent    = 1234 EUR
+			)
+		order = ordertask.BuyOrder(self.storage, orderID, 'lnAddress')
+
+		task = ordertask.OrderTask(self.client, self.storage, order)
+		task.startup()
+
+		self.storage.reset(startCount=43) #clean up from previous iteration
+		self.storage.buyOrders[orderID] = {}
+		order.setAmount = Mock() #Replace mock object with a fresh one
+
+		#Offer gets published
+		msg = await self.outgoingMessages.get()
+		self.assertEqual(msg, messages.BL4PAddOffer(
+			localOrderID=42,
+
+			offer=order,
+			))
+		task.setCallResult(messages.BL4PAddOfferResult(
+			ID=6,
+			))
+
+		#TODO: is the next message in a race condition with the previous?
+		await asyncio.sleep(0.1)
+
+		#Incoming LN transaction arrives
+		paymentPreimage = b'foo'
+		paymentHash = sha256(paymentPreimage)
+		task.setCallResult(messages.LNIncoming(
+			fiatAmount=100000000, #mCent = 1000 EUR
+			cryptoAmount=50,      #mBTC = 0.00000000050 BTC
+			paymentHash=paymentHash,
+			))
+
+		msg = await self.outgoingMessages.get()
+
+		await task.shutdown()
 
 
 	@asynciotest

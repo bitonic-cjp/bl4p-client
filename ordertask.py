@@ -17,11 +17,12 @@
 #    along with the BL4P Client. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
+import copy
 import hashlib
 
 from bl4p_api import offer
 from bl4p_api import offer_pb2
-from bl4p_api.offer import Offer
+from bl4p_api.offer import Offer, Asset
 
 from log import log, logException
 import messages
@@ -499,9 +500,35 @@ class OrderTask:
 		#ongoing tx.
 		#In that case, simply send back the payment preimage again.
 
-		#TODO: check if lntx conforms to our order
-
 		log('Received incoming Lightning transaction')
+		#TODO: log transaction characteristics
+
+		#Check if lntx conforms to our order:
+		counterOffer = Offer(
+			#These are equivalent to our order, except for max_amount.
+			#max_amount will be overwritten - see below
+			bid=copy.deepcopy(self.order.ask),
+			ask=copy.deepcopy(self.order.bid),
+
+			#dummy values:
+			address='',
+			ID=0,
+
+			#Don't specify sender_timeout: we can just try if we're still within the timeout
+			#TODO: specify locked_timeout!
+			)
+		counterOffer.bid.max_amount = message.cryptoAmount
+		counterOffer.ask.max_amount = message.fiatAmount
+
+		if not counterOffer.matches(self.order):
+			log('Received transaction did not match our order - refusing it')
+			self.client.handleOutgoingMessage(messages.LNFail(
+				paymentHash=message.paymentHash,
+				))
+			return
+
+		#TODO: check max per-tx amount
+		#TODO: check that we still have sufficient time according to our cltv_expiry_delta
 
 		#Check if remaining order size is sufficient:
 		assert message.fiatAmount <= self.order.amount
