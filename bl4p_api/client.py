@@ -83,10 +83,11 @@ class Bl4pApi:
 		self.apiCall(request)
 
 
-	def send(self, sender_amount, payment_hash):
+	def send(self, sender_amount, payment_hash, max_locked_timeout_delta_s):
 		request = bl4p_pb2.BL4P_Send()
 		request.sender_amount.amount = sender_amount
 		request.payment_hash.data = payment_hash
+		request.max_locked_timeout_delta_s = max_locked_timeout_delta_s
 		result = self.apiCall(request)
 		return result.payment_preimage.data
 
