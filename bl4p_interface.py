@@ -76,6 +76,7 @@ class BL4PInterface(bl4p.Bl4pApi, messages.Handler):
 		request = bl4p_pb2.BL4P_Send()
 		request.sender_amount.amount = message.amount
 		request.payment_hash.data = message.paymentHash
+		request.max_locked_timeout_delta_s = message.max_locked_timeout_delta_s
 		requestID = self.sendRequest(request)
 		self.activeRequests[requestID] = message
 

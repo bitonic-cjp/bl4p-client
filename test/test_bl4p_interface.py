@@ -129,10 +129,12 @@ class TestBL4PInterface(unittest.TestCase):
 		msgIn = messages.BL4PSend(
 			amount = 1234,
 			paymentHash = b'foobar',
+			max_locked_timeout_delta_s = 5000,
 			)
 		expectedMsgOut = bl4p_pb2.BL4P_Send()
 		expectedMsgOut.sender_amount.amount = 1234
 		expectedMsgOut.payment_hash.data = b'foobar'
+		expectedMsgOut.max_locked_timeout_delta_s = 5000
 		self.doSingleSendTest(msgIn, expectedMsgOut)
 
 

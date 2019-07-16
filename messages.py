@@ -61,6 +61,7 @@ class BL4PCancelStart(BL4PRequest):
 class BL4PSend(BL4PRequest):
 	amount = 0
 	paymentHash = b''
+	max_locked_timeout_delta_s = 0
 
 
 class BL4PReceive(BL4PRequest):

@@ -241,6 +241,7 @@ class TestOrderTask(unittest.TestCase):
 
 				amount=txAmount,
 				paymentHash=paymentHash,
+				max_locked_timeout_delta_s = 3600*24*14,
 				))
 			task.setCallResult(messages.BL4PSendResult(
 				paymentPreimage=paymentPreimage,
@@ -354,6 +355,7 @@ class TestOrderTask(unittest.TestCase):
 
 			amount = 100000000,
 			paymentHash = b'foo',
+			max_locked_timeout_delta_s = 3600*24*14,
 			))
 
 		await task.shutdown()
@@ -405,6 +407,7 @@ class TestOrderTask(unittest.TestCase):
 
 			amount = 100000000,
 			paymentHash = b'foo',
+			max_locked_timeout_delta_s = 3600*24*14,
 			))
 		task.setCallResult(messages.BL4PError())
 

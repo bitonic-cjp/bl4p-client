@@ -515,7 +515,7 @@ class OrderTask:
 			ID=0,
 
 			#Don't specify sender_timeout: we can just try if we're still within the timeout
-			#TODO: specify locked_timeout!
+			#Don't specify locked_timeout: it is unknown to us; we will inform BL4P about our maximum
 			)
 		counterOffer.bid.max_amount = message.cryptoAmount
 		counterOffer.ask.max_amount = message.fiatAmount
@@ -553,8 +553,9 @@ class OrderTask:
 			sendResult = await self.call(messages.BL4PSend(
 				localOrderID = self.order.ID,
 
-				amount      = self.transaction.fiatAmount,
-				paymentHash = self.transaction.paymentHash,
+				amount                     = self.transaction.fiatAmount,
+				paymentHash                = self.transaction.paymentHash,
+				max_locked_timeout_delta_s = self.order.getConditionMax(offer.Condition.LOCKED_TIMEOUT),
 				),
 				messages.BL4PSendResult)
 		except BL4PError:
