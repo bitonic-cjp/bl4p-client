@@ -486,8 +486,8 @@ class TestOrderTask(unittest.TestCase):
 			][i]
 			receiverCryptoAmount = \
 			[
-			100000000000000, #1000 BTC
-			21280000500000,  #212.8 BTC = 425.6 BTC * buyer limit rate
+			100000000000001, #1000 BTC
+			21280000500001,  #212.8 BTC = 425.6 BTC * buyer limit rate
 			][i]
 			senderFiatAmount = \
 			[

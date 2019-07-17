@@ -327,6 +327,7 @@ class OrderTask:
 		receiverCryptoAmount = \
 			(cryptoAmountDivisor * senderFiatAmount  * self.counterOffer.ask.max_amount         * self.counterOffer.bid.max_amount_divisor) // \
 			(                      fiatAmountDivisor * self.counterOffer.ask.max_amount_divisor * self.counterOffer.bid.max_amount)
+		receiverCryptoAmount += 1 #make sure it isn't rounded down - should be irrelevant anyway
 		log('receiverCryptoAmount = ' + str(receiverCryptoAmount))
 		assert receiverCryptoAmount >= 0
 		#Maximum: this is what we are prepared to pay
