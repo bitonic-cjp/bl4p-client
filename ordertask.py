@@ -520,8 +520,11 @@ class OrderTask:
 		counterOffer.bid.max_amount = message.cryptoAmount
 		counterOffer.ask.max_amount = message.fiatAmount
 
-		if not counterOffer.matches(self.order):
-			log('Received transaction did not match our order - refusing it')
+		try:
+			counterOffer.verifyMatches(self.order)
+		except offer.MismatchError as error:
+			log('Received transaction did not match our order - refusing it.')
+			log('The mismatch is: ' + str(error))
 			self.client.handleOutgoingMessage(messages.LNFail(
 				paymentHash=message.paymentHash,
 				))
