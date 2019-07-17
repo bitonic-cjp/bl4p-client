@@ -36,6 +36,11 @@ def Asset(max_amount, max_amount_divisor, currency, exchange):
 
 
 
+class MismatchError(Exception):
+	pass
+
+
+
 class Offer:
 	@staticmethod
 	def fromPB2(pb2):
@@ -111,24 +116,35 @@ class Offer:
 
 
 	def matches(self, other):
+		try:
+			self.verifyMatches(other)
+		except MismatchError:
+			return False
+
+		return True
+
+
+	def verifyMatches(self, other):
 		#Must be matching currency and exchange:
-		if \
-			self.bid.currency != other.ask.currency or \
-			self.bid.exchange != other.ask.exchange or \
-			self.ask.currency != other.bid.currency or \
-			self.ask.exchange != other.bid.exchange:
-				return False
+		if self.bid.currency != other.ask.currency:
+			raise MismatchError('Currency mismatch between bid %s and ask %s' % (self.bid.currency, other.ask.currency))
+		if self.bid.exchange != other.ask.exchange:
+			raise MismatchError('Exchange mismatch between bid %s and ask %s' % (self.bid.exchange, other.ask.exchange))
+		if self.ask.currency != other.bid.currency:
+			raise MismatchError('Currency mismatch between ask %s and bid %s' % (self.ask.currency, other.bid.currency))
+		if self.ask.exchange != other.bid.exchange:
+			raise MismatchError('Exchange mismatch between ask %s and bid %s' % (self.ask.exchange, other.bid.exchange))
 
 		#All condition ranges must overlap
 		commonKeys = set(self.conditions.keys()) & set(other.conditions.keys())
 		testOverlap = lambda r1, r2: r1[0] <= r2[1] and r2[0] <= r1[1]
-		overlaps = \
-		(
-		testOverlap(self.conditions[key], other.conditions[key])
-		for key in commonKeys
-		)
-		if False in overlaps:
-			return False
+		for key in commonKeys:
+			overlaps = testOverlap(self.conditions[key], other.conditions[key])
+			if not overlaps:
+				raise MismatchError(
+					'Mismatch on condition %d between ranges %s and %s' % \
+					(key, self.conditions[key], other.conditions[key])
+					)
 
 		#Must have compatible limit rates
 		#One should bid at least as much as the other asks.
@@ -139,10 +155,17 @@ class Offer:
 
 		#Implementation note: multiplying all these numbers together may give quite large results.
 		#The correctness may well depend on Python's unlimited-size integers.
-		return \
-			self.bid.max_amount * other.bid.max_amount * \
-			self.ask.max_amount_divisor * other.ask.max_amount_divisor \
-				>= \
-			self.ask.max_amount * other.ask.max_amount * \
+		mul1 = self.bid.max_amount * other.bid.max_amount * \
+			self.ask.max_amount_divisor * other.ask.max_amount_divisor
+		mul2 = self.ask.max_amount * other.ask.max_amount * \
 			self.bid.max_amount_divisor * other.bid.max_amount_divisor
+		if mul1 < mul2:
+			raise MismatchError('Mismatch between limit rates: bid1 %d/%d, ask1 %d/%d, bid2 %d/%d, ask2 %d/%d; %d < %d' % \
+				(
+				self.bid.max_amount, self.bid.max_amount_divisor,
+				self.ask.max_amount, self.ask.max_amount_divisor,
+				other.bid.max_amount, other.bid.max_amount_divisor,
+				other.ask.max_amount, other.ask.max_amount_divisor,
+				mul1, mul2
+				))
 
