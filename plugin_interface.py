@@ -210,6 +210,7 @@ class PluginInterface(JSONRPC, messages.Handler):
 	def buy(self, limit_rate, amount, **kwargs):
 		'Place an order for buying crypto-currency with fiat-currency'
 		self.client.handleIncomingMessage(messages.BuyCommand(
+			commandID=None,
 			limitRate=limit_rate,
 			amount=amount
 			))
@@ -218,6 +219,7 @@ class PluginInterface(JSONRPC, messages.Handler):
 	def sell(self, limit_rate, amount, **kwargs):
 		'Place an order for selling crypto-currency for fiat-currency'
 		self.client.handleIncomingMessage(messages.SellCommand(
+			commandID=None,
 			limitRate=limit_rate,
 			amount=amount
 			))

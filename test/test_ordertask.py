@@ -205,6 +205,7 @@ class TestOrderTask(unittest.TestCase):
 				offer=order,
 				))
 			task.setCallResult(messages.BL4PAddOfferResult(
+				request=None,
 				ID=6,
 				))
 
@@ -215,6 +216,8 @@ class TestOrderTask(unittest.TestCase):
 			paymentPreimage = b'foo'
 			paymentHash = sha256(paymentPreimage)
 			task.setCallResult(messages.LNIncoming(
+				offerID=42,
+				CLTVExpiryDelta=0,
 				fiatAmount=txAmount,
 				cryptoAmount=100000000000000,
 				paymentHash=paymentHash,
@@ -244,6 +247,7 @@ class TestOrderTask(unittest.TestCase):
 				max_locked_timeout_delta_s = 3600*24*14,
 				))
 			task.setCallResult(messages.BL4PSendResult(
+				request=None,
 				paymentPreimage=paymentPreimage,
 				))
 
@@ -274,6 +278,7 @@ class TestOrderTask(unittest.TestCase):
 				offerID=6,
 				))
 			task.setCallResult(messages.BL4PRemoveOfferResult(
+				request=None,
 				))
 
 		await task.waitFinished()
@@ -304,6 +309,7 @@ class TestOrderTask(unittest.TestCase):
 			offer=order,
 			))
 		task.setCallResult(messages.BL4PAddOfferResult(
+			request=None,
 			ID=6,
 			))
 
@@ -314,6 +320,8 @@ class TestOrderTask(unittest.TestCase):
 		paymentPreimage = b'foo'
 		paymentHash = sha256(paymentPreimage)
 		task.setCallResult(messages.LNIncoming(
+			offerID=42,
+			CLTVExpiryDelta=0,
 			fiatAmount=100000000, #mCent = 1000 EUR
 			cryptoAmount=50,      #mBTC = 0.00000000050 BTC
 			paymentHash=paymentHash,
@@ -409,7 +417,9 @@ class TestOrderTask(unittest.TestCase):
 			paymentHash = b'foo',
 			max_locked_timeout_delta_s = 3600*24*14,
 			))
-		task.setCallResult(messages.BL4PError())
+		task.setCallResult(messages.BL4PError(
+			request = None,
+			))
 
 		#LN transaction gets canceled
 		msg = await self.outgoingMessages.get()
@@ -430,12 +440,17 @@ class TestOrderTask(unittest.TestCase):
 		#Old offer gets removed
 		msg = await self.outgoingMessages.get()
 		self.assertTrue(isinstance(msg, messages.BL4PRemoveOffer))
-		task.setCallResult(messages.BL4PRemoveOfferResult())
+		task.setCallResult(messages.BL4PRemoveOfferResult(
+			request = None,
+			))
 
 		#New offer gets added
 		msg = await self.outgoingMessages.get()
 		self.assertTrue(isinstance(msg, messages.BL4PAddOffer))
-		task.setCallResult(messages.BL4PAddOfferResult())
+		task.setCallResult(messages.BL4PAddOfferResult(
+			request = None,
+			ID = 6,
+			))
 
 		#Continues to next iteration:
 		await asyncio.sleep(0.1)
@@ -508,6 +523,7 @@ class TestOrderTask(unittest.TestCase):
 				query=order,
 				))
 			task.setCallResult(messages.BL4PFindOffersResult(
+				request=None,
 				offers=[o1, Mock()],
 				))
 
@@ -551,6 +567,7 @@ class TestOrderTask(unittest.TestCase):
 		                receiver_pays_fee=True,
 				))
 			task.setCallResult(messages.BL4PStartResult(
+				request=None,
 				senderAmount=senderFiatAmount,
 				receiverAmount=receiverFiatAmount,
 				paymentHash=paymentHash,
@@ -589,6 +606,8 @@ class TestOrderTask(unittest.TestCase):
 				offerID               = 6,
 				))
 			task.setCallResult(messages.LNPayResult(
+				localOrderID=44,
+				paymentHash=paymentHash,
 				senderCryptoAmount=senderCryptoAmount,
 				paymentPreimage=paymentPreimage,
 				))
@@ -624,6 +643,7 @@ class TestOrderTask(unittest.TestCase):
 				paymentPreimage=paymentPreimage,
 				))
 			task.setCallResult(messages.BL4PReceiveResult(
+				request=None,
 				))
 
 			await asyncio.sleep(0.1)
@@ -819,6 +839,8 @@ class TestOrderTask(unittest.TestCase):
 
 		#Lightning tx ends up canceled:
 		task.setCallResult(messages.LNPayResult(
+			localOrderID=0,
+			paymentHash=b'foo',
 			senderCryptoAmount=10500,
 			paymentPreimage=None,
 			))
@@ -831,6 +853,7 @@ class TestOrderTask(unittest.TestCase):
 				))
 
 		task.setCallResult(messages.BL4PCancelStartResult(
+			request = None,
 			))
 
 		msg = await self.outgoingMessages.get()
@@ -918,6 +941,7 @@ class TestOrderTask(unittest.TestCase):
 			query=order,
 			))
 		task.setCallResult(messages.BL4PFindOffersResult(
+			request = None,
 			offers = [],
 			))
 
@@ -929,6 +953,7 @@ class TestOrderTask(unittest.TestCase):
 			offer=order,
 			))
 		task.setCallResult(messages.BL4PAddOfferResult(
+			request = None,
 			ID = 6,
 			))
 
@@ -943,6 +968,7 @@ class TestOrderTask(unittest.TestCase):
 			query=order,
 			))
 		task.setCallResult(messages.BL4PFindOffersResult(
+			request = None,
 			offers = [],
 			))
 		self.assertEqual(order.remoteOfferID, 6)
@@ -955,6 +981,7 @@ class TestOrderTask(unittest.TestCase):
 			query=order,
 			))
 		task.setCallResult(messages.BL4PFindOffersResult(
+			request = None,
 			offers = ['foo', 'bar'],
 			))
 

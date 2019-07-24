@@ -103,6 +103,7 @@ class TestBL4PInterface(unittest.TestCase):
 
 	def test_sendStart(self):
 		msgIn = messages.BL4PStart(
+			localOrderID = 0,
 			amount = 1234,
 			sender_timeout_delta_ms = 100,
 			locked_timeout_delta_s = 1000000,
@@ -118,6 +119,7 @@ class TestBL4PInterface(unittest.TestCase):
 
 	def test_sendCancelStart(self):
 		msgIn = messages.BL4PCancelStart(
+			localOrderID = 0,
 			paymentHash = b'foobar',
 			)
 		expectedMsgOut = bl4p_pb2.BL4P_CancelStart()
@@ -127,6 +129,7 @@ class TestBL4PInterface(unittest.TestCase):
 
 	def test_sendSend(self):
 		msgIn = messages.BL4PSend(
+			localOrderID = 0,
 			amount = 1234,
 			paymentHash = b'foobar',
 			max_locked_timeout_delta_s = 5000,
@@ -140,6 +143,7 @@ class TestBL4PInterface(unittest.TestCase):
 
 	def test_sendReceive(self):
 		msgIn = messages.BL4PReceive(
+			localOrderID = 0,
 			paymentPreimage = b'foobar',
 			)
 		expectedMsgOut = bl4p_pb2.BL4P_Receive()
@@ -155,6 +159,7 @@ class TestBL4PInterface(unittest.TestCase):
 			ID = 42,
 			)
 		msgIn = messages.BL4PAddOffer(
+			localOrderID = 0,
 			offer = offer,
 			)
 		expectedMsgOut = bl4p_pb2.BL4P_AddOffer()
@@ -164,6 +169,7 @@ class TestBL4PInterface(unittest.TestCase):
 
 	def test_sendRemoveOffer(self):
 		msgIn = messages.BL4PRemoveOffer(
+			localOrderID = 0,
 			offerID = 42,
 			)
 		expectedMsgOut = bl4p_pb2.BL4P_RemoveOffer()
@@ -179,6 +185,7 @@ class TestBL4PInterface(unittest.TestCase):
 			ID = 42,
 			)
 		msgIn = messages.BL4PFindOffers(
+			localOrderID = 0,
 			query = query,
 			)
 		expectedMsgOut = bl4p_pb2.BL4P_FindOffers()
@@ -261,8 +268,13 @@ class TestBL4PInterface(unittest.TestCase):
 
 	def test_handleResult_unrecognized(self):
 		#Just testing coverage without exceptions
-		msg = bl4p_pb2.BL4P_Amount()
+		self.interface.activeRequests = {6: 'baz'}
+		msg = bl4p_pb2.BL4P_CancelStart()
+		msg.request = 6
 		self.interface.handleResult(msg)
+
+		#TODO: handle the case of types without request attribute
+		#TODO: handle the case of invalid request number
 
 
 

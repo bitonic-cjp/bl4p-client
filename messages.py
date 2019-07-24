@@ -25,7 +25,7 @@ from bl4p_api import offer as _offer
 
 
 class PluginCommand(Struct):
-	commandID = 0
+	commandID = None #type: Optional[int]
 
 
 class BuyCommand(PluginCommand):

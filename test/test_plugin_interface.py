@@ -158,6 +158,7 @@ class TestPluginInterface(unittest.TestCase):
 			'result': None,
 			})
 		self.client.handleIncomingMessage.assert_called_once_with(messages.BuyCommand(
+			commandID=None,
 			limitRate=42,
 			amount=6,
 			))
@@ -172,6 +173,7 @@ class TestPluginInterface(unittest.TestCase):
 			'result': None,
 			})
 		self.client.handleIncomingMessage.assert_called_once_with(messages.SellCommand(
+			commandID=None,
 			limitRate=42,
 			amount=6,
 			))

@@ -31,20 +31,18 @@ class Foo(simplestruct.Struct):
 
 class TestStruct(unittest.TestCase):
 	def test_construction(self):
-		obj = Foo()
-		self.assertEqual(obj.bar, 0)
-		self.assertEqual(obj.baz, None)
-
-		obj = Foo(bar=1)
-		self.assertEqual(obj.bar, 1)
-		self.assertEqual(obj.baz, None)
-
 		obj = Foo(bar=1, baz='z')
 		self.assertEqual(obj.bar, 1)
 		self.assertEqual(obj.baz, 'z')
 
 		with self.assertRaises(KeyError):
 			obj = Foo(x=0)
+
+		with self.assertRaises(KeyError):
+			obj = Foo(bar=0)
+
+		with self.assertRaises(KeyError):
+			obj = Foo(baz=0)
 
 
 	def test_str(self):

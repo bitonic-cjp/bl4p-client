@@ -111,29 +111,42 @@ class BL4PInterface(bl4p.Bl4pApi, messages.Handler):
 
 	def handleResult(self, result):
 		#log('BL4PInterface: Received result: ' + str(result))
+
+		request = self.activeRequests[result.request]
+
 		if isinstance(result, bl4p_pb2.BL4P_StartResult):
 			message = messages.BL4PStartResult(
+				request = request,
 				senderAmount = result.sender_amount.amount,
 				receiverAmount = result.receiver_amount.amount,
 				paymentHash = result.payment_hash.data
 				)
 		elif isinstance(result, bl4p_pb2.BL4P_CancelStartResult):
-			message = messages.BL4PCancelStartResult()
+			message = messages.BL4PCancelStartResult(
+				request = request,
+				)
 		elif isinstance(result, bl4p_pb2.BL4P_SendResult):
 			message = messages.BL4PSendResult(
+				request = request,
 				paymentPreimage = result.payment_preimage.data,
 				)
 		elif isinstance(result, bl4p_pb2.BL4P_ReceiveResult):
-			message = messages.BL4PReceiveResult()
+			message = messages.BL4PReceiveResult(
+				request = request,
+				)
 		elif isinstance(result, bl4p_pb2.BL4P_AddOfferResult):
 			message = messages.BL4PAddOfferResult(
+				request = request,
 				ID=result.offerID,
 				)
 		elif isinstance(result, bl4p_pb2.BL4P_RemoveOfferResult):
 			message = messages.BL4PRemoveOfferResult(
+				request = request,
 				)
 		elif isinstance(result, bl4p_pb2.BL4P_FindOffersResult):
-			message = messages.BL4PFindOffersResult(offers = \
+			message = messages.BL4PFindOffersResult(
+				request = request,
+				offers = \
 				[
 				offer.Offer.fromPB2(offer_PB2)
 				for offer_PB2 in result.offers
@@ -141,14 +154,15 @@ class BL4PInterface(bl4p.Bl4pApi, messages.Handler):
 
 		elif isinstance(result, bl4p_pb2.Error):
 			log('Got BL4P error (reason = %d)' % result.reason)
-			message = messages.BL4PError()
+			message = messages.BL4PError(
+				request = request,
+				)
 
 		else:
 			log('Ignoring unrecognized message type from BL4P: ' + \
 				str(result.__class__))
 			return
 
-		message.request = self.activeRequests[result.request]
 		del self.activeRequests[result.request]
 		self.client.handleIncomingMessage(message)
 
