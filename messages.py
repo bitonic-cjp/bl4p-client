@@ -16,7 +16,11 @@
 #    You should have received a copy of the GNU General Public License
 #    along with the BL4P Client. If not, see <http://www.gnu.org/licenses/>.
 
+from typing import Optional
+
 from simplestruct import Struct
+
+from bl4p_api import offer as _offer
 
 
 
@@ -40,7 +44,7 @@ class ListCommand(PluginCommand):
 
 class PluginCommandResult(Struct):
 	commandID = 0
-	result = None
+	result = None #type: dict[str, str]
 
 
 class BL4PRequest(Struct):
@@ -69,7 +73,7 @@ class BL4PReceive(BL4PRequest):
 
 
 class BL4PAddOffer(BL4PRequest):
-	offer = None
+	offer = None #type: _offer.Offer
 
 
 class BL4PRemoveOffer(BL4PRequest):
@@ -77,11 +81,11 @@ class BL4PRemoveOffer(BL4PRequest):
 
 
 class BL4PFindOffers(BL4PRequest):
-	query = None
+	query = None #type: _offer.Offer
 
 
 class BL4PResult(Struct):
-	request = None
+	request = None #type: BL4PRequest
 
 
 class BL4PStartResult(BL4PResult):
@@ -111,7 +115,7 @@ class BL4PRemoveOfferResult(BL4PResult):
 
 
 class BL4PFindOffersResult(BL4PResult):
-	offers = []
+	offers = [] #type: list[_offer.Offer]
 
 
 class BL4PError(BL4PResult):
@@ -152,7 +156,7 @@ class LNPayResult(Struct):
 
 	senderCryptoAmount = 0
 	paymentHash = b''
-	paymentPreimage = None #None indicates a failed payment
+	paymentPreimage = None #type: Optional[bytes] #None indicates a failed payment
 
 
 class Handler:

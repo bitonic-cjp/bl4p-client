@@ -20,6 +20,7 @@ simulated environments.
 * Make
 * Protobuf-compiler
 * Python3-coverage
+* Mypy
 
 ## Usage
 

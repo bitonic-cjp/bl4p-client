@@ -15,11 +15,18 @@
 #    You should have received a copy of the GNU General Public License
 #    along with BL4P Client. If not, see <http://www.gnu.org/licenses/>.
 
-.PHONY: all test
+.PHONY: all test typetest unittest
 
 all: test
 
-test:
+test: typetest unittest
+
+current_dir = $(shell pwd)
+
+typetest:
+	cd .. && MYPYPATH=$(current_dir)/mypy_stubs mypy --fast-parser bl4p_plugin.py
+
+unittest:
 	-rm -rf coverage-html
 	-rm -rf .coverage
 	python3-coverage erase
