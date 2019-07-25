@@ -16,7 +16,12 @@
 #    You should have received a copy of the GNU General Public License
 #    along with the BL4P Client. If not, see <http://www.gnu.org/licenses/>.
 
+from typing import Dict, List, Optional, Type, Union, TYPE_CHECKING
+
 from bl4p_api import offer
+
+if TYPE_CHECKING:
+	import bl4p_plugin
 
 from log import log, logException
 import messages
@@ -24,12 +29,13 @@ import order
 from order import BuyOrder, SellOrder
 import ordertask
 import settings
+from simplestruct import Struct
 import storage
 
 
 
 class Backend(messages.Handler):
-	def __init__(self, client):
+	def __init__(self, client: 'bl4p_plugin.BL4PClient') -> None:
 		messages.Handler.__init__(self, {
 			messages.BuyCommand : self.handleBuyCommand,
 			messages.SellCommand: self.handleSellCommand,
@@ -48,73 +54,73 @@ class Backend(messages.Handler):
 			messages.LNPayResult: self.handleLNPayResult,
 			})
 
-		self.storage = None
+		self.storage = None #type: Optional[storage.Storage]
 
-		self.client = client
-		self.orderTasks = {} #localID -> ordertask.OrderTask
+		self.client = client #type: bl4p_plugin.BL4PClient
+		self.orderTasks = {} #type: Dict[int, ordertask.OrderTask] #localID -> OrderTask
 
 
-	def startup(self, DBFile):
+	def startup(self, DBFile: str) -> None:
 		self.storage = storage.Storage(DBFile)
 
 		#Loading existing orders and initializing order tasks:
-		def loadOrders(tableName, orderClass, address):
+		def loadOrders(tableName: str, orderClass: Type[Union[SellOrder, BuyOrder]], address: str) -> None:
 			query = 'SELECT `ID` FROM `%s` WHERE `status` = %d' % \
-				(tableName, order.STATUS_ACTIVE)
-			cursor = self.storage.execute(query)
+				(tableName, order.STATUS_ACTIVE) #type: str
+			cursor = self.storage.execute(query) #type: storage.Cursor
 			for row in cursor:
-				ID = row[0]
-				orderObj = orderClass(self.storage, ID, address)
+				ID = row[0] #type: int
+				orderObj = orderClass(self.storage, ID, address) #type: Union[SellOrder, BuyOrder]
 				self.addOrder(orderObj)
 
 		loadOrders('sellOrders', SellOrder, self.BL4PAddress)
 		loadOrders('buyOrders' , BuyOrder , self.LNAddress  )
 
 
-	async def shutdown(self):
+	async def shutdown(self) -> None:
 		for task in self.orderTasks.values():
 			await task.shutdown()
 		self.storage.shutdown()
 
 
-	def setLNAddress(self, address):
-		self.LNAddress = address
+	def setLNAddress(self, address: str) -> None:
+		self.LNAddress = address #type: str
 
 
-	def setBL4PAddress(self, address):
-		self.BL4PAddress = address
+	def setBL4PAddress(self, address: str) -> None:
+		self.BL4PAddress = address #type: str
 
 
-	def handleBuyCommand(self, cmd):
+	def handleBuyCommand(self, cmd: messages.BuyCommand) -> None:
 		ID = BuyOrder.create(
 			self.storage,
 			limitRate = cmd.limitRate,
 			amount = cmd.amount,
-			)
-		order = BuyOrder(self.storage, ID, self.LNAddress)
+			) #type: int
+		order = BuyOrder(self.storage, ID, self.LNAddress) #type: BuyOrder
 		self.addOrder(order)
 
 
-	def handleSellCommand(self, cmd):
+	def handleSellCommand(self, cmd: messages.SellCommand) -> None:
 		ID = SellOrder.create(
 			self.storage,
 			limitRate = cmd.limitRate,
 			amount = cmd.amount,
-			)
-		order = SellOrder(self.storage, ID, self.BL4PAddress)
+			) #type: int
+		order = SellOrder(self.storage, ID, self.BL4PAddress) #type: SellOrder
 		self.addOrder(order)
 
 
-	def addOrder(self, order):
+	def addOrder(self, order: Union[SellOrder, BuyOrder]) -> None:
 		self.orderTasks[order.ID] = ordertask.OrderTask(self.client, self.storage, order)
 		self.orderTasks[order.ID].startup()
 
 
-	def handleListCommand(self, cmd):
-		sell = []
-		buy = []
+	def handleListCommand(self, cmd: messages.ListCommand) -> None:
+		sell = [] #type: List[Dict[str, int]]
+		buy  = [] #type: List[Dict[str, int]]
 		for ID, task in self.orderTasks.items():
-			order = {'limitRate': task.order.limitRate, 'amount': task.order.amount}
+			order = {'limitRate': task.order.limitRate, 'amount': task.order.amount} #type: Dict[str, int]
 			if isinstance(task.order, SellOrder):
 				sell.append(order)
 			elif isinstance(task.order, BuyOrder):
@@ -129,13 +135,13 @@ class Backend(messages.Handler):
 			))
 
 
-	def handleBL4PResult(self, result):
-		localID = result.request.localOrderID
+	def handleBL4PResult(self, result: messages.BL4PResult) -> None:
+		localID = result.request.localOrderID #type: int
 		self.orderTasks[localID].setCallResult(result)
 
 
-	def handleLNIncoming(self, message):
-		localID = message.offerID
+	def handleLNIncoming(self, message: messages.LNIncoming) -> None:
+		localID = message.offerID #type: int
 		try:
 			self.orderTasks[localID].setCallResult(message)
 		except:
@@ -147,11 +153,11 @@ class Backend(messages.Handler):
 				))
 
 
-	def handleLNPayResult(self, message):
-		localID = message.localOrderID
+	def handleLNPayResult(self, message: messages.LNPayResult) -> None:
+		localID = message.localOrderID #type: int
 		self.orderTasks[localID].setCallResult(message)
 
 
-	def handleOrderTaskFinished(self, ID):
+	def handleOrderTaskFinished(self, ID: int) -> None:
 		del self.orderTasks[ID]
 

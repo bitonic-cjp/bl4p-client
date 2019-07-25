@@ -16,7 +16,7 @@
 #    You should have received a copy of the GNU General Public License
 #    along with the BL4P Client. If not, see <http://www.gnu.org/licenses/>.
 
-from typing import Callable, Dict, List, Optional, Type
+from typing import Callable, Dict, List, Optional, Type, Union, cast
 
 from simplestruct import Struct
 
@@ -159,13 +159,70 @@ class LNPayResult(Struct):
 	paymentPreimage    = None #type: Optional[bytes] #None indicates a failed payment
 
 
+AnyMessage = Union[
+	BuyCommand,
+	SellCommand,
+	ListCommand,
+	PluginCommandResult,
+	BL4PStart,
+	BL4PCancelStart,
+	BL4PSend,
+	BL4PReceive,
+	BL4PAddOffer,
+	BL4PRemoveOffer,
+	BL4PFindOffers,
+	BL4PStartResult,
+	BL4PCancelStartResult,
+	BL4PSendResult,
+	BL4PReceiveResult,
+	BL4PAddOfferResult,
+	BL4PRemoveOfferResult,
+	BL4PFindOffersResult,
+	BL4PError,
+	LNPay,
+	LNIncoming,
+	LNFinish,
+	LNFail,
+	LNPayResult,
+	]
+
+AnyMessageHandler = Union[
+	Callable[[BuyCommand], None],
+	Callable[[SellCommand], None],
+	Callable[[ListCommand], None],
+	Callable[[PluginCommandResult], None],
+	Callable[[BL4PStart], None],
+	Callable[[BL4PCancelStart], None],
+	Callable[[BL4PSend], None],
+	Callable[[BL4PReceive], None],
+	Callable[[BL4PAddOffer], None],
+	Callable[[BL4PRemoveOffer], None],
+	Callable[[BL4PFindOffers], None],
+	Callable[[BL4PStartResult], None],
+	Callable[[BL4PCancelStartResult], None],
+	Callable[[BL4PSendResult], None],
+	Callable[[BL4PReceiveResult], None],
+	Callable[[BL4PAddOfferResult], None],
+	Callable[[BL4PRemoveOfferResult], None],
+	Callable[[BL4PFindOffersResult], None],
+	Callable[[BL4PError], None],
+	Callable[[LNPay], None],
+	Callable[[LNIncoming], None],
+	Callable[[LNFinish], None],
+	Callable[[LNFail], None],
+	Callable[[LNPayResult], None],
+	]
+
+
+
 class Handler:
-	def __init__(self, handlerMethods: Dict[type, Callable[[Struct], None]] = {}) -> None:
-		self.handlerMethods = handlerMethods #type: Dict[type, Callable[[Struct], None]]
+	def __init__(self, handlerMethods: Dict[type, AnyMessageHandler] = {}) -> None:
+		self.handlerMethods = handlerMethods #type: Dict[type, AnyMessageHandler]
 
 
-	def handleMessage(self, message: Struct) -> None:
-		self.handlerMethods[message.__class__](message)
+	def handleMessage(self, message: AnyMessage) -> None:
+		handler = cast(Callable[[AnyMessage], None], self.handlerMethods[message.__class__])
+		handler(message)
 
 
 

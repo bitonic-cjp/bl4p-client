@@ -21,6 +21,10 @@ from log import log
 
 
 
+Cursor = sqlite3.Cursor
+
+
+
 class StoredObject:
 	@staticmethod
 	def create(storage, tableName, **kwargs):
