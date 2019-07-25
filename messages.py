@@ -16,7 +16,7 @@
 #    You should have received a copy of the GNU General Public License
 #    along with the BL4P Client. If not, see <http://www.gnu.org/licenses/>.
 
-from typing import Optional
+from typing import Callable, Dict, List, Optional, Type
 
 from simplestruct import Struct
 
@@ -29,13 +29,13 @@ class PluginCommand(Struct):
 
 
 class BuyCommand(PluginCommand):
-	amount = 0
-	limitRate = 0
+	amount    = 0 #type: int
+	limitRate = 0 #type: int
 
 
 class SellCommand(PluginCommand):
-	amount = 0
-	limitRate = 0
+	amount    = 0 #type: int
+	limitRate = 0 #type: int
 
 
 class ListCommand(PluginCommand):
@@ -43,33 +43,33 @@ class ListCommand(PluginCommand):
 
 
 class PluginCommandResult(Struct):
-	commandID = 0
-	result = None #type: dict[str, str]
+	commandID = 0    #type: int
+	result    = None #type: Dict[str, str]
 
 
 class BL4PRequest(Struct):
-	localOrderID = 0 #not transmitted - for local use only
+	localOrderID = 0 #type: int #not transmitted - for local use only
 
 
 class BL4PStart(BL4PRequest):
-	amount = 0
-	sender_timeout_delta_ms = 0
-	locked_timeout_delta_s = 0
-	receiver_pays_fee = True
+	amount                  = 0    #type: int
+	sender_timeout_delta_ms = 0    #type: int
+	locked_timeout_delta_s  = 0    #type: int
+	receiver_pays_fee       = True #type: bool
 
 
 class BL4PCancelStart(BL4PRequest):
-	paymentHash = b''
+	paymentHash = b'' #type: bytes
 
 
 class BL4PSend(BL4PRequest):
-	amount = 0
-	paymentHash = b''
-	max_locked_timeout_delta_s = 0
+	amount                     = 0    #type: int
+	paymentHash                = b''  #type: bytes
+	max_locked_timeout_delta_s = 0    #type: int
 
 
 class BL4PReceive(BL4PRequest):
-	paymentPreimage = b''
+	paymentPreimage = b'' #type: bytes
 
 
 class BL4PAddOffer(BL4PRequest):
@@ -77,7 +77,7 @@ class BL4PAddOffer(BL4PRequest):
 
 
 class BL4PRemoveOffer(BL4PRequest):
-	offerID = 0
+	offerID = 0 #type: int
 
 
 class BL4PFindOffers(BL4PRequest):
@@ -89,9 +89,9 @@ class BL4PResult(Struct):
 
 
 class BL4PStartResult(BL4PResult):
-	senderAmount = 0
-	receiverAmount = 0
-	paymentHash = b''
+	senderAmount   = 0   #type: int
+	receiverAmount = 0   #type: int
+	paymentHash    = b'' #type: bytes
 
 
 class BL4PCancelStartResult(BL4PResult):
@@ -99,7 +99,7 @@ class BL4PCancelStartResult(BL4PResult):
 
 
 class BL4PSendResult(BL4PResult):
-	paymentPreimage = b''
+	paymentPreimage = b'' #type: bytes
 
 
 class BL4PReceiveResult(BL4PResult):
@@ -107,7 +107,7 @@ class BL4PReceiveResult(BL4PResult):
 
 
 class BL4PAddOfferResult(BL4PResult):
-	ID = 0
+	ID = 0 #type: int
 
 
 class BL4PRemoveOfferResult(BL4PResult):
@@ -115,7 +115,7 @@ class BL4PRemoveOfferResult(BL4PResult):
 
 
 class BL4PFindOffersResult(BL4PResult):
-	offers = [] #type: list[_offer.Offer]
+	offers = [] #type: List[_offer.Offer]
 
 
 class BL4PError(BL4PResult):
@@ -123,54 +123,54 @@ class BL4PError(BL4PResult):
 
 
 class LNPay(Struct):
-	localOrderID = 0 #not transmitted - for local use only
+	localOrderID          = 0 #type: int #not transmitted - for local use only
 
-	destinationNodeID = ''
-	paymentHash = b''
-	recipientCryptoAmount = 0
-	maxSenderCryptoAmount = 0
-	minCLTVExpiryDelta = 0
-	fiatAmount = 0
-	offerID = 0
+	destinationNodeID     = ''  #type: str
+	paymentHash           = b'' #type: bytes
+	recipientCryptoAmount = 0   #type: int
+	maxSenderCryptoAmount = 0   #type: int
+	minCLTVExpiryDelta    = 0   #type: int
+	fiatAmount            = 0   #type: int
+	offerID               = 0   #type: int
 
 
 class LNIncoming(Struct):
-	paymentHash = b''
-	cryptoAmount = 0
-	CLTVExpiryDelta = 0
-	fiatAmount = 0
-	offerID = 0
+	paymentHash     = b'' #type: bytes
+	cryptoAmount    = 0   #type: int
+	CLTVExpiryDelta = 0   #type: int
+	fiatAmount      = 0   #type: int
+	offerID         = 0   #type: int
 
 
 class LNFinish(Struct):
-	paymentHash = b''
-	paymentPreimage = b''
+	paymentHash     = b'' #type: bytes
+	paymentPreimage = b'' #type: bytes
 
 
 class LNFail(Struct):
-	paymentHash = b''
+	paymentHash = b'' #type: bytes
 
 
 class LNPayResult(Struct):
-	localOrderID = 0
+	localOrderID       = 0    #type: int
 
-	senderCryptoAmount = 0
-	paymentHash = b''
-	paymentPreimage = None #type: Optional[bytes] #None indicates a failed payment
+	senderCryptoAmount = 0    #type: int
+	paymentHash        = b''  #type: bytes
+	paymentPreimage    = None #type: Optional[bytes] #None indicates a failed payment
 
 
 class Handler:
-	def __init__(self, handlerMethods={}):
-		self.handlerMethods = handlerMethods
+	def __init__(self, handlerMethods: Dict[type, Callable[[Struct], None]] = {}) -> None:
+		self.handlerMethods = handlerMethods #type: Dict[type, Callable[[Struct], None]]
 
 
-	def handleMessage(self, message):
-		return self.handlerMethods[message.__class__](message)
+	def handleMessage(self, message: Struct) -> None:
+		self.handlerMethods[message.__class__](message)
 
 
 
 class Router(Handler):
-	def addHandler(self, handler):
+	def addHandler(self, handler: Handler) -> None:
 		for msgClass, method in handler.handlerMethods.items():
 			if msgClass in self.handlerMethods:
 				raise Exception(
