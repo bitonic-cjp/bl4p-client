@@ -16,16 +16,22 @@
 #    You should have received a copy of the GNU General Public License
 #    along with the BL4P Client. If not, see <http://www.gnu.org/licenses/>.
 
+from typing import Any, Dict, TYPE_CHECKING
+
 from bl4p_api import bl4p_pb2
 from bl4p_api import asynclient as bl4p
 from bl4p_api import offer
+
+if TYPE_CHECKING:
+	import bl4p_plugin
+
 from log import log
 import messages
 
 
 
 class BL4PInterface(bl4p.Bl4pApi, messages.Handler):
-	def __init__(self, client):
+	def __init__(self, client: 'bl4p_plugin.BL4PClient') -> None:
 		bl4p.Bl4pApi.__init__(self, log=log)
 		messages.Handler.__init__(self, {
 			messages.BL4PStart      : self.sendStart,
@@ -36,83 +42,85 @@ class BL4PInterface(bl4p.Bl4pApi, messages.Handler):
 			messages.BL4PRemoveOffer: self.sendRemoveOffer,
 			messages.BL4PFindOffers : self.sendFindOffers,
 			})
-		self.client = client
-		self.activeRequests = {}
+		self.client = client #type: bl4p_plugin.BL4PClient
+		self.activeRequests = {} #type: Dict[int, messages.BL4PRequest]
 
 
-	async def startup(self, url, userid, password):
+	async def startup(self, url: str, userid: str, password: str) -> None:
 		await bl4p.Bl4pApi.startup(self, url, userid, password)
 
 		#Get our currently active orders
-		result = await self.synCall(bl4p_pb2.BL4P_ListOffers())
+		result = await self.synCall(bl4p_pb2.BL4P_ListOffers()) #type: bl4p_pb2.BL4P_ListOffersResult
+		#TODO: runtime check that result is actually bl4p_pb2.BL4P_ListOffersResult
 
 		#Remove them one by one.
 		#When appropriate, they will be re-added later.
 		for item in result.offers:
 			log('Removing offer that existed before startup with ID ' + str(item.offerID))
-			request = bl4p_pb2.BL4P_RemoveOffer()
+			request = bl4p_pb2.BL4P_RemoveOffer() #type: bl4p_pb2.BL4P_RemoveOffer
 			request.offerID = item.offerID
 			await self.synCall(request)
 
 
-	def sendStart(self, message):
-		request = bl4p_pb2.BL4P_Start()
+	def sendStart(self, message: messages.BL4PStart) -> None:
+		request = bl4p_pb2.BL4P_Start() #type: bl4p_pb2.BL4P_Start
 		request.amount.amount = message.amount
 		request.sender_timeout_delta_ms = message.sender_timeout_delta_ms
 		request.locked_timeout_delta_s = message.locked_timeout_delta_s
 		request.receiver_pays_fee = message.receiver_pays_fee
-		requestID = self.sendRequest(request)
+		requestID = self.sendRequest(request) #type: int
 		self.activeRequests[requestID] = message
 
 
-	def sendCancelStart(self, message):
-		request = bl4p_pb2.BL4P_CancelStart()
+	def sendCancelStart(self, message: messages.BL4PCancelStart) -> None:
+		request = bl4p_pb2.BL4P_CancelStart() #type: bl4p_pb2.BL4P_CancelStart
 		request.payment_hash.data = message.paymentHash
-		requestID = self.sendRequest(request)
+		requestID = self.sendRequest(request) #type: int
 		self.activeRequests[requestID] = message
 
 
-	def sendSend(self, message):
-		request = bl4p_pb2.BL4P_Send()
+	def sendSend(self, message: messages.BL4PSend) -> None:
+		request = bl4p_pb2.BL4P_Send() #type: bl4p_pb2.BL4P_Send
 		request.sender_amount.amount = message.amount
 		request.payment_hash.data = message.paymentHash
 		request.max_locked_timeout_delta_s = message.max_locked_timeout_delta_s
-		requestID = self.sendRequest(request)
+		requestID = self.sendRequest(request) #type: int
 		self.activeRequests[requestID] = message
 
 
-	def sendReceive(self, message):
-		request = bl4p_pb2.BL4P_Receive()
+	def sendReceive(self, message: messages.BL4PReceive) -> None:
+		request = bl4p_pb2.BL4P_Receive() #type: bl4p_pb2.BL4P_Receive
 		request.payment_preimage.data = message.paymentPreimage
 		requestID = self.sendRequest(request)
 		self.activeRequests[requestID] = message
 
 
-	def sendAddOffer(self, message):
-		request = bl4p_pb2.BL4P_AddOffer()
+	def sendAddOffer(self, message: messages.BL4PAddOffer) -> None:
+		request = bl4p_pb2.BL4P_AddOffer() #type: bl4p_pb2.BL4P_AddOffer
 		request.offer.CopyFrom(message.offer.toPB2())
-		requestID = self.sendRequest(request)
+		requestID = self.sendRequest(request) #type: int
 		self.activeRequests[requestID] = message
 
 
-	def sendRemoveOffer(self, message):
-		request = bl4p_pb2.BL4P_RemoveOffer()
+	def sendRemoveOffer(self, message: messages.BL4PRemoveOffer) -> None:
+		request = bl4p_pb2.BL4P_RemoveOffer() #type: bl4p_pb2.BL4P_RemoveOffer
 		request.offerID = message.offerID
 		requestID = self.sendRequest(request)
 		self.activeRequests[requestID] = message
 
 
-	def sendFindOffers(self, message):
-		request = bl4p_pb2.BL4P_FindOffers()
+	def sendFindOffers(self, message: messages.BL4PFindOffers) -> None:
+		request = bl4p_pb2.BL4P_FindOffers() #type: bl4p_pb2.BL4P_FindOffers
 		request.query.CopyFrom(message.query.toPB2())
 		requestID = self.sendRequest(request)
 		self.activeRequests[requestID] = message
 
 
-	def handleResult(self, result):
+	def handleResult(self, result: Any) -> None:
 		#log('BL4PInterface: Received result: ' + str(result))
 
-		request = self.activeRequests[result.request]
+		request = self.activeRequests[result.request] #type: messages.BL4PRequest
+		message = None #type: messages.BL4PResult
 
 		if isinstance(result, bl4p_pb2.BL4P_StartResult):
 			message = messages.BL4PStartResult(

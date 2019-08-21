@@ -1,3 +1,9 @@
+from typing import Iterable
+
+from .offer_pb2 import Offer
+
+
+
 Msg_Error                 = ... #type: int
 
 Msg_BL4P_Start            = ... #type: int
@@ -22,34 +28,44 @@ Msg_BL4P_FindOffersResult = ... #type: int
 
 
 class BL4P_Amount:
-	pass
+	amount = 0 #type: int
 
 class BL4P_CryptoData:
-	pass
+	data = b'' #type: bytes
 
 class Error:
-	pass
+	request = 0 #type: int
+	reason  = 0 #type: int
 
 class BL4P_Start:
-	pass
+	amount                  = None  #type: BL4P_Amount
+	sender_timeout_delta_ms = 0     #type: int
+	locked_timeout_delta_s  = 0     #type: int
+	receiver_pays_fee       = False #type: bool
 
 class BL4P_StartResult:
-	pass
+	request         = 0    #type: int
+	sender_amount   = None #type: BL4P_Amount
+	receiver_amount = None #type: BL4P_Amount
+	payment_hash    = None #type: BL4P_CryptoData
 
 class BL4P_CancelStart:
-	pass
+	payment_hash = None #type: BL4P_CryptoData
 
 class BL4P_CancelStartResult:
 	pass
 
 class BL4P_Send:
-	pass
+	sender_amount              = None #type: BL4P_Amount
+	payment_hash               = None #type: BL4P_CryptoData
+	max_locked_timeout_delta_s = 0    #type: int 
 
 class BL4P_SendResult:
-	pass
+	request          = 0    #type: int
+	payment_preimage = None #type: BL4P_CryptoData
 
 class BL4P_Receive:
-	pass
+	payment_preimage = None #type: BL4P_CryptoData
 
 class BL4P_ReceiveResult:
 	pass
@@ -61,27 +77,31 @@ class BL4P_GetStatusResult:
 	pass
 
 class BL4P_AddOffer:
-	pass
+	offer = None #type: Offer
 
 class BL4P_AddOfferResult:
-	pass
+	request = 0 #type: int
+	offerID = 0 #type: int
 
 class BL4P_ListOffers:
 	pass
 
 class BL4P_ListOffersResult:
-	pass
+	class Item:
+		offerID = 0    #type: int
+		offer   = None #type: Offer
+	offers = None #type: Iterable[Item]
 
 class BL4P_RemoveOffer:
-	pass
+	offerID = 0 #type: int
 
 class BL4P_RemoveOfferResult:
 	pass
 
 class BL4P_FindOffers:
-	pass
+	query = None #type: Offer
 
 class BL4P_FindOffersResult:
-	pass
-
+	request = 0    #type: int
+	offers  = None #type: Iterable[Offer]
 
