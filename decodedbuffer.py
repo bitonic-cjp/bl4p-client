@@ -34,19 +34,19 @@ class DecodedBuffer:
 	boundaries.
 	'''
 
-	def __init__(self, encoding):
-		self.encoding = encoding
-		self.decoded = ''
-		self.remainder = b''
+	def __init__(self, encoding) -> None:
+		self.encoding = encoding #type: str
+		self.decoded = '' #type: str
+		self.remainder = b'' #type: bytes
 
 
-	def append(self, b):
+	def append(self, b: bytes) -> None:
 		'Append bytes from b to the buffer.'
 
 		self.remainder += b
 		for i in range(len(b)):
-			pos = len(self.remainder) - i
-			firstPart = self.remainder[:pos]
+			pos = len(self.remainder) - i #type: int
+			firstPart = self.remainder[:pos] #type: bytes
 			try:
 				self.decoded += firstPart.decode(self.encoding)
 				self.remainder = self.remainder[pos:]
@@ -55,13 +55,13 @@ class DecodedBuffer:
 				continue
 
 
-	def get(self):
+	def get(self) -> str:
 		'Get the character contents of the buffer.'
 
 		return self.decoded
 
 
-	def set(self, s):
+	def set(self, s: str) -> None:
 		'Replace the character buffer with s.'
 
 		self.decoded = s
