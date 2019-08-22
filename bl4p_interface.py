@@ -120,7 +120,7 @@ class BL4PInterface(bl4p.Bl4pApi, messages.Handler):
 		#log('BL4PInterface: Received result: ' + str(result))
 
 		request = self.activeRequests[result.request] #type: messages.BL4PRequest
-		message = None #type: messages.BL4PResult
+		message = None #type: messages.AnyMessage
 
 		if isinstance(result, bl4p_pb2.BL4P_StartResult):
 			message = messages.BL4PStartResult(

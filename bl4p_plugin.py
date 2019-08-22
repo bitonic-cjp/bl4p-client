@@ -20,6 +20,7 @@ import asyncio
 import os
 import signal
 import sys
+from typing import Tuple
 
 import backend
 import bl4p_interface
@@ -30,30 +31,31 @@ import rpc_interface
 
 
 
-async_stdio = None
-async def stdio():
+async_stdio = None #type: Tuple[asyncio.StreamReader, asyncio.streams.StreamWriter]
+async def stdio() -> Tuple[asyncio.StreamReader, asyncio.streams.StreamWriter]:
 	global async_stdio
 	if async_stdio is not None:
 		return async_stdio
 
-	loop = asyncio.get_event_loop()
+	loop = asyncio.get_event_loop() #type: asyncio.AbstractEventLoop
 
-	reader = asyncio.StreamReader(
-		limit=asyncio.streams._DEFAULT_LIMIT,
-		loop=loop
-		)
-	await loop.connect_read_pipe(
+	reader = asyncio.StreamReader(loop=loop) #type: asyncio.StreamReader
+	coro = loop.connect_read_pipe(
 		lambda: asyncio.StreamReaderProtocol(reader, loop=loop),
 		sys.stdin
 		)
+	await coro #type: ignore #mypy bug: it doesn't know this is a coroutine
 
-	writer_transport, writer_protocol = await loop.connect_write_pipe(
-		lambda: asyncio.streams.FlowControlMixin(loop=loop),
+	proto_factory = lambda: asyncio.streams.FlowControlMixin(loop=loop) #type: ignore #mypy bug: it doesn't know the loop argument
+	coro = loop.connect_write_pipe(
+		proto_factory,
 		os.fdopen(sys.stdout.fileno(), 'wb')
 		)
+	writer_transport, writer_protocol = await coro #type: ignore #mypy bug: it doesn't know this is a coroutine
+
 	writer = asyncio.streams.StreamWriter(
 		writer_transport, writer_protocol, None, loop
-		)
+		) #type: asyncio.streams.StreamWriter
 
 	async_stdio = reader, writer
 	return async_stdio
@@ -61,23 +63,23 @@ async def stdio():
 
 
 class BL4PClient:
-	def __init__(self):
-		self.backend = backend.Backend(self)
-		self.messageRouter = messages.Router()
+	def __init__(self) -> None:
+		self.backend = backend.Backend(self) #type: backend.Backend
+		self.messageRouter = messages.Router() #type: messages.Router
 
 
-	async def startup(self):
-		stdin, stdout = await stdio()
-		self.pluginInterface = plugin_interface.PluginInterface(self, stdin, stdout)
+	async def startup(self) -> None:
+		stdin, stdout = await stdio() #type: Tuple[asyncio.StreamReader, asyncio.streams.StreamWriter]
+		self.pluginInterface = plugin_interface.PluginInterface(self, stdin, stdout) #type: plugin_interface.PluginInterface
 		await self.pluginInterface.startup() #Guarantees that init is called
 
 		setLogFile(self.pluginInterface.logFile)
 
-		reader, writer = await asyncio.open_unix_connection(path=self.pluginInterface.RPCPath)
-		self.rpcInterface = rpc_interface.RPCInterface(self, reader, writer)
+		reader, writer = await asyncio.open_unix_connection(path=self.pluginInterface.RPCPath) #type: ignore #mypy bug: it doesn't know open_unix_connection
+		self.rpcInterface = rpc_interface.RPCInterface(self, reader, writer) #type: rpc_interface.RPCInterface
 		await self.rpcInterface.startup() #Gets our LN node ID
 
-		self.bl4pInterface = bl4p_interface.BL4PInterface(self)
+		self.bl4pInterface = bl4p_interface.BL4PInterface(self) #type: bl4p_interface.BL4PInterface
 		await self.bl4pInterface.startup('ws://localhost:8000/', '3', '3')
 
 		self.backend.setLNAddress(self.rpcInterface.nodeID)
@@ -90,34 +92,34 @@ class BL4PClient:
 		self.messageRouter.addHandler(self.rpcInterface)
 
 
-	async def shutdown(self):
+	async def shutdown(self) -> None:
 		await self.backend.shutdown()
 		await self.bl4pInterface.shutdown()
 		await self.rpcInterface.shutdown()
 		await self.pluginInterface.shutdown()
 
 
-	def handleIncomingMessage(self, message):
+	def handleIncomingMessage(self, message: messages.AnyMessage) -> None:
 		#Process a single incoming message:
 		log('<== ' + str(message))
 		self.messageRouter.handleMessage(message)
 
 
-	def handleOutgoingMessage(self, message):
+	def handleOutgoingMessage(self, message: messages.AnyMessage) -> None:
 		#Process a single outgoing message:
 		log('==> ' + str(message))
 		self.messageRouter.handleMessage(message)
 
 
 
-def terminateSignalHandler():
-	loop = asyncio.get_event_loop()
+def terminateSignalHandler() -> None:
+	loop = asyncio.get_event_loop() #type: asyncio.AbstractEventLoop
 	loop.stop()
 
 
 def main():
-	client = BL4PClient()
-	loop = asyncio.get_event_loop()
+	client = BL4PClient() #type: BL4PClient
+	loop = asyncio.get_event_loop() #type: asyncio.AbstractEventLoop
 
 	loop.run_until_complete(client.startup())
 
