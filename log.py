@@ -19,20 +19,21 @@
 import datetime
 import sys
 import traceback
+from typing import IO
 
 
 
-logFile = sys.stderr
+logFile = sys.stderr #type: IO
 
 
-def setLogFile(filename):
+def setLogFile(filename: str) -> None:
 	global logFile
 	logFile = open(filename, 'a')
 	log('\n\n\n\nOpened the log file')
 
 
-def log(s):
-	dt = datetime.datetime.now()
+def log(s: str):
+	dt = datetime.datetime.now() #type: datetime.datetime
 	logFile.write('%s  %s\n' % (str(dt), s))
 	logFile.flush()
 
