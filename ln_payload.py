@@ -30,15 +30,17 @@ Note that this format forces the fiat amount to be non-negative.
 
 class Payload:
 	@staticmethod
-	def decode(data):
+	def decode(data: bytes) -> 'Payload':
+		fiatAmount = None #type: int
+		offerID = None #type; int
 		fiatAmount, offerID = struct.unpack('!QI', data)
 		return Payload(fiatAmount, offerID)
 
-	def __init__(self, fiatAmount, offerID):
-		self.fiatAmount = fiatAmount
-		self.offerID = offerID
+	def __init__(self, fiatAmount: int, offerID: int) -> None:
+		self.fiatAmount = fiatAmount #type: int
+		self.offerID = offerID #type: int
 
 
-	def encode(self):
+	def encode(self) -> bytes:
 		return struct.pack('!QI', self.fiatAmount, self.offerID)
 
