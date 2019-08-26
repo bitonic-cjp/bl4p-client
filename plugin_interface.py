@@ -21,12 +21,13 @@ from enum import Enum
 import inspect
 import os
 import re
-import settings
+from typing import Dict
 
 from json_rpc import JSONRPC
 from ln_payload import Payload
 from log import log, logException
 import messages
+import settings
 
 
 
@@ -111,7 +112,7 @@ class PluginInterface(JSONRPC, messages.Handler):
 		return JSONRPC.startup(self)
 
 
-	def handleRequest(self, ID, name, params):
+	def handleRequest(self, ID: int, name: str, params: Dict) -> None:
 		self.currentRequestID = ID
 		try:
 			func, _ = self.methods[name]
@@ -146,7 +147,7 @@ class PluginInterface(JSONRPC, messages.Handler):
 		self.sendResponse(ID, result)
 
 
-	def handleNotification(self, name, params):
+	def handleNotification(self, name: str, params: Dict) -> None:
 		func = self.subscriptions[name]
 		func(**params)
 

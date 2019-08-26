@@ -18,6 +18,7 @@
 
 import asyncio
 import json
+from typing import Any, Dict
 
 import decodedbuffer
 from log import log, logException
@@ -25,39 +26,40 @@ from log import log, logException
 
 
 #DoS prevention measure:
-MAX_BUFFER_LENGTH = 1024*1024
+MAX_BUFFER_LENGTH = 1024*1024 #type: int
 
 
 
 class JSONRPC:
-	def __init__(self, inputStream, outputStream):
-		self.inputStream = inputStream
-		self.outputStream = outputStream
+	def __init__(self, inputStream: asyncio.StreamReader, outputStream: asyncio.StreamWriter) -> None:
+		self.inputStream = inputStream #type: asyncio.StreamReader
+		self.outputStream = outputStream #type: asyncio.StreamWriter
 
-		self.inputBuffer = decodedbuffer.DecodedBuffer('UTF-8')
-		self.outgoingRequestID = 0
-		self.decoder = json.JSONDecoder()
-
-
-	def startup(self):
-		self.task = asyncio.ensure_future(self.handleIncomingData())
+		self.inputBuffer = decodedbuffer.DecodedBuffer('UTF-8') #type: decodedbuffer.DecodedBuffer
+		self.outgoingRequestID = 0 #type: int
+		self.decoder = json.JSONDecoder() #type: json.JSONDecoder
 
 
-	async def shutdown(self):
+	def startup(self) -> None:
+		self.task = None #type: asyncio.Future
+		self.task = asyncio.ensure_future(self.handleIncomingData()) #type: ignore #mypy has weird ideas about ensure_future
+
+
+	async def shutdown(self) -> None:
 		self.task.cancel()
 		await self.task
 
 
-	async def waitFinished(self):
+	async def waitFinished(self) -> None:
 		await self.task
 
 
-	async def handleIncomingData(self):
+	async def handleIncomingData(self) -> None:
 		#log('Started JSON RPC')
 		try:
 			try:
 				while True:
-					message = await self.getNextJSON()
+					message = await self.getNextJSON() #type: Dict
 					if message is None:
 						break
 					self.handleJSON(message)
@@ -71,14 +73,17 @@ class JSONRPC:
 		#log('Stopped JSON RPC')
 
 
-	async def getNextJSON(self):
+	async def getNextJSON(self) -> Dict:
 		while True:
 			try:
 				#log('Input buffer: ' + self.inputBuffer.get())
+				request = None #type: Dict
+				length  = None #type: int
 				request, length = self.decoder.raw_decode(self.inputBuffer.get())
+				assert type(request) == dict #TODO: unit test
 			except ValueError:
 				#probably the buffer is incomplete
-				newData = await self.inputStream.read(1024)
+				newData = await self.inputStream.read(1024) #type: bytes
 				if not newData: #EOF
 					return None
 				self.inputBuffer.append(newData)
@@ -94,30 +99,54 @@ class JSONRPC:
 			return request
 
 
-	def handleJSON(self, request):
+	def handleJSON(self, request: Any) -> None:
 		try:
+			ID     = None #type: int
+			error  = None #type: str
+			result = None #type: Any
+			method = None #type: str
+			params = None #type: Dict
+
 			if 'error' in request:
-				self.handleError(request['id'], request['error'])
+				ID    = request['id']
+				error = request['error']
+				assert type(ID)    == int #TODO: unit test
+				assert type(error) == str #TODO: unit test
+				self.handleError(ID, error)
 			elif 'result' in request:
-				self.handleResult(request['id'], request['result'])
+				ID     = request['id']
+				result = request['result']
+				assert type(ID) == int #TODO: unit test
+				#result can be any type
+				self.handleResult(ID, result)
 			elif 'id' in request:
-				self.handleRequest(request['id'], request['method'], request['params'])
+				ID     = request['id']
+				method = request['method']
+				params = request['params']
+				assert type(ID)     == int #TODO: unit test
+				assert type(method) == str #TODO: unit test
+				assert type(params) == dict #TODO: unit test
+				self.handleRequest(ID, method, params)
 			else:
-				self.handleNotification(request['method'], request['params'])
-		except Exception:
+				method = request['method']
+				params = request['params']
+				assert type(method) == str #TODO: unit test
+				assert type(params) == dict #TODO: unit test
+				self.handleNotification(method, params)
+		except Exception: #TODO: remove (let the main task terminate)
 			logException()
 
 
-	def writeJSON(self, msg):
+	def writeJSON(self, msg: Dict) -> None:
 		#log('--> ' + str(msg))
-		msg = json.dumps(msg)
-		self.outputStream.write(msg.encode('UTF-8') + b'\n\n')
+		JSONMessage = json.dumps(msg) #type: str
+		self.outputStream.write(JSONMessage.encode('UTF-8') + b'\n\n')
 
 
-	async def synCall(self, name, params={}):
-		ID = self.sendRequest(name, params)
+	async def synCall(self, name: str, params: Dict = {}) -> Any:
+		ID = self.sendRequest(name, params) #type: int
 		while True:
-			message = await self.getNextJSON()
+			message = await self.getNextJSON() #type: Dict
 
 			#These are ours:
 			if 'result' in message and 'id' in message and message['id'] == ID:
@@ -130,8 +159,8 @@ class JSONRPC:
 		return message['result']
 
 
-	def sendRequest(self, name, params={}):
-		ID = self.outgoingRequestID
+	def sendRequest(self, name: str, params: Dict = {}) -> int:
+		ID = self.outgoingRequestID #type: int
 		self.outgoingRequestID += 1
 		msg = \
 		{
@@ -139,53 +168,53 @@ class JSONRPC:
 			'id': ID,
 			'method': name,
 			'params': params,
-		}
+		} #type: Dict
 		self.writeJSON(msg)
 		return ID
 
 
-	def sendResponse(self, ID, result):
+	def sendResponse(self, ID: int, result: Any) -> None:
 		response = \
 			{
 			'jsonrpc': '2.0',
 			'id': ID,
 			'result': result,
-			}
+			} #type: Dict
 		self.writeJSON(response)
 
 
-	def sendErrorResponse(self, ID, error):
+	def sendErrorResponse(self, ID: int, error: str) -> None:
 		response = \
 			{
 			'jsonrpc': '2.0',
 			'id': ID,
 			"error": error,
-			}
+			} #type: Dict
 		self.writeJSON(response)
 
 
-	def sendNotification(self, name, params):
+	def sendNotification(self, name: str, params: Dict) -> None:
 		msg = \
 		{
 			'jsonrpc': '2.0',
 			'method': name,
 			'params': params,
-		}
+		} #type: Dict
 		self.writeJSON(msg)
 
 
-	def handleRequest(self, ID, name, params):
+	def handleRequest(self, ID: int, name: str, params: Dict) -> None:
 		pass #To be overloaded in derived classes
 
 
-	def handleNotification(self, name, params):
+	def handleNotification(self, name: str, params: Dict) -> None:
 		pass #To be overloaded in derived classes
 
 
-	def handleResult(self, ID, result):
+	def handleResult(self, ID: int, result: Any) -> None:
 		pass #To be overloaded in derived classes
 
 
-	def handleError(self, ID, error):
+	def handleError(self, ID: int, error: str) -> None:
 		pass #To be overloaded in derived classes
 

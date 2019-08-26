@@ -16,6 +16,8 @@
 #    You should have received a copy of the GNU General Public License
 #    along with the BL4P Client. If not, see <http://www.gnu.org/licenses/>.
 
+from typing import Any, Dict
+
 from json_rpc import JSONRPC
 from ln_payload import Payload
 from log import log
@@ -49,13 +51,13 @@ class RPCInterface(JSONRPC, messages.Handler):
 		self.ongoingRequests[ID] = (name, message)
 
 
-	def handleResult(self, ID, result):
+	def handleResult(self, ID: int, result: Any) -> None:
 		name, message = self.ongoingRequests[ID]
 		del self.ongoingRequests[ID]
 		self.handleStoredRequestResult(message, name, result)
 
 
-	def handleError(self, ID, error):
+	def handleError(self, ID: int, error: str) -> None:
 		name, message = self.ongoingRequests[ID]
 		del self.ongoingRequests[ID]
 		self.handleStoredRequestError(message, name, error)
