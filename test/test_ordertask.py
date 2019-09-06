@@ -50,10 +50,10 @@ class TestOrderTask(unittest.TestCase):
 
 
 	def test_BuyTransaction(self):
-		with patch.object(ordertask.StoredObject, 'create', Mock(return_value=43)):
+		with patch.object(ordertask.StoredObject, 'createStoredObject', Mock(return_value=43)):
 			self.assertEqual(ordertask.BuyTransaction.create('foo', 'baa', 'bab', 'bac', 'bad'), 43)
 
-			ordertask.StoredObject.create.assert_called_once_with(
+			ordertask.StoredObject.createStoredObject.assert_called_once_with(
 				'foo', 'buyTransactions',
 				buyOrder='baa', fiatAmount='bab', cryptoAmount='bac', paymentHash='bad',
 				status=0, paymentPreimage=None,
@@ -74,10 +74,10 @@ class TestOrderTask(unittest.TestCase):
 
 
 	def test_SellTransaction(self):
-		with patch.object(ordertask.StoredObject, 'create', Mock(return_value=43)):
+		with patch.object(ordertask.StoredObject, 'createStoredObject', Mock(return_value=43)):
 			self.assertEqual(ordertask.SellTransaction.create('foo', 'baa', 'bab', 'bac', 'bad', 'bae', 'baf', 'bag', 'bah'), 43)
 
-			ordertask.StoredObject.create.assert_called_once_with(
+			ordertask.StoredObject.createStoredObject.assert_called_once_with(
 				'foo', 'sellTransactions',
 				sellOrder='baa', counterOffer='bab', senderFiatAmount='bac', maxSenderCryptoAmount='bad', receiverCryptoAmount='bae', senderTimeoutDelta='baf', lockedTimeoutDelta='bag', CLTVExpiryDelta='bah',
 				status=0, receiverFiatAmount=None, senderCryptoAmount=None, paymentHash=None, paymentPreimage=None,
@@ -98,7 +98,7 @@ class TestOrderTask(unittest.TestCase):
 
 
 	def test_CounterOffer(self):
-		with patch.object(ordertask.StoredObject, 'create', Mock(return_value=43)):
+		with patch.object(ordertask.StoredObject, 'createStoredObject', Mock(return_value=43)):
 			PB2 = Mock()
 			PB2.SerializeToString = Mock(return_value=b'bar')
 			counterOffer = Mock()
@@ -106,7 +106,7 @@ class TestOrderTask(unittest.TestCase):
 
 			self.assertEqual(ordertask.CounterOffer.create('foo', counterOffer), 43)
 
-			ordertask.StoredObject.create.assert_called_once_with(
+			ordertask.StoredObject.createStoredObject.assert_called_once_with(
 				'foo', 'counterOffers', blob=b'bar')
 
 			storage = Mock()

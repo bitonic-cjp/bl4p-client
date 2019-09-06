@@ -27,7 +27,7 @@ Cursor = sqlite3.Cursor
 
 class StoredObject:
 	@staticmethod
-	def create(storage, tableName, **kwargs):
+	def createStoredObject(storage, tableName, **kwargs):
 		names = list(kwargs.keys())
 		values = [kwargs[k] for k in names]
 		questionMarks = ','.join(['?'] * len(kwargs))
@@ -163,7 +163,7 @@ class Storage:
 def main(): #pragma: nocover
 	s = Storage('node0.bl4p.db')
 
-	ID = StoredObject.create(s, 'buyOrders', amount=0)
+	ID = StoredObject.createStoredObject(s, 'buyOrders', amount=0)
 
 	so = StoredObject(s, 'buyOrders', ID)
 

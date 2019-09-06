@@ -75,7 +75,7 @@ class TestStorage(unittest.TestCase):
 
 
 	def test_storedObject(self):
-		returnedID = storage.StoredObject.create(self.storage, 'buyOrders', limitRate=1234)
+		returnedID = storage.StoredObject.createStoredObject(self.storage, 'buyOrders', limitRate=1234)
 
 		cursor = self.storage.execute('SELECT ID,limitRate,amount FROM buyOrders')
 		values = list(cursor)

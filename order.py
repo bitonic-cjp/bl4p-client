@@ -16,17 +16,19 @@
 #    along with BL4P client. If not, see <http://www.gnu.org/licenses/>.
 
 import decimal
+from typing import Optional
 
 from bl4p_api import offer
 import settings
+import storage
 from storage import StoredObject
 
 '''
 Order status
 Active -> Completed
 '''
-STATUS_ACTIVE = 0
-STATUS_COMPLETED = 1
+STATUS_ACTIVE = 0    #type: int
+STATUS_COMPLETED = 1 #type: int
 
 
 
@@ -56,23 +58,29 @@ class Order(offer.Offer, StoredObject):
 	remoteOfferID       determined on publishing
 	'''
 
-	def __init__(self, storage, tableName, ID, limitRateInverted, **kwargs):
+	def __init__(self, storage: storage.Storage, tableName: str, ID: int, limitRateInverted: int, **kwargs) -> None:
+		#This initialization is just to inform Mypy about data types.
+		#TODO: find a way to make sure storage.Storage respects these types
+		self.amount    = None #type: int
+		self.limitRate = None #type: int
+		self.status    = None #type: int
+
 		offer.Offer.__init__(self, ID=ID, **kwargs)
 		StoredObject.__init__(self, storage, tableName, ID)
 
-		self.remoteOfferID = None
+		self.remoteOfferID = None #type: Optional[int]
 
-		self.perTxMaxAmount = self.amount #TODO
-		self.limitRateInverted = limitRateInverted
+		self.perTxMaxAmount = self.amount #type: int #TODO
+		self.limitRateInverted = limitRateInverted #type: int
 		self.updateOfferMaxAmounts()
 
 
-	def setAmount(self, value):
+	def setAmount(self, value: int) -> None:
 		self.update(amount = value) #sets attribute and stores to disk
 		self.updateOfferMaxAmounts()
 
 
-	def updateOfferMaxAmounts(self):
+	def updateOfferMaxAmounts(self) -> None:
 		'''
 		Variable:                                               Unit (typical buy):   Unit (typical sell):
 		limitRate                                               mCent/mSatoshi        mSatoshi/mCent
@@ -80,14 +88,14 @@ class Order(offer.Offer, StoredObject):
 		'''
 
 		#From integer attributes to Decimal:
-		limitRate = decimal.Decimal(self.limitRate) / settings.cryptoDivisor
+		limitRate = decimal.Decimal(self.limitRate) / settings.cryptoDivisor #type: decimal.Decimal
 		if self.limitRateInverted:
 			limitRate = 1 / limitRate
-		amount = decimal.Decimal(self.amount)
-		perTxMaxAmount = decimal.Decimal(self.perTxMaxAmount)
+		amount = decimal.Decimal(self.amount) #type: decimal.Decimal
+		perTxMaxAmount = decimal.Decimal(self.perTxMaxAmount) #type: decimal.Decimal
 
-		offerAskAmount = amount / limitRate
-		offerBidAmount = amount
+		offerAskAmount = amount / limitRate #type: decimal.Decimal
+		offerBidAmount = amount             #type: decimal.Decimal
 
 		if perTxMaxAmount < offerBidAmount:
 			offerAskAmount = perTxMaxAmount / limitRate
@@ -105,18 +113,18 @@ class BuyOrder(Order):
 
 	@staticmethod
 	def create(
-		storage,
-		limitRate, # fiat / crypto
-		amount,    # fiat
-		):
-		return StoredObject.create(storage, 'buyOrders',
+		storage: storage.Storage,
+		limitRate: int, # fiat / crypto
+		amount   : int, # fiat
+		) -> int:
+		return StoredObject.createStoredObject(storage, 'buyOrders',
 			limitRate = limitRate,
 			amount = amount,
 			status = STATUS_ACTIVE,
 			)
 
 
-	def __init__(self, storage, ID, LNAddress):
+	def __init__(self, storage: storage.Storage, ID: int, LNAddress: str) -> None:
 		Order.__init__(self,
 			storage, 'buyOrders', ID,
 			limitRateInverted=False,
@@ -149,17 +157,17 @@ class SellOrder(Order):
 
 	@staticmethod
 	def create(
-		storage,
-		limitRate, # fiat / crypto
-		amount,    # fiat
-		):
-		return StoredObject.create(storage, 'sellOrders',
+		storage: storage.Storage,
+		limitRate: int, # fiat / crypto
+		amount   : int, # fiat
+		) -> int:
+		return StoredObject.createStoredObject(storage, 'sellOrders',
 			limitRate = limitRate,
 			amount = amount,
 			status = STATUS_ACTIVE,
 			)
 
-	def __init__(self, storage, ID, Bl4PAddress):
+	def __init__(self, storage: storage.Storage, ID: int, Bl4PAddress: str) -> None:
 		Order.__init__(self,
 			storage, 'sellOrders', ID,
 			limitRateInverted=True,

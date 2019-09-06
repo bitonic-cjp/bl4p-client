@@ -33,7 +33,7 @@ class TestOrder(unittest.TestCase):
 		self.cursor.description = [['ID'], ['amount'], ['limitRate']]
 		self.cursor.fetchone = Mock(return_value = [42, 6000000, 200000]) #60 eur @ 2 eur/btc
 		self.storage.execute = Mock(return_value=self.cursor)
-		order.StoredObject.create = Mock(return_value=43)
+		order.StoredObject.createStoredObject = Mock(return_value=43)
 
 		self.order = order.Order(
 			self.storage, 'foo', 42, False,
@@ -106,7 +106,7 @@ class TestOrder(unittest.TestCase):
 
 	def test_BuyOrder(self):
 		self.assertEqual(order.BuyOrder.create('foo', 'bar', 'baz'), 43)
-		order.StoredObject.create.assert_called_once_with('foo', 'buyOrders', limitRate='bar', amount='baz', status=0)
+		order.StoredObject.createStoredObject.assert_called_once_with('foo', 'buyOrders', limitRate='bar', amount='baz', status=0)
 
 		buy = order.BuyOrder(self.storage, 42, 'foo')
 		self.assertEqual(buy.ID, 42)
@@ -130,7 +130,7 @@ class TestOrder(unittest.TestCase):
 
 	def test_SellOrder(self):
 		self.assertEqual(order.SellOrder.create('foo', 'bar', 'baz'), 43)
-		order.StoredObject.create.assert_called_once_with('foo', 'sellOrders', limitRate='bar', amount='baz', status=0)
+		order.StoredObject.createStoredObject.assert_called_once_with('foo', 'sellOrders', limitRate='bar', amount='baz', status=0)
 
 		sell = order.SellOrder(self.storage, 42, 'foo')
 		self.assertEqual(sell.ID, 42)

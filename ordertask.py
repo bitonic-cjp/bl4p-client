@@ -74,7 +74,7 @@ STATUS_CANCELED = 4
 class BuyTransaction(StoredObject):
 	@staticmethod
 	def create(storage, buyOrder, fiatAmount, cryptoAmount, paymentHash):
-		return StoredObject.create(
+		return StoredObject.createStoredObject(
 			storage, 'buyTransactions',
 
 			buyOrder = buyOrder,
@@ -97,7 +97,7 @@ class BuyTransaction(StoredObject):
 class SellTransaction(StoredObject):
 	@staticmethod
 	def create(storage, sellOrder, counterOffer, senderFiatAmount, maxSenderCryptoAmount, receiverCryptoAmount, senderTimeoutDelta, lockedTimeoutDelta, CLTVExpiryDelta):
-		return StoredObject.create(
+		return StoredObject.createStoredObject(
 			storage, 'sellTransactions',
 
 			sellOrder  = sellOrder,
@@ -129,7 +129,7 @@ class SellTransaction(StoredObject):
 class CounterOffer(StoredObject):
 	@staticmethod
 	def create(storage, counterOffer):
-		return StoredObject.create(
+		return StoredObject.createStoredObject(
 			storage, 'counterOffers',
 			blob = counterOffer.toPB2().SerializeToString(),
 			)
