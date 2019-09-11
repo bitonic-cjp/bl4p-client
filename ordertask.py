@@ -19,28 +19,33 @@
 import asyncio
 import copy
 import hashlib
+from typing import TYPE_CHECKING, cast, List, Optional, Type, Union
 
 from bl4p_api import offer
 from bl4p_api import offer_pb2
 from bl4p_api.offer import Offer, Asset
+
+if TYPE_CHECKING:
+	import bl4p_plugin
 
 from log import log, logException
 import messages
 import order
 from order import BuyOrder, SellOrder
 import settings
+import storage
 from storage import StoredObject
 
 
 
-def getMinConditionValue(offer1, offer2, condition):
+def getMinConditionValue(offer1: offer.Offer, offer2: offer.Offer, condition: int) -> int:
 	return max(
 		offer1.getConditionMin(condition),
 		offer2.getConditionMin(condition)
 		)
 
 
-def getMaxConditionValue(offer1, offer2, condition):
+def getMaxConditionValue(offer1: offer.Offer, offer2: offer.Offer, condition: int) -> int:
 	return min(
 		offer1.getConditionMax(condition),
 		offer2.getConditionMax(condition)
@@ -63,17 +68,20 @@ Buyer market maker:
 initial -> finished
         -> canceled
 '''
-STATUS_INITIAL = 0
-STATUS_LOCKED = 1
-STATUS_RECEIVED_PREIMAGE = 2
-STATUS_FINISHED = 3
-STATUS_CANCELED = 4
+STATUS_INITIAL           = 0 #type: int
+STATUS_LOCKED            = 1 #type: int
+STATUS_RECEIVED_PREIMAGE = 2 #type: int
+STATUS_FINISHED          = 3 #type: int
+STATUS_CANCELED          = 4 #type: int
 
 
 
 class BuyTransaction(StoredObject):
 	@staticmethod
-	def create(storage, buyOrder, fiatAmount, cryptoAmount, paymentHash):
+	def create(storage: storage.Storage,
+		buyOrder: int, fiatAmount: int, cryptoAmount: int, paymentHash: bytes
+		) -> int:
+
 		return StoredObject.createStoredObject(
 			storage, 'buyTransactions',
 
@@ -89,14 +97,26 @@ class BuyTransaction(StoredObject):
 			)
 
 
-	def __init__(self, storage, ID):
+	def __init__(self, storage: storage.Storage, ID: int) -> None:
+		#This initialization is just to inform Mypy about data types.
+		#TODO: find a way to make sure storage.Storage respects these types
+		self.buyOrder        = None #type: int
+		self.status          = None #type: int
+		self.fiatAmount      = None #type: int
+		self.cryptoAmount    = None #type: int
+		self.paymentHash     = None #type: bytes
+		self.paymentPreimage = None #type: bytes
+
 		StoredObject.__init__(self, storage, 'buyTransactions', ID)
 
 
 
 class SellTransaction(StoredObject):
 	@staticmethod
-	def create(storage, sellOrder, counterOffer, senderFiatAmount, maxSenderCryptoAmount, receiverCryptoAmount, senderTimeoutDelta, lockedTimeoutDelta, CLTVExpiryDelta):
+	def create(storage: storage.Storage,
+		sellOrder: int, counterOffer: int, senderFiatAmount: int, maxSenderCryptoAmount: int, receiverCryptoAmount: int, senderTimeoutDelta: int, lockedTimeoutDelta: int, CLTVExpiryDelta: int
+		) -> int:
+
 		return StoredObject.createStoredObject(
 			storage, 'sellTransactions',
 
@@ -121,21 +141,41 @@ class SellTransaction(StoredObject):
 			)
 
 
-	def __init__(self, storage, ID):
+	def __init__(self, storage: storage.Storage, ID: int) -> None:
+		#This initialization is just to inform Mypy about data types.
+		#TODO: find a way to make sure storage.Storage respects these types
+		self.sellOrder             = None #type: int
+		self.counterOffer          = None #type: int
+		self.status                = None #type: int
+		self.senderFiatAmount      = None #type: int
+		self.receiverFiatAmount    = None #type: int
+		self.maxSenderCryptoAmount = None #type: int
+		self.senderCryptoAmount    = None #type: int
+		self.receiverCryptoAmount  = None #type: int
+		self.senderTimeoutDelta    = None #type: int
+		self.lockedTimeoutDelta    = None #type: int
+		self.CLTVExpiryDelta       = None #type: int
+		self.paymentHash           = None #type: bytes
+		self.paymentPreimage       = None #type: bytes
+
 		StoredObject.__init__(self, storage, 'sellTransactions', ID)
 
 
 
 class CounterOffer(StoredObject):
 	@staticmethod
-	def create(storage, counterOffer):
+	def create(storage: storage.Storage, counterOffer: offer.Offer) -> int:
 		return StoredObject.createStoredObject(
 			storage, 'counterOffers',
 			blob = counterOffer.toPB2().SerializeToString(),
 			)
 
 
-	def __init__(self, storage, ID):
+	def __init__(self, storage: storage.Storage, ID: int) -> None:
+		#This initialization is just to inform Mypy about data types.
+		#TODO: find a way to make sure storage.Storage respects these types
+		self.blob = None #type: bytes
+
 		StoredObject.__init__(self, storage, 'counterOffers', ID)
 		counterOffer = offer_pb2.Offer()
 		counterOffer.ParseFromString(self.blob)
@@ -154,31 +194,32 @@ class BL4PError(Exception):
 
 
 class OrderTask:
-	def __init__(self, client, storage, order):
-		self.client = client
-		self.storage = storage
-		self.callResult = None
-		self.expectedCallResultType = None
+	def __init__(self, client: 'bl4p_plugin.BL4PClient', s: storage.Storage, o: order.Order) -> None:
+		self.client = client               #type: bl4p_plugin.BL4PClient
+		self.storage = s                   #type: storage.Storage
+		self.callResult = None             #type: Optional[asyncio.Future]
+		self.expectedCallResultType = None #type: Optional[Type]
 
-		self.order = order
-		self.counterOffer = None
-		self.transaction = None
-
-
-	def startup(self):
-		self.task = asyncio.ensure_future(self.doTrading())
+		self.order = o                     #type: order.Order
+		self.counterOffer = None           #type: offer.Offer
+		self.transaction = None            #type: Optional[Union[BuyTransaction, SellTransaction]]
 
 
-	async def shutdown(self):
+	def startup(self) -> None:
+		self.task = None #type: asyncio.Future
+		self.task = asyncio.ensure_future(self.doTrading()) #type: ignore #mypy has weird ideas about ensure_future
+
+
+	async def shutdown(self) -> None:
 		self.task.cancel()
 		await self.task
 
 
-	async def waitFinished(self):
+	async def waitFinished(self) -> None:
 		await self.task
 
 
-	def setCallResult(self, result):
+	def setCallResult(self, result: messages.AnyMessage) -> None:
 		if self.callResult is None:
 			raise UnexpectedResult(
 				'Received a call result while no call was going on: ' + \
@@ -192,7 +233,7 @@ class OrderTask:
 		self.callResult.set_result(result)
 
 
-	async def doTrading(self):
+	async def doTrading(self) -> None:
 		try:
 			if isinstance(self.order, BuyOrder):
 				await self.continueBuyTransaction()
@@ -223,19 +264,21 @@ class OrderTask:
 		self.client.backend.handleOrderTaskFinished(self.order.ID)
 
 
-	async def doOfferSearch(self):
+	async def doOfferSearch(self) -> None:
 		'''
 		Keeps searching for matching offers until it finds one.
 		Then, it performs a single transaction based on the found offer.
 		'''
 
 		while True:
-			queryResult = await self.call(messages.BL4PFindOffers(
-				localOrderID=self.order.ID,
+			queryResult = cast(messages.BL4PFindOffersResult,
+				await self.call(messages.BL4PFindOffers(
+					localOrderID=self.order.ID,
 
-				query=self.order
-				),
-				messages.BL4PFindOffersResult)
+					query=self.order
+					),
+					messages.BL4PFindOffersResult)
+				) #type: messages.BL4PFindOffersResult
 
 			if queryResult.offers: #found a matching offer
 				log('Found offers - starting a transaction')
@@ -256,14 +299,16 @@ class OrderTask:
 			await asyncio.sleep(1)
 
 
-	async def publishOffer(self):
-		result = await self.call(messages.BL4PAddOffer(
-			localOrderID=self.order.ID,
+	async def publishOffer(self) -> None:
+		result = cast(messages.BL4PAddOfferResult,
+			await self.call(messages.BL4PAddOffer(
+				localOrderID=self.order.ID,
 
-			offer=self.order
-			),
-			messages.BL4PAddOfferResult)
-		remoteID = result.ID
+				offer=self.order
+				),
+				messages.BL4PAddOfferResult)
+			) #type: messages.BL4PAddOfferResult
+		remoteID = result.ID #type: int
 		self.order.remoteOfferID = remoteID
 		log('Local ID %d gets remote ID %s' % (self.order.ID, remoteID))
 
@@ -272,21 +317,23 @@ class OrderTask:
 	# Seller side
 	########################################################################
 
-	async def continueSellTransaction(self):
+	async def continueSellTransaction(self) -> None:
+		assert isinstance(self.order, SellOrder)
+
 		cursor = self.storage.execute(
 			'SELECT ID from sellTransactions WHERE sellOrder = ? AND status != ? AND status != ?',
 			[self.order.ID, STATUS_FINISHED, STATUS_CANCELED]
-			)
-		IDs = [row[0] for row in cursor]
+			) #type: storage.Cursor
+		IDs = [row[0] for row in cursor] #type: List[int]
 		assert len(IDs) < 2 #TODO: properly report database inconsistency error
 		if len(IDs) == 0:
 			return #no transaction needs to be continued
-		ID = IDs[0]
+		ID = IDs[0] #type: int
 
 		log('Found an unfinished transaction with ID %d - loading it' % ID)
 
 		self.transaction = SellTransaction(self.storage, ID)
-		storedCounterOffer = CounterOffer(self.storage, self.transaction.counterOffer)
+		storedCounterOffer = CounterOffer(self.storage, self.transaction.counterOffer) #type: CounterOffer
 		self.counterOffer = storedCounterOffer.counterOffer
 
 		if self.transaction.status == STATUS_INITIAL:
@@ -300,7 +347,7 @@ class OrderTask:
 			raise Exception('Invalid transaction status value in unfinished transaction')
 
 
-	async def doTransaction(self):
+	async def doTransaction(self) -> None:
 		assert isinstance(self.order, SellOrder) #TODO: enable buyer-initiated trade once supported
 
 		log('Doing trade for local order ID' + str(self.order.ID))
@@ -308,11 +355,11 @@ class OrderTask:
 		log('  counter offer: ' + str(self.counterOffer))
 
 		#Choose the largest fiat amount accepted by both
-		fiatAmountDivisor = settings.fiatDivisor
+		fiatAmountDivisor = settings.fiatDivisor #type: int
 		senderFiatAmount = min(
 			fiatAmountDivisor * self.order.ask.max_amount // self.order.ask.max_amount_divisor,
 			fiatAmountDivisor * self.counterOffer.bid.max_amount // self.counterOffer.bid.max_amount_divisor
-			)
+			) #type: int
 		assert senderFiatAmount > 0
 		log('senderFiatAmount = ' + str(senderFiatAmount))
 
@@ -323,17 +370,17 @@ class OrderTask:
 		#    = (eur * ask * bid_divisor) / (bid * ask_divisor)
 		#Implementation note:
 		#The correctness of this code might depend on Python's unlimited size integers.
-		cryptoAmountDivisor = settings.cryptoDivisor
+		cryptoAmountDivisor = settings.cryptoDivisor #type: int
 		receiverCryptoAmount = \
 			(cryptoAmountDivisor * senderFiatAmount  * self.counterOffer.ask.max_amount         * self.counterOffer.bid.max_amount_divisor) // \
-			(                      fiatAmountDivisor * self.counterOffer.ask.max_amount_divisor * self.counterOffer.bid.max_amount)
+			(                      fiatAmountDivisor * self.counterOffer.ask.max_amount_divisor * self.counterOffer.bid.max_amount) #type: int
 		receiverCryptoAmount += 1 #make sure it isn't rounded down - should be irrelevant anyway
 		log('receiverCryptoAmount = ' + str(receiverCryptoAmount))
 		assert receiverCryptoAmount >= 0
 		#Maximum: this is what we are prepared to pay
 		maxSenderCryptoAmount = \
 			(cryptoAmountDivisor * senderFiatAmount  * self.order.bid.max_amount         * self.order.ask.max_amount_divisor) // \
-			(                      fiatAmountDivisor * self.order.bid.max_amount_divisor * self.order.ask.max_amount)
+			(                      fiatAmountDivisor * self.order.bid.max_amount_divisor * self.order.ask.max_amount) #type: int
 		log('maxSenderCryptoAmount = ' + str(maxSenderCryptoAmount))
 		assert maxSenderCryptoAmount >= receiverCryptoAmount
 
@@ -341,22 +388,22 @@ class OrderTask:
 		sender_timeout_delta_ms = getMinConditionValue(
 			self.order, self.counterOffer,
 			offer.Condition.SENDER_TIMEOUT
-			)
+			) #type: int
 
 		#Choose the locked timeout limit as large as possible
 		locked_timeout_delta_s = getMaxConditionValue(
 			self.order, self.counterOffer,
 			offer.Condition.LOCKED_TIMEOUT
-			)
+			) #type: int
 
 		#Choose the CLTV expiry delta as small as possible
 		CLTV_expiry_delta = getMinConditionValue(
 			self.order, self.counterOffer,
 			offer.Condition.CLTV_EXPIRY_DELTA
-			)
+			) #type: int
 
 		#TODO: check if it's already in the database
-		counterOfferID = CounterOffer.create(self.storage, self.counterOffer)
+		counterOfferID = CounterOffer.create(self.storage, self.counterOffer) #type: int
 
 		sellTransactionID = SellTransaction.create(self.storage,
 			sellOrder    = self.order.ID,
@@ -370,23 +417,28 @@ class OrderTask:
 			senderTimeoutDelta = sender_timeout_delta_ms,
 			lockedTimeoutDelta = locked_timeout_delta_s,
 			CLTVExpiryDelta    = CLTV_expiry_delta,
-			)
+			) #type: int
 		self.transaction = SellTransaction(self.storage, sellTransactionID)
 
 		await self.startTransactionOnBL4P()
 
 
-	async def startTransactionOnBL4P(self):
-		#Create transaction on the exchange:
-		startResult = await self.call(messages.BL4PStart(
-			localOrderID = self.order.ID,
+	async def startTransactionOnBL4P(self) -> None:
+		assert isinstance(self.order, SellOrder)
+		assert isinstance(self.transaction, SellTransaction)
 
-			amount = self.transaction.senderFiatAmount,
-			sender_timeout_delta_ms = self.transaction.senderTimeoutDelta,
-			locked_timeout_delta_s = self.transaction.lockedTimeoutDelta,
-			receiver_pays_fee = True
-			),
-			messages.BL4PStartResult)
+		#Create transaction on the exchange:
+		startResult = cast(messages.BL4PStartResult,
+			await self.call(messages.BL4PStart(
+				localOrderID = self.order.ID,
+
+				amount = self.transaction.senderFiatAmount,
+				sender_timeout_delta_ms = self.transaction.senderTimeoutDelta,
+				locked_timeout_delta_s = self.transaction.lockedTimeoutDelta,
+				receiver_pays_fee = True
+				),
+				messages.BL4PStartResult)
+			) #type: messages.BL4PStartResult
 
 		assert startResult.senderAmount == self.transaction.senderFiatAmount
 		#TODO: check that we're not paying too much fees to BL4P
@@ -400,20 +452,25 @@ class OrderTask:
 		await self.doTransactionOnLightning()
 
 
-	async def doTransactionOnLightning(self):
-		#Send out over Lightning:
-		lightningResult = await self.call(messages.LNPay(
-			localOrderID = self.order.ID,
+	async def doTransactionOnLightning(self) -> None:
+		assert isinstance(self.order, SellOrder)
+		assert isinstance(self.transaction, SellTransaction)
 
-			destinationNodeID     = self.counterOffer.address,
-			paymentHash           = self.transaction.paymentHash,
-			recipientCryptoAmount = self.transaction.receiverCryptoAmount,
-			maxSenderCryptoAmount = self.transaction.maxSenderCryptoAmount,
-			minCLTVExpiryDelta    = self.transaction.CLTVExpiryDelta,
-			fiatAmount            = self.transaction.senderFiatAmount,
-			offerID               = self.counterOffer.ID,
-			),
-			messages.LNPayResult)
+		#Send out over Lightning:
+		lightningResult = cast(messages.LNPayResult,
+			await self.call(messages.LNPay(
+				localOrderID = self.order.ID,
+
+				destinationNodeID     = self.counterOffer.address,
+				paymentHash           = self.transaction.paymentHash,
+				recipientCryptoAmount = self.transaction.receiverCryptoAmount,
+				maxSenderCryptoAmount = self.transaction.maxSenderCryptoAmount,
+				minCLTVExpiryDelta    = self.transaction.CLTVExpiryDelta,
+				fiatAmount            = self.transaction.senderFiatAmount,
+				offerID               = self.counterOffer.ID,
+				),
+				messages.LNPayResult)
+			) #type: messages.LNPayResult
 
 		if lightningResult.paymentPreimage is None:
 			#LN transaction failed, so revert everything we got so far
@@ -434,13 +491,18 @@ class OrderTask:
 		await self.receiveFiatFunds()
 
 
-	async def receiveFiatFunds(self):
-		receiveResult = await self.call(messages.BL4PReceive(
-			localOrderID=self.order.ID,
+	async def receiveFiatFunds(self) -> None:
+		assert isinstance(self.order, SellOrder)
+		assert isinstance(self.transaction, SellTransaction)
 
-			paymentPreimage=self.transaction.paymentPreimage,
-			),
-			messages.BL4PReceiveResult)
+		receiveResult = cast(messages.BL4PReceiveResult,
+			await self.call(messages.BL4PReceive(
+				localOrderID=self.order.ID,
+
+				paymentPreimage=self.transaction.paymentPreimage,
+				),
+				messages.BL4PReceiveResult)
+			) #type: messages.BL4PReceiveResult
 
 		self.transaction.update(
 			status = STATUS_FINISHED,
@@ -451,7 +513,10 @@ class OrderTask:
 		await self.updateOrderAfterTransaction()
 
 
-	async def cancelIncomingFiatFunds(self):
+	async def cancelIncomingFiatFunds(self) -> None:
+		assert isinstance(self.order, SellOrder)
+		assert isinstance(self.transaction, SellTransaction)
+
 		await self.call(messages.BL4PCancelStart(
 			localOrderID=self.order.ID,
 
@@ -472,16 +537,18 @@ class OrderTask:
 	# Buyer side
 	########################################################################
 
-	async def continueBuyTransaction(self):
+	async def continueBuyTransaction(self) -> None:
+		assert isinstance(self.order, BuyOrder)
+
 		cursor = self.storage.execute(
 			'SELECT ID from buyTransactions WHERE buyOrder = ? AND status != ? AND status != ?',
 			[self.order.ID, STATUS_FINISHED, STATUS_CANCELED]
-			)
-		IDs = [row[0] for row in cursor]
+			) #type: storage.Cursor
+		IDs = [row[0] for row in cursor] #type: List[int]
 		assert len(IDs) < 2 #TODO: properly report database inconsistency error
 		if len(IDs) == 0:
 			return #no transaction needs to be continued
-		ID = IDs[0]
+		ID = IDs[0] #type: int
 
 		log('Found an unfinished transaction with ID %d - loading it' % ID)
 
@@ -494,8 +561,12 @@ class OrderTask:
 			raise Exception('Invalid transaction status value in unfinished transaction')
 
 
-	async def waitForIncomingTransaction(self):
-		message = await self.waitForIncomingMessage(messages.LNIncoming)
+	async def waitForIncomingTransaction(self) -> None:
+		assert isinstance(self.order, BuyOrder)
+
+		message = cast(messages.LNIncoming,
+			await self.waitForIncomingMessage(messages.LNIncoming)
+			) #type: messages.LNIncoming
 
 		#TODO: check if this is a new notification for an already
 		#ongoing tx.
@@ -517,7 +588,7 @@ class OrderTask:
 
 			#Don't specify sender_timeout: we can just try if we're still within the timeout
 			#Don't specify locked_timeout: it is unknown to us; we will inform BL4P about our maximum
-			)
+			) #type: offer.Offer
 		counterOffer.bid.max_amount = message.cryptoAmount
 		counterOffer.ask.max_amount = message.fiatAmount
 
@@ -544,24 +615,29 @@ class OrderTask:
 			cryptoAmount = message.cryptoAmount,
 
 			paymentHash = message.paymentHash,
-			)
+			) #type: int
 		self.order.setAmount(self.order.amount - message.fiatAmount)
 		self.transaction = BuyTransaction(self.storage, buyTransactionID)
 
 		await self.sendFundsOnBL4P()
 
 
-	async def sendFundsOnBL4P(self):
+	async def sendFundsOnBL4P(self) -> None:
+		assert isinstance(self.order, BuyOrder)
+		assert isinstance(self.transaction, BuyTransaction)
+
 		try:
 			#Lock fiat funds:
-			sendResult = await self.call(messages.BL4PSend(
-				localOrderID = self.order.ID,
+			sendResult = cast(messages.BL4PSendResult,
+				await self.call(messages.BL4PSend(
+					localOrderID = self.order.ID,
 
-				amount                     = self.transaction.fiatAmount,
-				paymentHash                = self.transaction.paymentHash,
-				max_locked_timeout_delta_s = self.order.getConditionMax(offer.Condition.LOCKED_TIMEOUT),
-				),
-				messages.BL4PSendResult)
+					amount                     = self.transaction.fiatAmount,
+					paymentHash                = self.transaction.paymentHash,
+					max_locked_timeout_delta_s = self.order.getConditionMax(offer.Condition.LOCKED_TIMEOUT),
+					),
+					messages.BL4PSendResult)
+				) #type: messages.BL4PSendResult
 		except BL4PError:
 			log('Error received from BL4P - transaction canceled')
 			self.order.setAmount(self.order.amount + self.transaction.fiatAmount)
@@ -583,7 +659,10 @@ class OrderTask:
 		await self.finishTransactionOnLightning()
 
 
-	async def finishTransactionOnLightning(self):
+	async def finishTransactionOnLightning(self) -> None:
+		assert isinstance(self.order, BuyOrder)
+		assert isinstance(self.transaction, BuyTransaction)
+
 		#Receive crypto funds
 		self.client.handleOutgoingMessage(messages.LNFinish(
 			paymentHash=self.transaction.paymentHash,
@@ -595,7 +674,10 @@ class OrderTask:
 		await self.updateOrderAfterTransaction()
 
 
-	async def cancelTransactionOnLightning(self):
+	async def cancelTransactionOnLightning(self) -> None:
+		assert isinstance(self.order, BuyOrder)
+		assert isinstance(self.transaction, BuyTransaction)
+
 		self.client.handleOutgoingMessage(messages.LNFail(
 			paymentHash=self.transaction.paymentHash,
 			))
@@ -611,7 +693,7 @@ class OrderTask:
 	# Generic
 	########################################################################
 
-	async def updateOrderAfterTransaction(self):
+	async def updateOrderAfterTransaction(self) -> None:
 		if self.order.remoteOfferID is not None:
 			#Remove offer from the market
 			log('Removing old offer from the market')
@@ -628,17 +710,17 @@ class OrderTask:
 				await self.publishOffer()
 
 
-	async def call(self, message, expectedResultType):
+	async def call(self, message: messages.AnyMessage, expectedResultType: Type) -> messages.AnyMessage:
 		self.client.handleOutgoingMessage(message)
 		return await self.waitForIncomingMessage(expectedResultType)
 
 
-	async def waitForIncomingMessage(self, expectedResultType):
+	async def waitForIncomingMessage(self, expectedResultType: Type) -> messages.AnyMessage:
 		assert self.callResult is None
 		self.callResult = asyncio.Future()
 		self.expectedCallResultType = expectedResultType
 		await self.callResult
-		ret = self.callResult.result()
+		ret = self.callResult.result() #type: messages.AnyMessage
 
 		#Special case for BL4P exceptions
 		if isinstance(ret, messages.BL4PError):
