@@ -21,7 +21,10 @@ from enum import Enum
 import inspect
 import os
 import re
-from typing import Dict
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union, TYPE_CHECKING
+
+if TYPE_CHECKING:
+	import bl4p_plugin
 
 from json_rpc import JSONRPC
 from ln_payload import Payload
@@ -32,13 +35,14 @@ import settings
 
 
 class MethodType(Enum):
-    RPCMETHOD = 0
-    HOOK = 1
+    RPCMETHOD = 0 #type: int
+    HOOK      = 1 #type: int
 
 
 
 class OngoingRequest:
-	pass #Attributes will be added on an ad-hoc basis
+	#Which attributes are used depends on the call:
+	paymentHash = None #type: bytes
 
 
 NO_RESPONSE = object() #Placeholder in case no response is to be sent
@@ -46,7 +50,7 @@ NO_RESPONSE = object() #Placeholder in case no response is to be sent
 
 
 class PluginInterface(JSONRPC, messages.Handler):
-	def __init__(self, client, inputStream, outputStream):
+	def __init__(self, client: 'bl4p_plugin.BL4PClient', inputStream: asyncio.StreamReader, outputStream: asyncio.StreamWriter) -> None:
 		JSONRPC.__init__(self, inputStream, outputStream)
 		messages.Handler.__init__(self, {
 			messages.LNFinish: self.sendFinish,
@@ -54,12 +58,12 @@ class PluginInterface(JSONRPC, messages.Handler):
 
 			messages.PluginCommandResult: self.sendPluginCommandResult,
 			})
-		self.client = client
+		self.client = client #type: bl4p_plugin.BL4PClient
 
 		#Output from the init method:
-		self.RPCPath = None
-		self.logFile = None
-		self.DBFile = None
+		self.RPCPath = None #type: str
+		self.logFile = None #type: str
+		self.DBFile = None  #type: str
 
 		self.options = \
 		[
@@ -75,7 +79,7 @@ class PluginInterface(JSONRPC, messages.Handler):
 		'description': 'BL4P plug-in database file',
 		'type'       : 'string',
 		},
-		]
+		] #type: List[Dict[str, str]]
 		self.methods = \
 		{
 		'getmanifest': (self.getManifest, MethodType.RPCMETHOD),
@@ -88,22 +92,22 @@ class PluginInterface(JSONRPC, messages.Handler):
 		'bl4p.list'             : (self.list              , MethodType.RPCMETHOD),
 
 		'htlc_accepted'         : (self.handleHTLCAccepted, MethodType.HOOK),
-		}
+		} #type: Dict[str, Tuple[Callable, MethodType]]
 
 		def testHandler(**kwargs):
 			log('Test notification received')
 
-		self.subscriptions = {'test': testHandler}
+		self.subscriptions = {'test': testHandler} #type: Dict[str, Callable]
 
-		self.currentRequestID = None
-		self.ongoingRequests = {} #ID -> (methodname, OngoingRequest)
+		self.currentRequestID = None #type: Optional[int]
+		self.ongoingRequests = {} #type: Dict[int, Tuple[str, OngoingRequest]] #ID -> (methodname, OngoingRequest)
 
 
 	async def startup(self):
 		#Keep handling messages until one message handler sets self.RPCPath
 		#(this happens on the init message)
 		while self.RPCPath is None:
-			message = await self.getNextJSON()
+			message = await self.getNextJSON() #type: Optional[Dict]
 			if message is None:
 				raise Exception('Plugin interface closed before init call')
 			self.handleJSON(message)
@@ -113,10 +117,12 @@ class PluginInterface(JSONRPC, messages.Handler):
 
 
 	def handleRequest(self, ID: int, name: str, params: Dict) -> None:
+		#We depend on C-Lightning to pass the expected types in params
+
 		self.currentRequestID = ID
 		try:
-			func, _ = self.methods[name]
-			result = func(**params)
+			func = self.methods[name][0] #type: Callable
+			result = func(**params) #type: Any
 			if result == NO_RESPONSE:
 				return
 			self.sendResponse(ID, result)
@@ -129,11 +135,16 @@ class PluginInterface(JSONRPC, messages.Handler):
 		self.currentRequestID = None
 
 
-	def storeOngoingRequest(self, name, request):
+	def storeOngoingRequest(self, name: str, request: OngoingRequest) -> None:
 		self.ongoingRequests[self.currentRequestID] = name, request
 
 
-	def findOngoingRequest(self, name, func):
+	def findOngoingRequest(self, name: str, func: Callable) -> int:
+		ID = None #type: int
+		value = None #type: Tuple[str, OngoingRequest]
+		methodName = None #type: str
+		request = None #type: OngoingRequest
+
 		for ID, value in self.ongoingRequests.items():
 			methodName, request = value
 			if methodName == name and func(request):
@@ -141,20 +152,26 @@ class PluginInterface(JSONRPC, messages.Handler):
 		raise IndexError()
 
 
-	def sendOngoingRequestResponse(self, ID, result):
+	def sendOngoingRequestResponse(self, ID: int, result: Any) -> None:
 		#TODO: have a way to send delayed error responses
 		del self.ongoingRequests[ID]
 		self.sendResponse(ID, result)
 
 
 	def handleNotification(self, name: str, params: Dict) -> None:
+		#We depend on C-Lightning to pass the expected types in params
 		func = self.subscriptions[name]
 		func(**params)
 
 
-	def getManifest(self, **kwargs):
-		methods = []
-		hooks = []
+	def getManifest(self, **kwargs) -> Dict[str, Any]:
+		name = None #type: str
+		entry = None #type: Tuple[Callable, MethodType]
+		func = None #type: Callable
+		typ = None #type: MethodType
+
+		methods = [] #type: List[Dict[str, str]]
+		hooks = [] #type: List[str]
 		for name, entry in self.methods.items():
 			func, typ = entry
 			# Skip the builtin ones, they don't get reported
@@ -186,11 +203,13 @@ class PluginInterface(JSONRPC, messages.Handler):
 			}
 
 
-	def init(self, options, configuration, **kwargs):
+	def init(self, options: Dict[str, str], configuration: Dict[str, str], **kwargs) -> None:
+		#We depend on C-Lightning to pass the expected types in options, configuration
+
 		#self.log('Plugin init got called')
 
-		filename = configuration['rpc-file']
-		lndir = configuration['lightning-dir']
+		filename = configuration['rpc-file'] #type: str
+		lndir = configuration['lightning-dir'] #type: str
 
 		self.RPCPath = os.path.join(lndir, filename)
 		self.logFile = options['bl4p.logfile']
@@ -198,18 +217,21 @@ class PluginInterface(JSONRPC, messages.Handler):
 		#self.log('RPC path is ' + self.RPCPath)
 
 
-	def getFiatCurrency(self):
+	def getFiatCurrency(self) -> Dict[str, Any]:
 		'Returns information about the fiat-currency'
 		return {'name': settings.fiatName, 'divisor': settings.fiatDivisor}
 
 
-	def getCryptoCurrency(self):
+	def getCryptoCurrency(self) -> Dict[str, Any]:
 		'Returns information about the crypto-currency'
 		return {'name': settings.cryptoName, 'divisor': settings.cryptoDivisor}
 
 
-	def buy(self, limit_rate, amount, **kwargs):
+	def buy(self, limit_rate: int, amount: int, **kwargs) -> None:
 		'Place an order for buying crypto-currency with fiat-currency'
+		assert isinstance(limit_rate, int)
+		assert isinstance(amount, int)
+
 		self.client.handleIncomingMessage(messages.BuyCommand(
 			commandID=None,
 			limitRate=limit_rate,
@@ -217,8 +239,11 @@ class PluginInterface(JSONRPC, messages.Handler):
 			))
 
 
-	def sell(self, limit_rate, amount, **kwargs):
+	def sell(self, limit_rate: int, amount: int, **kwargs) -> None:
 		'Place an order for selling crypto-currency for fiat-currency'
+		assert isinstance(limit_rate, int)
+		assert isinstance(amount, int)
+
 		self.client.handleIncomingMessage(messages.SellCommand(
 			commandID=None,
 			limitRate=limit_rate,
@@ -226,7 +251,7 @@ class PluginInterface(JSONRPC, messages.Handler):
 			))
 
 
-	def list(self, **kwargs):
+	def list(self, **kwargs) -> object:
 		'List active orders'
 
 		self.client.handleIncomingMessage(messages.ListCommand(
@@ -238,7 +263,7 @@ class PluginInterface(JSONRPC, messages.Handler):
 		return NO_RESPONSE
 
 
-	def handleHTLCAccepted(self, onion, htlc, **kwargs):
+	def handleHTLCAccepted(self, onion: Dict[str, Any], htlc: Dict[str, Any], **kwargs) -> Union[object, Dict[str, str]]:
 		'''
 		Parameter format:
 		'onion':
@@ -258,23 +283,25 @@ class PluginInterface(JSONRPC, messages.Handler):
 			'payment_hash': hex,
 			}
 		'''
-		realm = bytes.fromhex(onion['hop_data']['realm'])[0]
+		#We depend on C-Lightning to pass the expected types in onion, htlc
+
+		realm = bytes.fromhex(onion['hop_data']['realm'])[0] #type: int
 		if realm != 254: #TODO
 			return {'result': 'continue'} #it's not handled by us
 
 		try:
-			paymentHash = bytes.fromhex(htlc['payment_hash'])
+			paymentHash = bytes.fromhex(htlc['payment_hash']) #type: bytes
 			payload = Payload.decode(
-				bytes.fromhex(onion['hop_data']['per_hop']))
-			cryptoAmount = htlc['msatoshi']
-			CLTVExpiryDelta = htlc['cltv_expiry'] #TODO: check if this is a relative or absolute value. For now, relative is used everywhere.
+				bytes.fromhex(onion['hop_data']['per_hop'])) #type: Payload
+			cryptoAmount = htlc['msatoshi'] #type: int
+			CLTVExpiryDelta = htlc['cltv_expiry'] #type: int #TODO: check if this is a relative or absolute value. For now, relative is used everywhere.
 		except:
 			log('Refused incoming transaction because there is something wrong with it:')
 			logException()
 			return {'result': 'fail'}
 
 		#We will have to send a response later, possibly after finishing this function
-		req = OngoingRequest()
+		req = OngoingRequest() #type: OngoingRequest
 		req.paymentHash = paymentHash
 		self.storeOngoingRequest('htlc_accepted', req)
 
@@ -292,10 +319,10 @@ class PluginInterface(JSONRPC, messages.Handler):
 		return NO_RESPONSE
 
 
-	def sendFinish(self, message):
+	def sendFinish(self, message: messages.LNFinish) -> None:
 		try:
 			ID = self.findOngoingRequest('htlc_accepted',
-				lambda x: x.paymentHash == message.paymentHash)
+				lambda x: x.paymentHash == message.paymentHash) #type: int
 		except IndexError:
 			log('Cannot finish the Lightning transaction right now, because lightningd didn\'t give it to us.')
 			log('This may be caused by a restart during an ongoing transaction.')
@@ -308,10 +335,10 @@ class PluginInterface(JSONRPC, messages.Handler):
 			})
 
 
-	def sendFail(self, message):
+	def sendFail(self, message: messages.LNFail) -> None:
 		try:
 			ID = self.findOngoingRequest('htlc_accepted',
-				lambda x: x.paymentHash == message.paymentHash)
+				lambda x: x.paymentHash == message.paymentHash) #type: int
 		except IndexError:
 			log('Cannot fail the Lightning transaction right now, because lightningd didn\'t give it to us.')
 			log('This may be caused by a restart during an ongoing transaction.')
@@ -323,7 +350,7 @@ class PluginInterface(JSONRPC, messages.Handler):
 			})
 
 
-	def sendPluginCommandResult(self, message):
+	def sendPluginCommandResult(self, message: messages.PluginCommandResult) -> None:
 		self.sendResponse(message.commandID,
 			message.result)
 

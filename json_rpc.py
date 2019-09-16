@@ -18,7 +18,7 @@
 
 import asyncio
 import json
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import decodedbuffer
 from log import log, logException
@@ -73,7 +73,7 @@ class JSONRPC:
 		#log('Stopped JSON RPC')
 
 
-	async def getNextJSON(self) -> Dict:
+	async def getNextJSON(self) -> Optional[Dict]:
 		while True:
 			try:
 				#log('Input buffer: ' + self.inputBuffer.get())
