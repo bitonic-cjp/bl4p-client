@@ -382,7 +382,11 @@ class TestPluginInterface(unittest.TestCase):
 			{
 			'jsonrpc': '2.0',
 			'id': 6,
-			'error': "Error while processing does_not_exist: KeyError('does_not_exist',)",
+			'error':
+				{
+				'code': 1,
+				'message': "Error while processing does_not_exist: KeyError('does_not_exist',)",
+				},
 			})
 
 

@@ -63,9 +63,9 @@ class RPCInterface(JSONRPC):
 		return JSONRPC.sendResponse(self, ID, result)
 
 
-	def sendErrorResponse(self, ID, error):
-		log('%s RPC ==> %d ERROR %s' % (self.node.nodeID, ID, error))
-		return JSONRPC.sendErrorResponse(self, ID, error)
+	def sendErrorResponse(self, ID, code, message):
+		log('%s RPC ==> %d ERROR %d: %s' % (self.node.nodeID, ID, code, message))
+		return JSONRPC.sendErrorResponse(self, ID, code, message)
 
 
 
@@ -106,11 +106,11 @@ class PluginInterface(JSONRPC):
 		resultCB(result)
 
 
-	def handleError(self, ID, error):
-		log('%s plugin <== %d ERROR %s' % (self.node.nodeID, ID, error))
+	def handleError(self, ID, code, message):
+		log('%s plugin <== %d ERROR %d: %s' % (self.node.nodeID, ID, code, message))
 		resultCB, errorCB = self.node.pluginResultCallbacks[ID]
 		del self.node.pluginResultCallbacks[ID]
-		errorCB(error)
+		errorCB(code, message)
 
 
 	def sendRequest(self, name, params={}):
@@ -137,7 +137,7 @@ class Node:
 
 		self.startupFinished = False
 
-		self.pluginResultCallbacks = {} #ID -> (function(result), function(error))
+		self.pluginResultCallbacks = {} #ID -> (function(result), function(code, message))
 
 		#This is for RPC calls that have started, but for which no return data
 		#has been sent yet:
@@ -219,14 +219,14 @@ class Node:
 		interface.sendResponse(ID, result)
 
 
-	def sendDelayedErrorResponse(self, ID, error):
+	def sendDelayedErrorResponse(self, ID, code, message):
 		'''
 		Send an error response for an ongoing  request,
 		and remove the ongoing request, as it is now finished.
 		'''
 		interface = self.ongoingRequests[ID][0]
 		del self.ongoingRequests[ID]
-		interface.sendErrorResponse(ID, error)
+		interface.sendErrorResponse(ID, code, message)
 
 
 	def handleRPCCall(self, interface, ID, name, params):
@@ -240,9 +240,9 @@ class Node:
 					#print(result)
 					interface.sendResponse(ID, result)
 
-				def errorCB(error):
-					#print(error)
-					interface.sendErrorResponse(ID, error)
+				def errorCB(code, message):
+					#print(code, message)
+					interface.sendErrorResponse(ID, code, message)
 
 				self.pluginResultCallbacks[outgoingID] = (resultCB, errorCB)
 				return
@@ -374,8 +374,8 @@ class Node:
 				nodes[tx.sourceID].finishOutgoingTransaction(tx.paymentHash, None)
 			#TODO: handle continue
 
-		def errorCB(error):
-			print(error) #TODO
+		def errorCB(code, message):
+			print(code, message) #TODO
 
 		self.pluginResultCallbacks[ID] = (resultCB, errorCB)
 
@@ -393,7 +393,8 @@ class Node:
 		#Send the response to waitsendpay
 		if paymentResult is None:
 			self.sendDelayedErrorResponse(ID,
-				203 #Permanent failure at destination
+				203, #Permanent failure at destination
+				'Transaction was refused'
 				)
 		else:
 			self.sendDelayedResponse(ID,

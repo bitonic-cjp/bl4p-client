@@ -59,7 +59,7 @@ class JSONRPC:
 		try:
 			try:
 				while True:
-					message = await self.getNextJSON() #type: Dict
+					message = await self.getNextJSON() #type: Optional[Dict[str, Any]]
 					if message is None:
 						break
 					self.handleJSON(message)
@@ -73,7 +73,7 @@ class JSONRPC:
 		#log('Stopped JSON RPC')
 
 
-	async def getNextJSON(self) -> Optional[Dict]:
+	async def getNextJSON(self) -> Optional[Dict[str, Any]]:
 		while True:
 			try:
 				#log('Input buffer: ' + self.inputBuffer.get())
@@ -99,21 +99,25 @@ class JSONRPC:
 			return request
 
 
-	def handleJSON(self, request: Any) -> None:
+	def handleJSON(self, request: Dict[str, Any]) -> None:
 		try:
-			ID     = None #type: int
-			error  = None #type: str
-			result = None #type: Any
-			method = None #type: str
-			params = None #type: Dict
+			ID      = None #type: int
+			error   = None #type: Dict[str, Any]
+			code    = None #type: int
+			message = None #type: str
+			result  = None #type: Any
+			method  = None #type: str
+			params  = None #type: Dict
 
 			if 'error' in request:
 				ID    = request['id']
 				error = request['error']
-				assert type(ID)    == int #TODO: unit test
-				assert type(error) == str #TODO: unit test
-				#TODO: error must contain code = int, message = str
-				self.handleError(ID, error)
+				code = error['code']
+				message = error['message']
+				assert type(ID)      == int #TODO: unit test
+				assert type(code)    == int #TODO: unit test
+				assert type(message) == str #TODO: unit test
+				self.handleError(ID, code, message)
 			elif 'result' in request:
 				ID     = request['id']
 				result = request['result']
@@ -138,7 +142,7 @@ class JSONRPC:
 			logException()
 
 
-	def writeJSON(self, msg: Dict) -> None:
+	def writeJSON(self, msg: Dict[str, Any]) -> None:
 		#log('--> ' + str(msg))
 		JSONMessage = json.dumps(msg) #type: str
 		self.outputStream.write(JSONMessage.encode('UTF-8') + b'\n\n')
@@ -153,7 +157,7 @@ class JSONRPC:
 			if 'result' in message and 'id' in message and message['id'] == ID:
 				break
 			if 'error' in message and 'id' in message and message['id'] == ID:
-				raise Exception(message['error'])
+				raise Exception(str(message['error']))
 
 			#Generic processing of messages that are not ours
 			self.handleJSON(message)
@@ -184,14 +188,18 @@ class JSONRPC:
 		self.writeJSON(response)
 
 
-	def sendErrorResponse(self, ID: int, error: str) -> None:
+	def sendErrorResponse(self, ID: int, code: int, message: str) -> None:
 		#TODO: error must contain code = int, message = str
 		response = \
 			{
 			'jsonrpc': '2.0',
 			'id': ID,
-			"error": error,
-			} #type: Dict
+			'error': 
+				{
+				'code': code,
+				'message': message,
+				},
+			} #type: Dict[str, Any]
 		self.writeJSON(response)
 
 
@@ -217,6 +225,6 @@ class JSONRPC:
 		pass #To be overloaded in derived classes
 
 
-	def handleError(self, ID: int, error: str) -> None:
+	def handleError(self, ID: int, code: int, message: str) -> None:
 		pass #To be overloaded in derived classes
 

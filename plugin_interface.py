@@ -129,6 +129,7 @@ class PluginInterface(JSONRPC, messages.Handler):
 		except Exception as e:
 			logException()
 			self.sendErrorResponse(ID,
+				1, #TODO: define error numbers
 				"Error while processing {}: {}".format(
 				name, repr(e)
 				))

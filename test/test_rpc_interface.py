@@ -196,7 +196,7 @@ class TestRPCInterface(unittest.TestCase):
 				},
 			})
 
-		self.rpc.handleError(2, 203)
+		self.rpc.handleError(2, 203, 'Transaction was refused')
 
 		self.client.handleIncomingMessage.assert_called_once_with(messages.LNPayResult(
 			localOrderID = 6,

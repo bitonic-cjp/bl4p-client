@@ -67,12 +67,12 @@ class RPCInterface(JSONRPC, messages.Handler):
 		self.handleStoredRequestResult(message, name, result)
 
 
-	def handleError(self, ID: int, error: str) -> None:
+	def handleError(self, ID: int, code: int, message: str) -> None:
 		name = None #type: str
-		message = None #type: messages.AnyMessage
-		name, message = self.ongoingRequests[ID]
+		storedMessage = None #type: messages.AnyMessage
+		name, storedMessage = self.ongoingRequests[ID]
 		del self.ongoingRequests[ID]
-		self.handleStoredRequestError(message, name, int(error)) #TODO: error code/message distinction
+		self.handleStoredRequestError(storedMessage, name, code)
 
 
 	def sendPay(self, message: messages.LNPay) -> None:

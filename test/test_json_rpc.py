@@ -111,11 +111,11 @@ class TestJSONRPC(unittest.TestCase):
 			await self.rpc.handleIncomingData()
 			m.assert_called_once_with(3, {'bar': 0, 'baz': None})
 
-		self.input.buffer = b'{"id": 3, "error": "bar"}'
+		self.input.buffer = b'{"id": 3, "error": {"code": 42, "message": "bar"}}'
 		m = Mock(return_value=None)
 		with patch.object(self.rpc, 'handleError', m):
 			await self.rpc.handleIncomingData()
-			m.assert_called_once_with(3, 'bar')
+			m.assert_called_once_with(3, 42, 'bar')
 
 		self.input.buffer = b'{"info": "Dummy JSON data"}'
 		m = Mock(return_value=None)
@@ -156,8 +156,8 @@ class TestJSONRPC(unittest.TestCase):
 		self.rpc.sendResponse(6, {'bar': 0, 'baz': None})
 		testJSONWritten({'jsonrpc': '2.0', 'id': 6, 'result': {'baz': None, 'bar': 0}})
 
-		self.rpc.sendErrorResponse(6, 'bar')
-		testJSONWritten({'jsonrpc': '2.0', 'id': 6, 'error': 'bar'})
+		self.rpc.sendErrorResponse(6, 42, 'bar')
+		testJSONWritten({'jsonrpc': '2.0', 'id': 6, 'error': {'code': 42, 'message': 'bar'}})
 
 		self.rpc.sendNotification('foo', {'bar': 0, 'baz': None})
 		testJSONWritten({'jsonrpc': '2.0', 'method': 'foo', 'params': {'baz': None, 'bar': 0}})
