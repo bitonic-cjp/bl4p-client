@@ -112,6 +112,7 @@ class JSONRPC:
 				error = request['error']
 				assert type(ID)    == int #TODO: unit test
 				assert type(error) == str #TODO: unit test
+				#TODO: error must contain code = int, message = str
 				self.handleError(ID, error)
 			elif 'result' in request:
 				ID     = request['id']
@@ -184,6 +185,7 @@ class JSONRPC:
 
 
 	def sendErrorResponse(self, ID: int, error: str) -> None:
+		#TODO: error must contain code = int, message = str
 		response = \
 			{
 			'jsonrpc': '2.0',

@@ -39,7 +39,7 @@ class TestRPCInterface(unittest.TestCase):
 
 
 	@asynciotest
-	async def test_startup(self):
+	async def test_startupRPC(self):
 		self.assertEqual(self.rpc.inputStream, self.input)
 		self.assertEqual(self.rpc.outputStream, self.output)
 		self.assertEqual(self.rpc.client, self.client)
@@ -51,7 +51,7 @@ class TestRPCInterface(unittest.TestCase):
 
 		self.rpc.handleIncomingData = setCalled
 		self.input.buffer = b'{"id": 0, "result": {"id": "foo"}}\n\n'
-		await self.rpc.startup()
+		await self.rpc.startupRPC()
 		await asyncio.sleep(0.1)
 		await self.rpc.shutdown()
 

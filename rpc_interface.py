@@ -16,7 +16,11 @@
 #    You should have received a copy of the GNU General Public License
 #    along with the BL4P Client. If not, see <http://www.gnu.org/licenses/>.
 
-from typing import Any, Dict
+import asyncio
+from typing import Any, Dict, Tuple, TYPE_CHECKING
+
+if TYPE_CHECKING:
+	import bl4p_plugin
 
 from json_rpc import JSONRPC
 from ln_payload import Payload
@@ -25,45 +29,53 @@ import messages
 import settings
 
 
+class extendedLNPayMessage(messages.LNPay):
+	senderCryptoAmount    = 0   #type: int
+
+
 
 class RPCInterface(JSONRPC, messages.Handler):
-	def __init__(self, client, inputStream, outputStream):
+	def __init__(self, client: 'bl4p_plugin.BL4PClient', inputStream: asyncio.StreamReader, outputStream: asyncio.StreamWriter) -> None:
 		JSONRPC.__init__(self, inputStream, outputStream)
 		messages.Handler.__init__(self, {
 			messages.LNPay: self.sendPay,
 			})
-		self.client = client
+		self.client = client #type: bl4p_plugin.BL4PClient
 
-		self.nodeID = None
+		self.nodeID = None #type: str
 
-		self.ongoingRequests = {} #ID -> (methodname, message)
+		self.ongoingRequests = {} #type: Dict[int, Tuple[str, messages.AnyMessage]] #ID -> (methodname, message)
 
 
-	async def startup(self):
-		info = await self.synCall('getinfo')
+	async def startupRPC(self) -> None:
+		info = await self.synCall('getinfo') #type: Dict
 		self.nodeID = info['id']
 
-		return JSONRPC.startup(self)
+		JSONRPC.startup(self)
 
 
-	def sendStoredRequest(self, message, name, params):
-		ID = self.sendRequest(name, params)
+	def sendStoredRequest(self, message: messages.AnyMessage, name: str, params: Dict[str, Any]) -> None:
+		ID = self.sendRequest(name, params) #type: int
 		self.ongoingRequests[ID] = (name, message)
 
 
 	def handleResult(self, ID: int, result: Any) -> None:
+		name = None #type: str
+		message = None #type: messages.AnyMessage
 		name, message = self.ongoingRequests[ID]
 		del self.ongoingRequests[ID]
 		self.handleStoredRequestResult(message, name, result)
 
 
 	def handleError(self, ID: int, error: str) -> None:
+		name = None #type: str
+		message = None #type: messages.AnyMessage
 		name, message = self.ongoingRequests[ID]
 		del self.ongoingRequests[ID]
-		self.handleStoredRequestError(message, name, error)
+		self.handleStoredRequestError(message, name, int(error)) #TODO: error code/message distinction
 
 
-	def sendPay(self, message):
+	def sendPay(self, message: messages.LNPay) -> None:
 		#TODO: check if we're already sending out funds on this payment hash.
 		#This can be the case, for instance, after a restart.
 
@@ -80,37 +92,57 @@ class RPCInterface(JSONRPC, messages.Handler):
 		#Make sure the LNPay message stays stored!
 
 
-	def handleStoredRequestResult(self, message, name, result):
-		messageClass = message.__class__
+	def handleStoredRequestResult(self, message: messages.AnyMessage, name: str, result: Dict[str, Any]):
+		#We depend on C-Lightning to pass the expected types in result
+
+		messageClass = message.__class__ #type: type
 
 		if (name, messageClass) == ('getroute', messages.LNPay):
-			route = result['route']
+			assert isinstance(message, messages.LNPay) #mypy is stupid
 
-			message.senderCryptoAmount = route[0]["msatoshi"]
-			if message.senderCryptoAmount > message.maxSenderCryptoAmount:
+			route = result['route'] #type: List[Dict[str, Any]]
+
+			newMessage = extendedLNPayMessage(
+				localOrderID          = message.localOrderID,
+				destinationNodeID     = message.destinationNodeID,
+				paymentHash           = message.paymentHash,
+				recipientCryptoAmount = message.recipientCryptoAmount,
+				maxSenderCryptoAmount = message.maxSenderCryptoAmount,
+				minCLTVExpiryDelta    = message.minCLTVExpiryDelta,
+				fiatAmount            = message.fiatAmount,
+				offerID               = message.offerID,
+
+				senderCryptoAmount    = route[0]["msatoshi"]
+				)
+
+			if newMessage.senderCryptoAmount > message.maxSenderCryptoAmount:
 				#TODO: proper handling of this
 				raise Exception('maxSenderCryptoAmount exceeded')
 
-			payload = Payload(message.fiatAmount, message.offerID)
+			payload = Payload(message.fiatAmount, message.offerID) #type: Payload
 
-			self.sendStoredRequest(message, 'sendpay',
+			self.sendStoredRequest(newMessage, 'sendpay',
 				{
 				'route': route,
-				'payment_hash': message.paymentHash.hex(),
-				'msatoshi': message.recipientCryptoAmount,
+				'payment_hash': newMessage.paymentHash.hex(),
+				'msatoshi': newMessage.recipientCryptoAmount,
 
 				'realm': 254, #TODO
 				'data': payload.encode().hex(),
 				})
-		elif (name, messageClass) == ('sendpay', messages.LNPay):
+		elif (name, messageClass) == ('sendpay', extendedLNPayMessage):
+			assert isinstance(message, extendedLNPayMessage) #mypy is stupid
+
 			#TODO: maybe check if sendpay was OK
 			self.sendStoredRequest(message, 'waitsendpay',
 				{
 				'payment_hash': message.paymentHash.hex(),
 				})
-		elif (name, messageClass) == ('waitsendpay', messages.LNPay):
+		elif (name, messageClass) == ('waitsendpay', extendedLNPayMessage):
+			assert isinstance(message, extendedLNPayMessage) #mypy is stupid
+
 			assert result['status'] == 'complete' #TODO: what else?
-			paymentPreimage = bytes.fromhex(result['payment_preimage'])
+			paymentPreimage = bytes.fromhex(result['payment_preimage']) #type: bytes
 			self.client.handleIncomingMessage(messages.LNPayResult(
 				localOrderID = message.localOrderID,
 
@@ -122,10 +154,12 @@ class RPCInterface(JSONRPC, messages.Handler):
 			raise Exception('RPCInterface made an error in storing requests')
 
 
-	def handleStoredRequestError(self, message, name, error):
-		messageClass = message.__class__
+	def handleStoredRequestError(self, message: messages.AnyMessage, name: str, error: int) -> None:
+		messageClass = message.__class__ #type: type
 
-		if (name, messageClass, error) == ('waitsendpay', messages.LNPay, 203):
+		if (name, messageClass, error) == ('waitsendpay', extendedLNPayMessage, 203):
+			assert isinstance(message, extendedLNPayMessage) #mypy is stupid
+
 			#Recipient refused the transaction
 			self.client.handleIncomingMessage(messages.LNPayResult(
 				localOrderID = message.localOrderID,

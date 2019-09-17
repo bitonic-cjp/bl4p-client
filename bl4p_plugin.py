@@ -77,7 +77,7 @@ class BL4PClient:
 
 		reader, writer = await asyncio.open_unix_connection(path=self.pluginInterface.RPCPath) #type: ignore #mypy bug: it doesn't know open_unix_connection
 		self.rpcInterface = rpc_interface.RPCInterface(self, reader, writer) #type: rpc_interface.RPCInterface
-		await self.rpcInterface.startup() #Gets our LN node ID
+		await self.rpcInterface.startupRPC() #Gets our LN node ID
 
 		self.bl4pInterface = bl4p_interface.BL4PInterface(self) #type: bl4p_interface.BL4PInterface
 		await self.bl4pInterface.startup('ws://localhost:8000/', '3', '3')
