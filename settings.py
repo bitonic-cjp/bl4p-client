@@ -16,9 +16,9 @@
 #    You should have received a copy of the GNU General Public License
 #    along with the BL4P Client. If not, see <http://www.gnu.org/licenses/>.
 
-cryptoName = 'btc'
-cryptoDivisor = 100000000000 #in mSatoshi
+cryptoName    = 'btc'        #type: str
+cryptoDivisor = 100000000000 #type: int #in mSatoshi
 
-fiatName = 'eur'
-fiatDivisor = 100000       #in mCent
+fiatName    = 'eur'  #type: str
+fiatDivisor = 100000 #type: int         #in mCent
 
