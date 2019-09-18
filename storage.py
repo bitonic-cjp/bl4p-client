@@ -16,6 +16,7 @@
 #    along with BL4P Client. If not, see <http://www.gnu.org/licenses/>.
 
 import sqlite3
+from typing import Any, Iterable, List
 
 from log import log
 
@@ -27,41 +28,45 @@ Cursor = sqlite3.Cursor
 
 class StoredObject:
 	@staticmethod
-	def createStoredObject(storage, tableName, **kwargs):
-		names = list(kwargs.keys())
-		values = [kwargs[k] for k in names]
-		questionMarks = ','.join(['?'] * len(kwargs))
+	def createStoredObject(storage: 'Storage', tableName: str, **kwargs) -> int:
+		names = list(kwargs.keys()) #type: List[str]
+		values = [kwargs[k] for k in names] #type: List[Any]
+		questionMarks = ','.join(['?'] * len(kwargs)) #type: str
 
 		names = ['`%s`' % n for n in names]
-		query = 'INSERT INTO %s (%s) VALUES (%s)' % (tableName, ','.join(names), questionMarks)
+		query = 'INSERT INTO %s (%s) VALUES (%s)' % (tableName, ','.join(names), questionMarks) #type: str
 
-		cursor = storage.execute(query, values)
-		ID = cursor.lastrowid
+		cursor = storage.execute(query, values) #type: Cursor
+		ID = cursor.lastrowid #type: int
 
 		return ID
 
 
-	def __init__(self, storage, tableName, ID):
-		self._storage = storage
-		self._tableName = tableName
-		query = 'SELECT * from %s WHERE `ID` = ?' % tableName
+	def __init__(self, storage: 'Storage', tableName: str, ID: int) -> None:
+		#This initialization is just to inform Mypy about data types.
+		#TODO: find a way to make sure storage.Storage respects these types
+		self.ID = None #type: int
 
-		cursor = self._storage.execute(query, (ID,))
-		values = cursor.fetchone()
-		names = [x[0] for x in cursor.description]
+		self._storage = storage #type: Storage
+		self._tableName = tableName #type: str
+		query = 'SELECT * from %s WHERE `ID` = ?' % tableName #type: str
+
+		cursor = self._storage.execute(query, (ID,)) #type: Cursor
+		values = cursor.fetchone() #type: Iterable[Any]
+		names = [x[0] for x in cursor.description] #type: List[Any]
 
 		for name, value in zip(names, values):
 			setattr(self, name, value)
 
 
-	def update(self, **kwargs):
-		names = list(kwargs.keys())
-		values = [kwargs[k] for k in names]
-		questionMarks = ','.join(['?'] * len(kwargs))
+	def update(self, **kwargs) -> None:
+		names = list(kwargs.keys()) #type: List[str]
+		values = [kwargs[k] for k in names] #type: List[Any]
+		questionMarks = ','.join(['?'] * len(kwargs)) #type: str
 
-		quotedNames = ['`%s`' % n for n in names]
+		quotedNames = ['`%s`' % n for n in names] #type: List[str]
 		query = 'UPDATE %s SET (%s) = (%s) WHERE `ID` = ?' % \
-			(self._tableName, ','.join(quotedNames), questionMarks)
+			(self._tableName, ','.join(quotedNames), questionMarks) #type: str
 
 		self._storage.execute(query, values + [self.ID])
 
@@ -70,25 +75,25 @@ class StoredObject:
 			setattr(self, name, value)
 
 
-	def delete(self):
-		query = 'DELETE FROM %s WHERE `ID` = ?' % self._tableName
-		cursor = self._storage.execute(query, (self.ID,))
+	def delete(self) -> None:
+		query = 'DELETE FROM %s WHERE `ID` = ?' % self._tableName #type: str
+		self._storage.execute(query, (self.ID,))
 
 
 
 class Storage:
-	def __init__(self, filename):
-		self.connection = sqlite3.connect(filename)
+	def __init__(self, filename: str) -> None:
+		self.connection = sqlite3.connect(filename) #type: sqlite3.Connection
 		self.execute('PRAGMA foreign_keys = ON')
 		self.makeTables()
 
 
-	def shutdown(self):
+	def shutdown(self) -> None:
 		self.connection.close()
 
 
-	def makeTables(self):
-		cursor = self.connection.cursor()
+	def makeTables(self) -> None:
+		cursor = self.connection.cursor() #type: Cursor
 		cursor.execute(
 			'CREATE TABLE IF NOT EXISTS `buyOrders` ('
 			'	`ID`        INTEGER,'
@@ -151,9 +156,9 @@ class Storage:
 		self.connection.commit()
 
 
-	def execute(self, query, values=[]):
+	def execute(self, query: str, values: Iterable[Any] = []) -> Cursor:
 		log('SQL query %s; values %s' % (query, values))
-		cursor = self.connection.cursor()
+		cursor = self.connection.cursor() #type: Cursor
 		cursor.execute(query, values)
 		self.connection.commit()
 		return cursor
@@ -161,11 +166,11 @@ class Storage:
 
 
 def main(): #pragma: nocover
-	s = Storage('node0.bl4p.db')
+	s = Storage('node0.bl4p.db') #type: Storage
 
-	ID = StoredObject.createStoredObject(s, 'buyOrders', amount=0)
+	ID = StoredObject.createStoredObject(s, 'buyOrders', amount=0) #type: int
 
-	so = StoredObject(s, 'buyOrders', ID)
+	so = StoredObject(s, 'buyOrders', ID) #type: StoredObject
 
 	so.update(limitRate=100)
 
