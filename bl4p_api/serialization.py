@@ -16,6 +16,7 @@
 #    along with the BL4P API. If not, see <http://www.gnu.org/licenses/>.
 
 import struct
+from typing import Any, Dict, Type
 
 from . import bl4p_pb2
 
@@ -44,23 +45,23 @@ bl4p_pb2.Msg_BL4P_RemoveOffer       : bl4p_pb2.BL4P_RemoveOffer,
 bl4p_pb2.Msg_BL4P_RemoveOfferResult : bl4p_pb2.BL4P_RemoveOfferResult,
 bl4p_pb2.Msg_BL4P_FindOffers        : bl4p_pb2.BL4P_FindOffers,
 bl4p_pb2.Msg_BL4P_FindOffersResult  : bl4p_pb2.BL4P_FindOffersResult,
-}
+} #type: Dict[int, Type]
 
-type2id = {v:k for k,v in id2type.items()}
-
-
-
-def serialize(obj):
-	typeID = type2id[obj.__class__]
-	typeID = struct.pack('<I', typeID) #32-bit little endian
-	serialized = obj.SerializeToString()
-	return typeID + serialized
+type2id = {v:k for k,v in id2type.items()} #type: Dict[Type, int]
 
 
-def deserialize(message):
-	typeID = struct.unpack('<I', message[:4])[0] #32-bit little endian
-	serialized = message[4:]
-	obj = id2type[typeID]()
+
+def serialize(obj: Any) -> bytes:
+	typeID = type2id[obj.__class__] #type: int
+	typeID_bytes = struct.pack('<I', typeID) #type: bytes #32-bit little endian
+	serialized = obj.SerializeToString() #type: bytes
+	return typeID_bytes + serialized
+
+
+def deserialize(message: bytes) -> Any:
+	typeID = struct.unpack('<I', message[:4])[0] #type: int #32-bit little endian
+	serialized = message[4:] #type: bytes
+	obj = id2type[typeID]() #type: Any
 	obj.ParseFromString(serialized)
 	return obj
 
