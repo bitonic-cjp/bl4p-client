@@ -17,6 +17,7 @@
 
 import asyncio
 import traceback
+from typing import Any, Callable, Dict, Optional
 import websockets
 
 from .offer import Offer
@@ -25,46 +26,53 @@ from .serialization import serialize, deserialize
 
 
 class Bl4pApi:
-	def __init__(self, log=lambda s:None):
-		self.log = log
-		self.lastRequestID = 0
+	def __init__(self, log: Callable[[str],None] = lambda s:None) -> None:
+		self.log = log #type: Callable[[str],None]
+		self.lastRequestID = 0 #type: int
+
+		self.handleResultOverride = None #type: Optional[Callable[[Any], None]]
 
 
-	async def startup(self, url, userid, password):
+	async def startup(self, url: str, userid: str, password: str) -> None:
 		header = \
 		{
 		'User-Agent': 'Python Bl4pApi',
 		'Authorization': userid + ':' + password,
-		}
+		} #type: Dict[str, str]
 		self.websocket = await websockets.connect(
-			url, extra_headers=header)
+			url, extra_headers=header) #type: websockets.WebSocketClientProtocol
 
-		self.sendQueue = asyncio.Queue()
-		self.receiveTask = asyncio.ensure_future(self.handleIncomingData())
-		self.sendTask    = asyncio.ensure_future(self.sendOutgoingData())
+		self.sendQueue = asyncio.Queue() #type: asyncio.Queue
+		self.receiveTask = None #type: asyncio.Future
+		self.sendTask    = None #type: asyncio.Future
+		self.receiveTask = asyncio.ensure_future(self.handleIncomingData()) #type: ignore #mypy has weird ideas about ensure_future
+		self.sendTask    = asyncio.ensure_future(self.sendOutgoingData()) #type: ignore #mypy has weird ideas about ensure_future
 
 
-	async def shutdown(self):
+	async def shutdown(self) -> None:
 		self.receiveTask.cancel()
 		self.sendTask.cancel()
 		await self.waitFinished()
 
 
-	async def waitFinished(self):
+	async def waitFinished(self) -> None:
 		await self.sendTask
 		await self.receiveTask
 
 
-	async def handleIncomingData(self):
+	async def handleIncomingData(self) -> None:
 		try:
 			try:
 				while True:
-					message = await self.websocket.recv()
+					message = await self.websocket.recv() #type: Optional[bytes]
 					if message is None:
 						break
-					result = deserialize(message)
+					result = deserialize(message) #type: Any
 					try:
-						self.handleResult(result)
+						if self.handleResultOverride is None:
+							self.handleResult(result)
+						else:
+							self.handleResultOverride(result)
 					except:
 						self.log(traceback.format_exc())
 			except asyncio.CancelledError:
@@ -77,11 +85,11 @@ class Bl4pApi:
 			self.log(traceback.format_exc())
 
 
-	async def sendOutgoingData(self):
+	async def sendOutgoingData(self) -> None:
 		try:
 			try:
 				while True:
-					message = await self.sendQueue.get()
+					message = await self.sendQueue.get() #type: bytes
 					await self.websocket.send(message)
 			except asyncio.CancelledError:
 				pass #We're cancelled, so just quit the function
@@ -91,11 +99,11 @@ class Bl4pApi:
 			self.log(traceback.format_exc())
 
 
-	def handleResult(self, result):
+	def handleResult(self, result: Any) -> None:
 		pass #To be overloaded in derived classes
 
 
-	def sendRequest(self, message):
+	def sendRequest(self, message: Any) -> int:
 		message.request = self.lastRequestID
 		self.lastRequestID += 1
 
@@ -104,22 +112,21 @@ class Bl4pApi:
 		return message.request
 
 
-	async def synCall(self, message):
-		callResult = asyncio.Future()
+	async def synCall(self, message: Any) -> Any:
+		callResult = asyncio.Future() #type: asyncio.Future
 
-		requestID = self.sendRequest(message)
+		requestID = self.sendRequest(message) #type: int
 
-		oldhandleResult = self.handleResult
 		try:
-			def newHandleResult(message):
+			def newHandleResult(message: Any) -> None:
 				assert message.request == requestID
 				callResult.set_result(message)
 
-			#Temporarily hack the handleResult method to get our data:
-			self.handleResult = newHandleResult
+			#Temporarily override the handleResult method to get our data:
+			self.handleResultOverride = newHandleResult
 
 			await callResult
 			return callResult.result()
 		finally:
-			self.handleResult = oldhandleResult
+			self.handleResultOverride = None
 
