@@ -15,18 +15,20 @@
 #    You should have received a copy of the GNU General Public License
 #    along with the BL4P API. If not, see <http://www.gnu.org/licenses/>.
 
+from typing import Dict, Optional, Tuple
+
 from . import offer_pb2
 
 
 
-CONDITION_NO_MIN = -(2**63)  #64-bit 2-complement signed
-CONDITION_NO_MAX = 2**63 - 1 #64-bit 2-complement signed
+CONDITION_NO_MIN = -(2**63)  #type: int #64-bit 2-complement signed
+CONDITION_NO_MAX = 2**63 - 1 #type: int #64-bit 2-complement signed
 
 Condition = offer_pb2.Offer.Condition
 
 
 
-def Asset(max_amount, max_amount_divisor, currency, exchange):
+def Asset(max_amount: int, max_amount_divisor: int, currency: str, exchange: str) -> offer_pb2.Offer.Asset:
 	ret = offer_pb2.Offer.Asset()
 	ret.max_amount = max_amount
 	ret.max_amount_divisor = max_amount_divisor
@@ -43,8 +45,8 @@ class MismatchError(Exception):
 
 class Offer:
 	@staticmethod
-	def fromPB2(pb2):
-		ret = Offer(pb2.bid, pb2.ask, pb2.address, pb2.ID)
+	def fromPB2(pb2: offer_pb2.Offer) -> 'Offer':
+		ret = Offer(pb2.bid, pb2.ask, pb2.address, pb2.ID) #type: Offer
 
 		for condition in pb2.conditions:
 			ret.conditions[condition.key] = \
@@ -54,18 +56,18 @@ class Offer:
 
 
 	def __init__(self,
-			bid, ask,
-			address,
-			ID,
-			cltv_expiry_delta = None, #None or (min, max)
-			sender_timeout = None,    #None or (min, max), milliseconds
-			locked_timeout = None,    #None or (min, max), seconds
-			):
-		self.bid = bid
-		self.ask = ask
-		self.address = address
-		self.ID = ID
-		self.conditions = {}
+			bid: offer_pb2.Offer.Asset, ask: offer_pb2.Offer.Asset,
+			address: str,
+			ID: int,
+			cltv_expiry_delta = None, #Optional[Tuple[int, int]] #None or (min, max)
+			sender_timeout = None,    #Optional[Tuple[int, int]] #None or (min, max), milliseconds
+			locked_timeout = None,    #Optional[Tuple[int, int]] #None or (min, max), seconds
+			) -> None:
+		self.bid = bid #type: offer_pb2.Offer.Asset
+		self.ask = ask #type: offer_pb2.Offer.Asset
+		self.address = address #type: str
+		self.ID = ID #type: int
+		self.conditions = {} #type: Dict[int, Tuple[int, int]]
 		if cltv_expiry_delta is not None:
 			self.conditions[Condition.CLTV_EXPIRY_DELTA] = cltv_expiry_delta
 		if sender_timeout is not None:
@@ -74,11 +76,11 @@ class Offer:
 			self.conditions[Condition.LOCKED_TIMEOUT] = locked_timeout
 
 
-	def __eq__(self, other):
+	def __eq__(self, other: object) -> bool:
 		return self.__dict__ == other.__dict__
 
 
-	def __str__(self):
+	def __str__(self) -> str:
 		return 'Offer %d: bidding %f %s on %s, asking %f %s on %s' % \
 			(
 			self.ID,
@@ -87,22 +89,22 @@ class Offer:
 			)
 
 
-	def getConditionMin(self, condition):
+	def getConditionMin(self, condition: int) -> int:
 		try:
 			return self.conditions[condition][0]
 		except KeyError:
 			return CONDITION_NO_MIN
 
 
-	def getConditionMax(self, condition):
+	def getConditionMax(self, condition: int) -> int:
 		try:
 			return self.conditions[condition][1]
 		except KeyError:
 			return CONDITION_NO_MAX
 
 
-	def toPB2(self):
-		ret = offer_pb2.Offer()
+	def toPB2(self) -> offer_pb2.Offer:
+		ret = offer_pb2.Offer() #type: offer_pb2.Offer
 		ret.bid.CopyFrom(self.bid)
 		ret.ask.CopyFrom(self.ask)
 		ret.address = self.address
