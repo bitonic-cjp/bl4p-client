@@ -82,6 +82,8 @@ enum MessageType {
     Msg_BL4P_ReceiveResult     = 0x1007;
     Msg_BL4P_GetStatus         = 0x1008;
     Msg_BL4P_GetStatusResult   = 0x1009;
+    Msg_BL4P_SelfReport        = 0x110A;
+    Msg_BL4P_SelfReportResult  = 0x110B;
 
     Msg_BL4P_AddOffer          = 0x1100;
     Msg_BL4P_AddOfferResult    = 0x1101;
@@ -93,32 +95,46 @@ enum MessageType {
     Msg_BL4P_FindOffersResult  = 0x1107;
 };
 
-// TODO: ditch the underscore, and find a better alternative to solve scoping issue.
 enum ErrorReason {
-    _MalformedRequest = 0;
-
-    _NoSuchEngine = 1;
-    _NoSuchOrder = 2;
-    _InvalidAccount = 3;
-    _InvalidFilter = 4;
-    _InvalidPair = 5;
-    _InvalidSide = 6;
-
-    _BalanceInsufficient = 7;
-    _InvalidAmount = 8;
-    _RequestTimeout = 9;
-    _RequestQueueFull = 10;
-    _Unauthorized = 11;
-    _Unknown = 12;
+    Err_MalformedRequest = 0;
+    Err_NoSuchEngine = 1;
+    Err_NoSuchOrder = 2;
+    Err_InvalidAsset = 3;
+    Err_InvalidAccount = 4;
+    Err_InvalidFilter = 5;
+    Err_InvalidPair = 6;
+    Err_InvalidSide = 7;
+    Err_InvalidLimit = 8;
+    Err_BalanceInsufficient = 9;
+    Err_InvalidAmount = 10;
+    Err_RequestTimeout = 11;
+    Err_RequestQueueFull = 12;
+    Err_Unauthorized = 13;
+    Err_VolumeNotPositive = 14;
+    Err_BackendUnavailable = 15;
+    Err_MarketOrderWouldNotMatch = 16;
+    Err_OrderWouldSelfTrade = 17;
+    Err_RateLimitExceeded = 18;
+    Err_PriceTooHigh = 19;
+    Err_PriceNotPositive = 20;
+    Err_FundsTooHigh = 21;
+    Err_FundsNotPositive = 22;
+    Err_VolumeTooHigh = 23;
+    Err_InstructionNotPickedUp = 24;
+    Err_PriceMissing = 25;
+    Err_MissingVolumeOrFunds = 26;
+    Err_TooManyExecutions = 27;
+    Err_Unknown = 28;
 }
 
 enum BL4P_TransactionStatus {
-    _waiting_for_sender = 0;
-    _waiting_for_receiver = 1;
-    _sender_timeout = 2;
-    _receiver_timeout = 3;
-    _completed = 4;
-    _canceled = 5;
+    _waiting_for_selfreport = 0;
+    _waiting_for_sender = 1;
+    _waiting_for_receiver = 2;
+    _sender_timeout = 3;
+    _receiver_timeout = 4;
+    _completed = 5;
+    _canceled = 6;
 }
 
 message BL4P_Amount {
@@ -149,6 +165,24 @@ message BL4P_StartResult {
     BL4P_CryptoData payment_hash = 4;
 }
 
+message BL4P_SelfReportContents {
+    message pair {
+        string name = 1;
+        string value = 2;
+    }
+    repeated pair items = 1;
+}
+
+message BL4P_SelfReport {
+    uint64 request = 1;
+    bytes report = 2; //serialized BL4P_SelfReportContents
+    bytes signature = 3;
+}
+
+message BL4P_SelfReportResult {
+    uint64 request = 1;
+}
+
 message BL4P_CancelStart {
     uint64 request = 1;
     BL4P_CryptoData payment_hash = 2;
@@ -163,6 +197,9 @@ message BL4P_Send {
     BL4P_Amount sender_amount = 2;
     BL4P_CryptoData payment_hash = 3;
     uint32 max_locked_timeout_delta_s = 4;
+
+    bytes report = 5; //serialized BL4P_SelfReportContents
+    bytes signature = 6;
 }
 
 message BL4P_SendResult {

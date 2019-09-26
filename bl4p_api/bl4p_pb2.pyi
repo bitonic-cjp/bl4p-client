@@ -8,6 +8,8 @@ Msg_Error                 = ... #type: int
 
 Msg_BL4P_Start            = ... #type: int
 Msg_BL4P_StartResult      = ... #type: int
+Msg_BL4P_SelfReport       = ... #type: int
+Msg_BL4P_SelfReportResult = ... #type: int
 Msg_BL4P_CancelStart      = ... #type: int
 Msg_BL4P_CancelStartResult= ... #type: int
 Msg_BL4P_Send             = ... #type: int
@@ -48,6 +50,13 @@ class BL4P_StartResult:
 	sender_amount   = None #type: BL4P_Amount
 	receiver_amount = None #type: BL4P_Amount
 	payment_hash    = None #type: BL4P_CryptoData
+
+class BL4P_SelfReport:
+	report    = b'' #type: bytes
+	signature = b'' #type: bytes
+
+class BL4P_SelfReportResult:
+	pass
 
 class BL4P_CancelStart:
 	payment_hash = None #type: BL4P_CryptoData
