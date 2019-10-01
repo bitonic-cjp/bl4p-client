@@ -25,6 +25,7 @@ from utils import asynciotest
 sys.path.append('..')
 
 from bl4p_api import bl4p_pb2
+from bl4p_api import selfreport
 from bl4p_api.offer import Offer, Asset
 from bl4p_api.serialization import serialize
 
@@ -46,6 +47,7 @@ class TestBL4PInterface(unittest.TestCase):
 		self.assertEqual(self.interface.handlerMethods,
 			{
 			messages.BL4PStart      : self.interface.sendStart,
+			messages.BL4PSelfReport : self.interface.sendSelfReport,
 			messages.BL4PCancelStart: self.interface.sendCancelStart,
 			messages.BL4PSend       : self.interface.sendSend,
 			messages.BL4PReceive    : self.interface.sendReceive,
@@ -117,6 +119,17 @@ class TestBL4PInterface(unittest.TestCase):
 		self.doSingleSendTest(msgIn, expectedMsgOut)
 
 
+	def test_sendSelfReport(self):
+		msgIn = messages.BL4PSelfReport(
+			localOrderID = 0,
+			selfReport = {'foo': 'bar'},
+			)
+		expectedMsgOut = bl4p_pb2.BL4P_SelfReport()
+		expectedMsgOut.report = selfreport.serialize({'foo': 'bar'})
+		expectedMsgOut.signature = b'Dummy Signature' #TODO
+		self.doSingleSendTest(msgIn, expectedMsgOut)
+
+
 	def test_sendCancelStart(self):
 		msgIn = messages.BL4PCancelStart(
 			localOrderID = 0,
@@ -133,11 +146,14 @@ class TestBL4PInterface(unittest.TestCase):
 			amount = 1234,
 			paymentHash = b'foobar',
 			max_locked_timeout_delta_s = 5000,
+			selfReport = {'foo': 'bar'},
 			)
 		expectedMsgOut = bl4p_pb2.BL4P_Send()
 		expectedMsgOut.sender_amount.amount = 1234
 		expectedMsgOut.payment_hash.data = b'foobar'
 		expectedMsgOut.max_locked_timeout_delta_s = 5000
+		expectedMsgOut.report = selfreport.serialize({'foo': 'bar'})
+		expectedMsgOut.signature = b'Dummy Signature' #TODO
 		self.doSingleSendTest(msgIn, expectedMsgOut)
 
 
@@ -219,6 +235,14 @@ class TestBL4PInterface(unittest.TestCase):
 		self.assertEqual(msg.senderAmount, 1234)
 		self.assertEqual(msg.receiverAmount, 1230)
 		self.assertEqual(msg.paymentHash, b'foobar')
+
+		msg = bl4p_pb2.BL4P_SelfReportResult()
+		msg = testSingleMessage(msg)
+		self.assertTrue(isinstance(msg, messages.BL4PSelfReportResult))
+
+		msg = bl4p_pb2.BL4P_CancelStartResult()
+		msg = testSingleMessage(msg)
+		self.assertTrue(isinstance(msg, messages.BL4PCancelStartResult))
 
 		msg = bl4p_pb2.BL4P_SendResult()
 		msg.payment_preimage.data = b'foobar'

@@ -42,6 +42,7 @@ class Backend(messages.Handler):
 			messages.ListCommand: self.handleListCommand,
 
 			messages.BL4PStartResult      : self.handleBL4PResult,
+			messages.BL4PSelfReportResult : self.handleBL4PResult,
 			messages.BL4PCancelStartResult: self.handleBL4PResult,
 			messages.BL4PSendResult       : self.handleBL4PResult,
 			messages.BL4PReceiveResult    : self.handleBL4PResult,

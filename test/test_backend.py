@@ -64,6 +64,7 @@ class TestBackend(unittest.TestCase):
 			messages.ListCommand: self.backend.handleListCommand,
 
 			messages.BL4PStartResult      : self.backend.handleBL4PResult,
+			messages.BL4PSelfReportResult : self.backend.handleBL4PResult,
 			messages.BL4PCancelStartResult: self.backend.handleBL4PResult,
 			messages.BL4PSendResult       : self.backend.handleBL4PResult,
 			messages.BL4PReceiveResult    : self.backend.handleBL4PResult,

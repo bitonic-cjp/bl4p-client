@@ -21,6 +21,7 @@ from typing import Any, Dict, TYPE_CHECKING
 from bl4p_api import bl4p_pb2
 from bl4p_api import asynclient as bl4p
 from bl4p_api import offer
+from bl4p_api import selfreport
 
 if TYPE_CHECKING:
 	import bl4p_plugin
@@ -35,6 +36,7 @@ class BL4PInterface(bl4p.Bl4pApi, messages.Handler):
 		bl4p.Bl4pApi.__init__(self, log=log)
 		messages.Handler.__init__(self, {
 			messages.BL4PStart      : self.sendStart,
+			messages.BL4PSelfReport : self.sendSelfReport,
 			messages.BL4PCancelStart: self.sendCancelStart,
 			messages.BL4PSend       : self.sendSend,
 			messages.BL4PReceive    : self.sendReceive,
@@ -72,6 +74,17 @@ class BL4PInterface(bl4p.Bl4pApi, messages.Handler):
 		self.activeRequests[requestID] = message
 
 
+	def sendSelfReport(self, message: messages.BL4PSelfReport) -> None:
+		serializedReport = selfreport.serialize(message.selfReport) #type: bytes
+		signature = b'Dummy Signature' #TODO #type: bytes
+
+		request = bl4p_pb2.BL4P_SelfReport() #type: bl4p_pb2.BL4P_SelfReport
+		request.report = serializedReport
+		request.signature = signature
+		requestID = self.sendRequest(request) #type: int
+		self.activeRequests[requestID] = message
+
+
 	def sendCancelStart(self, message: messages.BL4PCancelStart) -> None:
 		request = bl4p_pb2.BL4P_CancelStart() #type: bl4p_pb2.BL4P_CancelStart
 		request.payment_hash.data = message.paymentHash
@@ -80,10 +93,15 @@ class BL4PInterface(bl4p.Bl4pApi, messages.Handler):
 
 
 	def sendSend(self, message: messages.BL4PSend) -> None:
+		serializedReport = selfreport.serialize(message.selfReport) #type: bytes
+		signature = b'Dummy Signature' #TODO #type: bytes
+
 		request = bl4p_pb2.BL4P_Send() #type: bl4p_pb2.BL4P_Send
 		request.sender_amount.amount = message.amount
 		request.payment_hash.data = message.paymentHash
 		request.max_locked_timeout_delta_s = message.max_locked_timeout_delta_s
+		request.report = serializedReport
+		request.signature = signature
 		requestID = self.sendRequest(request) #type: int
 		self.activeRequests[requestID] = message
 
@@ -128,6 +146,10 @@ class BL4PInterface(bl4p.Bl4pApi, messages.Handler):
 				senderAmount = result.sender_amount.amount,
 				receiverAmount = result.receiver_amount.amount,
 				paymentHash = result.payment_hash.data
+				)
+		elif isinstance(result, bl4p_pb2.BL4P_SelfReportResult):
+			message = messages.BL4PSelfReportResult(
+				request = request,
 				)
 		elif isinstance(result, bl4p_pb2.BL4P_CancelStartResult):
 			message = messages.BL4PCancelStartResult(

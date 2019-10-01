@@ -61,18 +61,19 @@ sha256 = lambda preimage: hashlib.sha256(preimage).digest()
 State transitions:
 
 Seller market taker:
-initial -> locked -> received_preimage -> finished
-                  -> canceled
+initial -> started -> locked -> received_preimage -> finished
+                   -> canceled
 
 Buyer market maker:
 initial -> finished
         -> canceled
 '''
 STATUS_INITIAL           = 0 #type: int
-STATUS_LOCKED            = 1 #type: int
-STATUS_RECEIVED_PREIMAGE = 2 #type: int
-STATUS_FINISHED          = 3 #type: int
-STATUS_CANCELED          = 4 #type: int
+STATUS_STARTED           = 1 #type: int
+STATUS_LOCKED            = 2 #type: int
+STATUS_RECEIVED_PREIMAGE = 3 #type: int
+STATUS_FINISHED          = 4 #type: int
+STATUS_CANCELED          = 5 #type: int
 
 
 
@@ -336,15 +337,15 @@ class OrderTask:
 		storedCounterOffer = CounterOffer(self.storage, self.transaction.counterOffer) #type: CounterOffer
 		self.counterOffer = storedCounterOffer.counterOffer
 
-		if self.transaction.status == STATUS_INITIAL:
-			await self.startTransactionOnBL4P()
-		elif self.transaction.status == STATUS_LOCKED:
-			await self.doTransactionOnLightning()
-		elif self.transaction.status == STATUS_RECEIVED_PREIMAGE:
-			await self.receiveFiatFunds()
-		else:
-			#TODO: properly report database inconsistency error
-			raise Exception('Invalid transaction status value in unfinished transaction')
+		#TODO: properly report database inconsistency error in case of KeyError
+		method = \
+		{
+		STATUS_INITIAL          : self.startTransactionOnBL4P,
+		STATUS_STARTED          : self.doSelfReportingOnBL4P,
+		STATUS_LOCKED           : self.doTransactionOnLightning,
+		STATUS_RECEIVED_PREIMAGE: self.receiveFiatFunds,
+		}[self.transaction.status]
+		await method()
 
 
 	async def doTransaction(self) -> None:
@@ -446,6 +447,24 @@ class OrderTask:
 		self.transaction.update(
 			receiverFiatAmount = startResult.receiverAmount,
 			paymentHash = startResult.paymentHash,
+			status = STATUS_STARTED,
+			)
+
+		await self.doSelfReportingOnBL4P()
+
+
+	async def doSelfReportingOnBL4P(self) -> None:
+		assert isinstance(self.order, SellOrder)
+		assert isinstance(self.transaction, SellTransaction)
+
+		await self.call(messages.BL4PSelfReport(
+			localOrderID = self.order.ID,
+
+			selfReport = {}, #TODO
+			),
+			messages.BL4PSelfReportResult)
+
+		self.transaction.update(
 			status = STATUS_LOCKED,
 			)
 
@@ -635,6 +654,7 @@ class OrderTask:
 					amount                     = self.transaction.fiatAmount,
 					paymentHash                = self.transaction.paymentHash,
 					max_locked_timeout_delta_s = self.order.getConditionMax(offer.Condition.LOCKED_TIMEOUT),
+					selfReport                 = {}, #TODO
 					),
 					messages.BL4PSendResult)
 				) #type: messages.BL4PSendResult

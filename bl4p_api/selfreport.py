@@ -15,21 +15,23 @@
 #    You should have received a copy of the GNU General Public License
 #    along with the BL4P API. If not, see <http://www.gnu.org/licenses/>.
 
+from typing import Dict
+
 from . import bl4p_pb2
 
 
 
-def deserialize(b):
-	pb2 = bl4p_pb2.BL4P_SelfReportContents()
+def deserialize(b: bytes) -> Dict[str, str]:
+	pb2 = bl4p_pb2.BL4P_SelfReportContents() #type: bl4p_pb2.BL4P_SelfReportContents
 	pb2.ParseFromString(b)
-	ret = {}
+	ret = {} #type: Dict[str, str]
 	for item in pb2.items:
 		ret[item.name] = item.value
 	return ret
 
 
-def serialize(d):
-	pb2 = bl4p_pb2.BL4P_SelfReportContents()
+def serialize(d: Dict[str, str]) -> bytes:
+	pb2 = bl4p_pb2.BL4P_SelfReportContents() #type: bl4p_pb2.BL4P_SelfReportContents
 	for k,v in d.items():
 		item = pb2.items.add()
 		item.name = k

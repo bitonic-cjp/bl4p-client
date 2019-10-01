@@ -245,6 +245,7 @@ class TestOrderTask(unittest.TestCase):
 				amount=txAmount,
 				paymentHash=paymentHash,
 				max_locked_timeout_delta_s = 3600*24*14,
+				selfReport = {}, #TODO
 				))
 			task.setCallResult(messages.BL4PSendResult(
 				request=None,
@@ -364,6 +365,7 @@ class TestOrderTask(unittest.TestCase):
 			amount = 100000000,
 			paymentHash = b'foo',
 			max_locked_timeout_delta_s = 3600*24*14,
+			selfReport = {}, #TODO
 			))
 
 		await task.shutdown()
@@ -416,6 +418,7 @@ class TestOrderTask(unittest.TestCase):
 			amount = 100000000,
 			paymentHash = b'foo',
 			max_locked_timeout_delta_s = 3600*24*14,
+			selfReport = {}, #TODO
 			))
 		task.setCallResult(messages.BL4PError(
 			request = None,
@@ -580,7 +583,37 @@ class TestOrderTask(unittest.TestCase):
 				'ID': 44,
 				'sellOrder': 42,
 				'counterOffer': 43,
-				'status': 1,
+				'status': ordertask.STATUS_STARTED,
+				'senderTimeoutDelta': 100,
+				'lockedTimeoutDelta': 53,
+				'CLTVExpiryDelta':    23,
+				'maxSenderCryptoAmount': maxSenderCryptoAmount,
+				'senderCryptoAmount': None,
+				'receiverCryptoAmount': receiverCryptoAmount,
+				'senderFiatAmount': senderFiatAmount,
+				'receiverFiatAmount': receiverFiatAmount,
+				'paymentHash': paymentHash,
+				'paymentPreimage': None,
+				}})
+
+			#Self-reporting on BL4P
+			self.assertEqual(msg, messages.BL4PSelfReport(
+				localOrderID=42,
+
+				selfReport={}, #TODO
+				))
+			task.setCallResult(messages.BL4PSelfReportResult(
+				request=None,
+				))
+
+			msg = await self.outgoingMessages.get()
+
+			self.assertEqual(self.storage.sellTransactions, {44:
+				{
+				'ID': 44,
+				'sellOrder': 42,
+				'counterOffer': 43,
+				'status': ordertask.STATUS_LOCKED,
 				'senderTimeoutDelta': 100,
 				'lockedTimeoutDelta': 53,
 				'CLTVExpiryDelta':    23,
@@ -619,7 +652,7 @@ class TestOrderTask(unittest.TestCase):
 				'ID': 44,
 				'sellOrder': 42,
 				'counterOffer': 43,
-				'status': 2,
+				'status': ordertask.STATUS_RECEIVED_PREIMAGE,
 				'senderTimeoutDelta': 100,
 				'lockedTimeoutDelta': 53,
 				'CLTVExpiryDelta':    23,
@@ -653,7 +686,7 @@ class TestOrderTask(unittest.TestCase):
 				'ID': 44,
 				'sellOrder': 42,
 				'counterOffer': 43,
-				'status': 3,
+				'status': ordertask.STATUS_FINISHED,
 				'senderTimeoutDelta': 100,
 				'lockedTimeoutDelta': 53,
 				'CLTVExpiryDelta':    23,
@@ -697,7 +730,7 @@ class TestOrderTask(unittest.TestCase):
 		#status -> message:
 		expectedMessages = \
 		{
-		0: messages.BL4PStart(
+		ordertask.STATUS_INITIAL: messages.BL4PStart(
 				localOrderID=42,
 
 				amount = 1200,
@@ -705,7 +738,12 @@ class TestOrderTask(unittest.TestCase):
 				locked_timeout_delta_s = 56,
 				receiver_pays_fee = True,
 				),
-		1: messages.LNPay(
+		ordertask.STATUS_STARTED: messages.BL4PSelfReport(
+				localOrderID=42,
+
+				selfReport = {}, #TODO
+				),
+		ordertask.STATUS_LOCKED: messages.LNPay(
 				localOrderID=42,
 
 		                destinationNodeID     = 'buyerAddress',
@@ -719,7 +757,7 @@ class TestOrderTask(unittest.TestCase):
 
 		                paymentHash           = b'foo',
 				),
-		2: messages.BL4PReceive(
+		ordertask.STATUS_RECEIVED_PREIMAGE: messages.BL4PReceive(
 				localOrderID=42,
 
 				paymentPreimage = b'bar',
@@ -804,7 +842,7 @@ class TestOrderTask(unittest.TestCase):
 			'ID': 41,
 			'sellOrder': orderID,
 			'counterOffer': 40,
-			'status': 1,
+			'status': ordertask.STATUS_LOCKED,
 
 			'senderFiatAmount': 1200,
 			'receiverCryptoAmount': 10000,
@@ -864,7 +902,7 @@ class TestOrderTask(unittest.TestCase):
 			'ID': 41,
 			'sellOrder': orderID,
 			'counterOffer': 40,
-			'status': 4,
+			'status': ordertask.STATUS_CANCELED,
 			'senderTimeoutDelta': 34,
 			'lockedTimeoutDelta': 56,
 			'CLTVExpiryDelta':    78,

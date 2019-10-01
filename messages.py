@@ -58,6 +58,10 @@ class BL4PStart(BL4PRequest):
 	receiver_pays_fee       = True #type: bool
 
 
+class BL4PSelfReport(BL4PRequest):
+	selfReport = {} #type: Dict[str, str]
+
+
 class BL4PCancelStart(BL4PRequest):
 	paymentHash = b'' #type: bytes
 
@@ -66,6 +70,7 @@ class BL4PSend(BL4PRequest):
 	amount                     = 0    #type: int
 	paymentHash                = b''  #type: bytes
 	max_locked_timeout_delta_s = 0    #type: int
+	selfReport                 = {}   #type: Dict[str, str]
 
 
 class BL4PReceive(BL4PRequest):
@@ -92,6 +97,10 @@ class BL4PStartResult(BL4PResult):
 	senderAmount   = 0   #type: int
 	receiverAmount = 0   #type: int
 	paymentHash    = b'' #type: bytes
+
+
+class BL4PSelfReportResult(BL4PResult):
+	pass
 
 
 class BL4PCancelStartResult(BL4PResult):
@@ -180,6 +189,7 @@ AnyMessageHandler = Union[
 	Callable[[ListCommand], None],
 	Callable[[PluginCommandResult], None],
 	Callable[[BL4PStart], None],
+	Callable[[BL4PSelfReport], None],
 	Callable[[BL4PCancelStart], None],
 	Callable[[BL4PSend], None],
 	Callable[[BL4PReceive], None],
