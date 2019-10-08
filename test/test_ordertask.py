@@ -245,7 +245,13 @@ class TestOrderTask(unittest.TestCase):
 				amount=txAmount,
 				paymentHash=paymentHash,
 				max_locked_timeout_delta_s = 3600*24*14,
-				selfReport = {}, #TODO
+				selfReport = \
+					{
+					'paymentHash'         : paymentHash.hex(),
+					'offerID'             : str(orderID),
+					'receiverCryptoAmount': '1000.00000000000',
+					'cryptoCurrency'      : 'btc',
+					},
 				))
 			task.setCallResult(messages.BL4PSendResult(
 				request=None,
@@ -350,6 +356,7 @@ class TestOrderTask(unittest.TestCase):
 			'status': 0,
 
 			'fiatAmount': 100000000,
+			'cryptoAmount': 200000000,
 
 			'paymentHash': b'foo',
 			}
@@ -365,7 +372,13 @@ class TestOrderTask(unittest.TestCase):
 			amount = 100000000,
 			paymentHash = b'foo',
 			max_locked_timeout_delta_s = 3600*24*14,
-			selfReport = {}, #TODO
+			selfReport = \
+				{
+				'paymentHash'         : '666f6f', #foo in hex
+				'offerID'             : str(orderID),
+				'receiverCryptoAmount': '0.00200000000',
+				'cryptoCurrency'      : 'btc',
+				},
 			))
 
 		await task.shutdown()
@@ -404,6 +417,7 @@ class TestOrderTask(unittest.TestCase):
 			'buyOrder': orderID,
 			'status': 0,
 			'fiatAmount': 100000000,
+			'cryptoAmount': 200000000,
 			'paymentHash': b'foo',
 			}
 		}
@@ -418,7 +432,13 @@ class TestOrderTask(unittest.TestCase):
 			amount = 100000000,
 			paymentHash = b'foo',
 			max_locked_timeout_delta_s = 3600*24*14,
-			selfReport = {}, #TODO
+			selfReport = \
+				{
+				'paymentHash'         : '666f6f', #foo in hex
+				'offerID'             : str(orderID),
+				'receiverCryptoAmount': '0.00200000000',
+				'cryptoCurrency'      : 'btc',
+				},
 			))
 		task.setCallResult(messages.BL4PError(
 			request = None,
@@ -436,6 +456,7 @@ class TestOrderTask(unittest.TestCase):
 			'status': ordertask.STATUS_CANCELED,
 			'buyOrder': orderID,
 			'fiatAmount': 100000000,
+			'cryptoAmount': 200000000,
 			'paymentHash': b'foo',
 			}})
 		self.assertEqual(task.transaction, None)
@@ -506,6 +527,11 @@ class TestOrderTask(unittest.TestCase):
 			[
 			100000000000001, #1000 BTC
 			21280000500001,  #212.8 BTC = 425.6 BTC * buyer limit rate
+			][i]
+			receiverCryptoAmount_str = \
+			[
+			'1000.00000000001',
+			'212.80000500001',
 			][i]
 			senderFiatAmount = \
 			[
@@ -600,7 +626,13 @@ class TestOrderTask(unittest.TestCase):
 			self.assertEqual(msg, messages.BL4PSelfReport(
 				localOrderID=42,
 
-				selfReport={}, #TODO
+				selfReport=\
+					{
+					'paymentHash'         : paymentHash.hex(),
+					'offerID'             : str(o1.ID),
+					'receiverCryptoAmount': receiverCryptoAmount_str,
+					'cryptoCurrency'      : 'btc',
+					},
 				))
 			task.setCallResult(messages.BL4PSelfReportResult(
 				request=None,
@@ -741,7 +773,13 @@ class TestOrderTask(unittest.TestCase):
 		ordertask.STATUS_STARTED: messages.BL4PSelfReport(
 				localOrderID=42,
 
-				selfReport = {}, #TODO
+				selfReport = \
+					{
+					'paymentHash'         : '666f6f', #foo in hex
+					'offerID'             : '43',
+					'receiverCryptoAmount': '0.00000010000',
+					'cryptoCurrency'      : 'btc',
+					},
 				),
 		ordertask.STATUS_LOCKED: messages.LNPay(
 				localOrderID=42,

@@ -19,7 +19,7 @@
 import asyncio
 import copy
 import hashlib
-from typing import TYPE_CHECKING, cast, List, Optional, Type, Union
+from typing import TYPE_CHECKING, cast, Awaitable, Callable, List, Optional, Type, Union
 
 from bl4p_api import offer
 from bl4p_api import offer_pb2
@@ -53,6 +53,17 @@ def getMaxConditionValue(offer1: offer.Offer, offer2: offer.Offer, condition: in
 
 
 sha256 = lambda preimage: hashlib.sha256(preimage).digest()
+
+
+def formatCryptoAmount(amount: int) -> str:
+	#We could use decimal.Decimal, but it gives scientific notation for very small values.
+	#Instead, do this:
+	divisor = settings.cryptoDivisor #type: int
+	divWidth = len(str(divisor)) #type: int
+	return '{integer}.{fraction:0{width}d}'.format(
+		integer = amount // divisor,
+		fraction = amount % divisor,
+		width = divWidth-1)
 
 
 
@@ -344,7 +355,7 @@ class OrderTask:
 		STATUS_STARTED          : self.doSelfReportingOnBL4P,
 		STATUS_LOCKED           : self.doTransactionOnLightning,
 		STATUS_RECEIVED_PREIMAGE: self.receiveFiatFunds,
-		}[self.transaction.status]
+		}[self.transaction.status] #type: Callable[[], Awaitable[None]]
 		await method()
 
 
@@ -460,7 +471,13 @@ class OrderTask:
 		await self.call(messages.BL4PSelfReport(
 			localOrderID = self.order.ID,
 
-			selfReport = {}, #TODO
+			selfReport = \
+				{
+		                'paymentHash'         : self.transaction.paymentHash.hex(),
+		                'offerID'             : str(self.counterOffer.ID),
+		                'receiverCryptoAmount': formatCryptoAmount(self.transaction.receiverCryptoAmount),
+		                'cryptoCurrency'      : self.order.bid.currency,
+				},
 			),
 			messages.BL4PSelfReportResult)
 
@@ -654,7 +671,13 @@ class OrderTask:
 					amount                     = self.transaction.fiatAmount,
 					paymentHash                = self.transaction.paymentHash,
 					max_locked_timeout_delta_s = self.order.getConditionMax(offer.Condition.LOCKED_TIMEOUT),
-					selfReport                 = {}, #TODO
+					selfReport                 = \
+						{
+						'paymentHash'         : self.transaction.paymentHash.hex(),
+						'offerID'             : str(self.order.ID),
+						'receiverCryptoAmount': formatCryptoAmount(self.transaction.cryptoAmount),
+						'cryptoCurrency'      : self.order.ask.currency,
+						},
 					),
 					messages.BL4PSendResult)
 				) #type: messages.BL4PSendResult
