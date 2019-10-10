@@ -70,7 +70,7 @@ class Order(offer.Offer, StoredObject):
 
 		self.remoteOfferID = None #type: Optional[int]
 
-		self.perTxMaxAmount = self.amount #type: int #TODO
+		self.perTxMaxAmount = self.amount #type: int #TODO (bug 18)
 		self.limitRateInverted = limitRateInverted #type: int
 		self.updateOfferMaxAmounts()
 
@@ -188,7 +188,8 @@ class SellOrder(Order):
 			sender_timeout = (100, 10000), #milliseconds
 
 			#We require a minimum lock timeout for incoming funds
-			#TODO: We MUST NEVER make Lightning routes with a longer time than the lock timeout
+			#TODO (bug 6): We MUST NEVER make Lightning routes with
+			#a longer time than the lock timeout
 			locked_timeout = (3600*24, offer.CONDITION_NO_MAX),
 			)
 

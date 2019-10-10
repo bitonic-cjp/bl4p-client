@@ -295,9 +295,9 @@ class OrderTask:
 			if queryResult.offers: #found a matching offer
 				log('Found offers - starting a transaction')
 				#TODO: filter on sensibility (e.g. max >= min for all conditions)
-				#TODO: check if offers actually match
-				#TODO: filter counterOffers on acceptability
-				#TODO: sort counterOffers (e.g. on exchange rate)
+				#TODO (bug 1): check if offers actually match
+				#TODO (bug 8): filter counterOffers on acceptability
+				#TODO (bug 8): sort counterOffers (e.g. on exchange rate)
 
 				#Start trade on the first in the list
 				self.counterOffer = queryResult.offers[0]
@@ -360,7 +360,7 @@ class OrderTask:
 
 
 	async def doTransaction(self) -> None:
-		assert isinstance(self.order, SellOrder) #TODO: enable buyer-initiated trade once supported
+		assert isinstance(self.order, SellOrder) #TODO (bug 13): enable buyer-initiated trade once supported
 
 		log('Doing trade for local order ID' + str(self.order.ID))
 		log('  local order: ' + str(self.order))
@@ -414,7 +414,7 @@ class OrderTask:
 			offer.Condition.CLTV_EXPIRY_DELTA
 			) #type: int
 
-		#TODO: check if it's already in the database
+		#TODO (bug 10): check if it's already in the database
 		counterOfferID = CounterOffer.create(self.storage, self.counterOffer) #type: int
 
 		sellTransactionID = SellTransaction.create(self.storage,
@@ -453,7 +453,7 @@ class OrderTask:
 			) #type: messages.BL4PStartResult
 
 		assert startResult.senderAmount == self.transaction.senderFiatAmount
-		#TODO: check that we're not paying too much fees to BL4P
+		#TODO (bug 2): check that we're not paying too much fees to BL4P
 
 		self.transaction.update(
 			receiverFiatAmount = startResult.receiverAmount,
@@ -604,8 +604,8 @@ class OrderTask:
 			await self.waitForIncomingMessage(messages.LNIncoming)
 			) #type: messages.LNIncoming
 
-		#TODO: check if this is a new notification for an already
-		#ongoing tx.
+		#TODO (bug 3): check if this is a new notification for an
+		#already ongoing tx.
 		#In that case, simply send back the payment preimage again.
 
 		log('Received incoming Lightning transaction')
@@ -638,8 +638,9 @@ class OrderTask:
 				))
 			return
 
-		#TODO: check max per-tx amount
-		#TODO: check that we still have sufficient time according to our cltv_expiry_delta
+		#TODO: (bug 5) check max per-tx amount
+		#TODO: (bug 5) check that we still have sufficient time
+		#according to our cltv_expiry_delta
 
 		#Check if remaining order size is sufficient:
 		assert message.fiatAmount <= self.order.amount

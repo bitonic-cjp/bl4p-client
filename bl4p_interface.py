@@ -76,7 +76,7 @@ class BL4PInterface(bl4p.Bl4pApi, messages.Handler):
 
 	def sendSelfReport(self, message: messages.BL4PSelfReport) -> None:
 		serializedReport = selfreport.serialize(message.selfReport) #type: bytes
-		signature = b'Dummy Signature' #TODO #type: bytes
+		signature = b'Dummy Signature' #type: bytes #TODO (bug 17)
 
 		request = bl4p_pb2.BL4P_SelfReport() #type: bl4p_pb2.BL4P_SelfReport
 		request.report = serializedReport
@@ -94,7 +94,7 @@ class BL4PInterface(bl4p.Bl4pApi, messages.Handler):
 
 	def sendSend(self, message: messages.BL4PSend) -> None:
 		serializedReport = selfreport.serialize(message.selfReport) #type: bytes
-		signature = b'Dummy Signature' #TODO #type: bytes
+		signature = b'Dummy Signature' #type: bytes #TODO (bug 17)
 
 		request = bl4p_pb2.BL4P_Send() #type: bl4p_pb2.BL4P_Send
 		request.sender_amount.amount = message.amount
