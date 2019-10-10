@@ -96,7 +96,7 @@ It's currently 'BL4Pdummy'.
 Might not matter anymore if buyer-initiated trade is removed.
 
 
-### Missing regulatory self-reporting
+### Missing signature in regulatory self-reporting
 This is expected to be necessary for deployment by Bitonic.
 
 
