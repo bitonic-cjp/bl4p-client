@@ -189,7 +189,6 @@ class JSONRPC:
 
 
 	def sendErrorResponse(self, ID: int, code: int, message: str) -> None:
-		#TODO: error must contain code = int, message = str
 		response = \
 			{
 			'jsonrpc': '2.0',
