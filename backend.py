@@ -21,7 +21,7 @@ from typing import Dict, List, Optional, Type, Union, TYPE_CHECKING
 from bl4p_api import offer
 
 if TYPE_CHECKING:
-	import bl4p_plugin
+	import bl4p_plugin #pragma: nocover
 
 from log import log, logException
 import messages

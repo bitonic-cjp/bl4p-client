@@ -26,7 +26,7 @@ from bl4p_api import offer_pb2
 from bl4p_api.offer import Offer, Asset
 
 if TYPE_CHECKING:
-	import bl4p_plugin
+	import bl4p_plugin #pragma: nocover
 
 from log import log, logException
 import messages

@@ -24,7 +24,7 @@ from bl4p_api import offer
 from bl4p_api import selfreport
 
 if TYPE_CHECKING:
-	import bl4p_plugin
+	import bl4p_plugin #pragma: nocover
 
 from log import log
 import messages

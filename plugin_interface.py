@@ -24,7 +24,7 @@ import re
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union, TYPE_CHECKING
 
 if TYPE_CHECKING:
-	import bl4p_plugin
+	import bl4p_plugin #pragma: nocover
 
 from json_rpc import JSONRPC
 from ln_payload import Payload
