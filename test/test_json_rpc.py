@@ -88,7 +88,10 @@ class TestJSONRPC(unittest.TestCase):
 	@asynciotest
 	async def test_incomingDataEOF(self):
 		#It must finish without exceptions
-		await self.rpc.handleIncomingData()
+		m = Mock(return_value=None)
+		with patch.object(json_rpc, 'logException', m):
+			await self.rpc.handleIncomingData()
+		m.assert_not_called()
 
 
 	@asynciotest
@@ -133,8 +136,11 @@ class TestJSONRPC(unittest.TestCase):
 	@asynciotest
 	async def test_defaultHandlerMethods(self):
 		#No assertions, just do code coverage and check there are no exceptions
-		self.input.buffer = b'{"method": "foo", "params": {}}{"id": 3, "method": "foo", "params": {}}{"id": 3, "result": {}}{"id": 3, "error": "bar"}'
-		await self.rpc.handleIncomingData()
+		m = Mock(return_value=None)
+		with patch.object(json_rpc, 'logException', m):
+			self.input.buffer = b'{"method": "foo", "params": {}}{"id": 3, "method": "foo", "params": {}}{"id": 3, "result": {}}{"id": 3, "error": {"code": 42, "message": "bar"}}'
+			await self.rpc.handleIncomingData()
+		m.assert_not_called()
 
 
 	def test_outgoingJSON(self):
