@@ -14,6 +14,7 @@ simulated environments.
 * Python 3, version 3.5 or later.
 * Python3-protobuf
 * Python3-websockets
+* Python3 secp256k1 (in Debian: pip3 install secp256k1)
 
 ### For development and testing:
 

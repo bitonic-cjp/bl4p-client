@@ -18,6 +18,8 @@
 
 from typing import Any, Dict, TYPE_CHECKING
 
+import secp256k1
+
 from bl4p_api import bl4p_pb2
 from bl4p_api import asynclient as bl4p
 from bl4p_api import offer
@@ -46,9 +48,11 @@ class BL4PInterface(bl4p.Bl4pApi, messages.Handler):
 			})
 		self.client = client #type: bl4p_plugin.BL4PClient
 		self.activeRequests = {} #type: Dict[int, messages.BL4PRequest]
+		self.key = None #type: secp256k1.PrivateKey
 
 
-	async def startup(self, url: str, userid: str, password: str) -> None:
+	async def startupInterface(self, url: str, userid: str, password: str, key: secp256k1.PrivateKey) -> None:
+		self.key = key
 		await bl4p.Bl4pApi.startup(self, url, userid, password)
 
 		#Get our currently active orders
@@ -76,11 +80,12 @@ class BL4PInterface(bl4p.Bl4pApi, messages.Handler):
 
 	def sendSelfReport(self, message: messages.BL4PSelfReport) -> None:
 		serializedReport = selfreport.serialize(message.selfReport) #type: bytes
-		signature = b'Dummy Signature' #type: bytes #TODO (bug 17)
+		sigObject = self.key.ecdsa_sign(serializedReport) #type: secp256k1.Signature
+		serializedSig = self.key.ecdsa_serialize(sigObject) #type: bytes
 
 		request = bl4p_pb2.BL4P_SelfReport() #type: bl4p_pb2.BL4P_SelfReport
 		request.report = serializedReport
-		request.signature = signature
+		request.signature = serializedSig
 		requestID = self.sendRequest(request) #type: int
 		self.activeRequests[requestID] = message
 
@@ -94,14 +99,15 @@ class BL4PInterface(bl4p.Bl4pApi, messages.Handler):
 
 	def sendSend(self, message: messages.BL4PSend) -> None:
 		serializedReport = selfreport.serialize(message.selfReport) #type: bytes
-		signature = b'Dummy Signature' #type: bytes #TODO (bug 17)
+		sigObject = self.key.ecdsa_sign(serializedReport) #type: secp256k1.Signature
+		serializedSig = self.key.ecdsa_serialize(sigObject) #type: bytes
 
 		request = bl4p_pb2.BL4P_Send() #type: bl4p_pb2.BL4P_Send
 		request.sender_amount.amount = message.amount
 		request.payment_hash.data = message.paymentHash
 		request.max_locked_timeout_delta_s = message.max_locked_timeout_delta_s
 		request.report = serializedReport
-		request.signature = signature
+		request.signature = serializedSig
 		requestID = self.sendRequest(request) #type: int
 		self.activeRequests[requestID] = message
 

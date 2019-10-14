@@ -87,17 +87,13 @@ protocol.
 In fact, it's currently hardcoded to be localhost.
 
 
-### 15. Fixed BL4P acount name and password
-It's currently '3', '3'.
+### 15. Fixed BL4P acount name, password and private key
+It's currently '3', '3' and SHA256('3').
 
 
 ### 16. Fixed BL4P address
 It's currently 'BL4Pdummy'.
 Might not matter anymore if buyer-initiated trade is removed.
-
-
-### 17. Missing signature in regulatory self-reporting
-This is expected to be necessary for deployment by Bitonic.
 
 
 ### 18. No per-transaction maximum amount

@@ -17,10 +17,13 @@
 #    along with the BL4P Client. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
+import hashlib
 import os
 import signal
 import sys
 from typing import Tuple
+
+import secp256k1
 
 import backend
 import bl4p_interface
@@ -28,6 +31,10 @@ import messages
 from log import log, setLogFile
 import plugin_interface
 import rpc_interface
+
+
+
+sha256 = lambda preimage: hashlib.sha256(preimage).digest()
 
 
 
@@ -81,8 +88,9 @@ class BL4PClient:
 
 		self.bl4pInterface = bl4p_interface.BL4PInterface(self) #type: bl4p_interface.BL4PInterface
 		#TODO (bug 14): make URL configurable
-		#TODO (bug 15): make user/pass configurable
-		await self.bl4pInterface.startup('ws://localhost:8000/', '3', '3')
+		#TODO (bug 15): make user/pass/key configurable
+		key = secp256k1.PrivateKey(privkey=sha256(b'3'))
+		await self.bl4pInterface.startupInterface('ws://localhost:8000/', '3', '3', key)
 
 		self.backend.setLNAddress(self.rpcInterface.nodeID)
 		#TODO (bug 16): get address from BL4P

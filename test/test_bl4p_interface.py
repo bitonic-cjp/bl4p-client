@@ -35,14 +35,27 @@ Bl4pApi = bl4p_interface.bl4p.Bl4pApi
 
 
 
+class Dummy:
+	pass
+
+
+
 class TestBL4PInterface(unittest.TestCase):
 	def setUp(self):
 		self.client = Mock()
 		self.interface = bl4p_interface.BL4PInterface(self.client)
 
+		self.interface.key = Dummy()
+		def ecdsa_sign(msg):
+			return b'ecdsa_sign:' + msg
+		def ecdsa_serialize(sig):
+			return b'ecdsa_serialize:' + sig
+		self.interface.key.ecdsa_sign = ecdsa_sign
+		self.interface.key.ecdsa_serialize = ecdsa_serialize
+
 
 	@asynciotest
-	async def test_startup(self):
+	async def test_startupInterface(self):
 		self.assertEqual(self.interface.client, self.client)
 		self.assertEqual(self.interface.handlerMethods,
 			{
@@ -77,8 +90,9 @@ class TestBL4PInterface(unittest.TestCase):
 
 		with patch.object(Bl4pApi, 'startup', startup):
 			with patch.object(self.interface, 'synCall', synCall):
-				await self.interface.startup('foo', 'bar', 'baz')
+				await self.interface.startupInterface('foo', 'bar', 'baz', 'baa')
 
+		self.assertEqual(self.interface.key, 'baa')
 		self.assertEqual(startupArgs, [(self.interface, 'foo', 'bar', 'baz')])
 
 		self.assertEqual(len(synCallArgs), 3)
@@ -126,7 +140,7 @@ class TestBL4PInterface(unittest.TestCase):
 			)
 		expectedMsgOut = bl4p_pb2.BL4P_SelfReport()
 		expectedMsgOut.report = selfreport.serialize({'foo': 'bar'})
-		expectedMsgOut.signature = b'Dummy Signature' #TODO
+		expectedMsgOut.signature = b'ecdsa_serialize:ecdsa_sign:' + expectedMsgOut.report
 		self.doSingleSendTest(msgIn, expectedMsgOut)
 
 
@@ -153,7 +167,7 @@ class TestBL4PInterface(unittest.TestCase):
 		expectedMsgOut.payment_hash.data = b'foobar'
 		expectedMsgOut.max_locked_timeout_delta_s = 5000
 		expectedMsgOut.report = selfreport.serialize({'foo': 'bar'})
-		expectedMsgOut.signature = b'Dummy Signature' #TODO
+		expectedMsgOut.signature = b'ecdsa_serialize:ecdsa_sign:' + expectedMsgOut.report
 		self.doSingleSendTest(msgIn, expectedMsgOut)
 
 

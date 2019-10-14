@@ -22,6 +22,8 @@ import sys
 import unittest
 from unittest.mock import Mock, patch
 
+import secp256k1
+
 from utils import asynciotest, DummyReader, DummyWriter
 
 sys.path.append('..')
@@ -67,7 +69,7 @@ class TestPlugin(unittest.TestCase):
 			def __init__(self, client):
 				self.client = client
 
-			async def startup(self, *args):
+			async def startupInterface(self, *args):
 				self.startupArgs = args
 
 		handlers = []
@@ -105,7 +107,8 @@ class TestPlugin(unittest.TestCase):
 
 		self.assertTrue(isinstance(client.bl4pInterface, BL4PInterface))
 		self.assertEqual(client.bl4pInterface.client, client)
-		self.assertEqual(client.bl4pInterface.startupArgs, ('ws://localhost:8000/', '3', '3'))
+		self.assertEqual(client.bl4pInterface.startupArgs[:3], ('ws://localhost:8000/', '3', '3'))
+		self.assertTrue(isinstance(client.bl4pInterface.startupArgs[3], secp256k1.PrivateKey))
 
 		self.assertEqual(client.backend.LNAddress, 'fubar')
 		self.assertEqual(client.backend.BL4PAddress, 'BL4Pdummy')
