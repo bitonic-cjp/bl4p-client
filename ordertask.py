@@ -239,8 +239,8 @@ class OrderTask:
 				)
 		if not isinstance(result, (self.expectedCallResultType, messages.BL4PError)):
 			raise UnexpectedResult(
-				'Received a call result of unexpected type: ' + \
-				str(result)
+				'Received a call result of unexpected type: %s: expected type %s' % \
+				(str(result), str(self.expectedCallResultType))
 				)
 		self.callResult.set_result(result)
 
@@ -591,7 +591,8 @@ class OrderTask:
 		self.transaction = BuyTransaction(self.storage, ID)
 
 		if self.transaction.status == STATUS_INITIAL:
-			await self.sendFundsOnBL4P()
+			log('For this unfinished transaction, we need to wait for lightningd to re-issue it to us')
+			await self.waitForIncomingTransaction()
 		else:
 			#TODO: properly report database inconsistency error
 			raise Exception('Invalid transaction status value in unfinished transaction')
@@ -604,12 +605,36 @@ class OrderTask:
 			await self.waitForIncomingMessage(messages.LNIncoming)
 			) #type: messages.LNIncoming
 
-		#TODO (bug 3): check if this is a new notification for an
-		#already ongoing tx.
-		#In that case, simply send back the payment preimage again.
-
 		log('Received incoming Lightning transaction')
 		#TODO: log transaction characteristics
+
+		#Check if this is a new notification for an already ongoing tx.
+		cursor = self.storage.execute(
+			'SELECT ID from buyTransactions WHERE paymentHash = ?',
+			[message.paymentHash]
+			) #type: storage.Cursor
+		transactions = [BuyTransaction(self.storage, row[0]) for row in cursor]
+		if transactions:
+			log('A transaction with this payment hash already exists in our database')
+			self.transaction = transactions[0]
+			if self.transaction.paymentPreimage is not None:
+				log('We already have the preimage, so we claim the Lightning funds')
+				await self.finishTransactionOnLightning()
+				return
+
+			#TODO (bug 19): maybe check if the incoming tx equals this tx?
+
+			if self.transaction.status == STATUS_CANCELED:
+				log('The transaction was canceled, so we cancel the Lightning tx')
+				await self.cancelTransactionOnLightning()
+			elif self.transaction.status == STATUS_INITIAL:
+				log('The transaction was not finished yet, so try again to finish it')
+				await self.sendFundsOnBL4P()
+			else:
+				#TODO: properly report database inconsistency error
+				raise Exception('Invalid transaction status value in unfinished transaction')
+
+			return
 
 		#Check if lntx conforms to our order:
 		counterOffer = Offer(

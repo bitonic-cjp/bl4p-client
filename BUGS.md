@@ -25,20 +25,17 @@ Although the BL4P server should never require excessive fees,
 clients can and should check this for themselves, before executing transactions.
 
 
-### 3. Re-notification of incoming Lightning tx is not handled correctly
-Often this will not be a problem, but in rare cases, the incoming transaction
-might be ignored, even though we have already committed to the outgoing
-transaction.
-A result could be that the incoming transaction gets canceled after time-out,
-even while the outgoing transaction is successful.
-
-
 ### 4. No check on ongoing outgoing Lightning transactions.
 After a crash, a duplicate Lightning transaction might be sent out.
 
 
 ### 5. Incoming transactions are not checked
 Others can exchange with us on arbitrary conditions and exchange rates.
+
+
+### 19. On re-notification of incoming Lightning tx, it is not checked
+The newly notified transaction may, for instance, send us less crypto funds
+than the original one.
 
 
 ### 6. No check on the outgoing Lightning transaction lock time
@@ -102,5 +99,5 @@ Currently, it equals the remaining order amount.
 
 ## Future and unknown bugs
 
-### 19. (This is the lowest non-assigned bug ID)
+### 20. (This is the lowest non-assigned bug ID)
 

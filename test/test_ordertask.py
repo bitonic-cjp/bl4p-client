@@ -365,6 +365,16 @@ class TestOrderTask(unittest.TestCase):
 		task = ordertask.OrderTask(self.client, self.storage, order)
 		task.startup()
 
+		await asyncio.sleep(0.1)
+
+		task.setCallResult(messages.LNIncoming(
+			offerID=42,
+			CLTVExpiryDelta=0,
+			fiatAmount=100000000,
+			cryptoAmount=200000000,
+			paymentHash=b'foo',
+			))
+
 		msg = await self.outgoingMessages.get()
 		self.assertEqual(msg, messages.BL4PSend(
 			localOrderID=42,
@@ -425,6 +435,16 @@ class TestOrderTask(unittest.TestCase):
 		task = ordertask.OrderTask(self.client, self.storage, order)
 		task.startup()
 
+		await asyncio.sleep(0.1)
+
+		task.setCallResult(messages.LNIncoming(
+			offerID=42,
+			CLTVExpiryDelta=0,
+			fiatAmount=100000000,
+			cryptoAmount=200000000,
+			paymentHash=b'foo',
+			))
+
 		msg = await self.outgoingMessages.get()
 		self.assertEqual(msg, messages.BL4PSend(
 			localOrderID=42,
@@ -478,6 +498,114 @@ class TestOrderTask(unittest.TestCase):
 
 		#Continues to next iteration:
 		await asyncio.sleep(0.1)
+
+		await task.shutdown()
+
+
+	@asynciotest
+	async def test_buyer_repeatFinishedTransaction(self):
+		orderID = ordertask.BuyOrder.create(self.storage,
+			190000,   #mCent / BTC = 1.9 EUR/BTC
+			123400000 #mCent    = 1234 EUR
+			)
+		order = ordertask.BuyOrder(self.storage, orderID, 'buyerAddress')
+		order.remoteOfferID = 6
+		order.setAmount = Mock()
+
+		self.storage.buyTransactions = \
+		{
+		41:
+			{
+			'ID': 41,
+			'buyOrder': orderID,
+			'status': 4, #finished
+			'fiatAmount': 100000000,
+			'cryptoAmount': 200000000,
+			'paymentHash': b'foo',
+			'paymentPreimage': b'bar',
+			},
+		42:
+			{
+			'ID': 42,
+			'buyOrder': orderID,
+			'status': 0,
+			'fiatAmount': 300000000,
+			'cryptoAmount': 600000000,
+			'paymentHash': b'foo2',
+			}
+		}
+
+		task = ordertask.OrderTask(self.client, self.storage, order)
+		task.startup()
+
+		await asyncio.sleep(0.1)
+
+		task.setCallResult(messages.LNIncoming(
+			offerID=42,
+			CLTVExpiryDelta=0,
+			fiatAmount=100000000,
+			cryptoAmount=200000000,
+			paymentHash=b'foo',
+			))
+
+		msg = await self.outgoingMessages.get()
+		self.assertEqual(msg, messages.LNFinish(
+			paymentHash     = b'foo',
+			paymentPreimage = b'bar'
+			))
+
+		await task.shutdown()
+
+
+	@asynciotest
+	async def test_buyer_repeatCanceledTransaction(self):
+		orderID = ordertask.BuyOrder.create(self.storage,
+			190000,   #mCent / BTC = 1.9 EUR/BTC
+			123400000 #mCent    = 1234 EUR
+			)
+		order = ordertask.BuyOrder(self.storage, orderID, 'buyerAddress')
+		order.remoteOfferID = 6
+		order.setAmount = Mock()
+
+		self.storage.buyTransactions = \
+		{
+		41:
+			{
+			'ID': 41,
+			'buyOrder': orderID,
+			'status': 5, #canceled
+			'fiatAmount': 100000000,
+			'cryptoAmount': 200000000,
+			'paymentHash': b'foo',
+			},
+		42:
+			{
+			'ID': 42,
+			'buyOrder': orderID,
+			'status': 0,
+			'fiatAmount': 300000000,
+			'cryptoAmount': 600000000,
+			'paymentHash': b'foo2',
+			}
+		}
+
+		task = ordertask.OrderTask(self.client, self.storage, order)
+		task.startup()
+
+		await asyncio.sleep(0.1)
+
+		task.setCallResult(messages.LNIncoming(
+			offerID=42,
+			CLTVExpiryDelta=0,
+			fiatAmount=100000000,
+			cryptoAmount=200000000,
+			paymentHash=b'foo',
+			))
+
+		msg = await self.outgoingMessages.get()
+		self.assertEqual(msg, messages.LNFail(
+			paymentHash     = b'foo',
+			))
 
 		await task.shutdown()
 

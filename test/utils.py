@@ -123,6 +123,14 @@ class MockStorage:
 			if tx['buyOrder'] == data[0] and tx['status'] not in [STATUS_FINISHED, STATUS_CANCELED]
 			]
 			return MockCursor(values)
+		elif query == 'SELECT ID from buyTransactions WHERE paymentHash = ?':
+			values = \
+			[
+			[tx['ID']]
+			for tx in self.buyTransactions.values()
+			if tx['paymentHash'] == data[0]
+			]
+			return MockCursor(values)
 
 		elif query.startswith('INSERT INTO buyOrders'):
 			names = query[query.index('(')+1:query.index(')')]
