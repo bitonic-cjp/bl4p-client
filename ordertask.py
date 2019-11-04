@@ -293,15 +293,7 @@ class OrderTask:
 				) #type: messages.BL4PFindOffersResult
 
 			if queryResult.offers: #found a matching offer
-				log('Found offers - starting a transaction')
-				#TODO: filter on sensibility (e.g. max >= min for all conditions)
-				#TODO (bug 1): check if offers actually match
-				#TODO (bug 8): filter counterOffers on acceptability
-				#TODO (bug 8): sort counterOffers (e.g. on exchange rate)
-
-				#Start trade on the first in the list
-				self.counterOffer = queryResult.offers[0]
-				await self.doTransaction()
+				await self.doTransactionBasedOnOffers(queryResult.offers)
 				return
 
 			if self.order.remoteOfferID is None:
@@ -309,6 +301,30 @@ class OrderTask:
 				await self.publishOffer()
 
 			await asyncio.sleep(1)
+
+
+	async def doTransactionBasedOnOffers(self, offers):
+		log('Received offers from BL4P')
+		#TODO: filter on sensibility (e.g. max >= min for all conditions)
+
+		#Check if offers actually match
+		def matchesOurOrder(offer):
+			ret = offer.matches(self.order)
+			if not ret:
+				log('Received an offer from BL4P that does not match our order - ignoring it')
+			return ret
+		offers = filter(matchesOurOrder, offers)
+
+		#TODO (bug 8): filter counterOffers on acceptability
+		#TODO (bug 8): sort counterOffers (e.g. on exchange rate)
+
+		#Evaluate iterator to a list:
+		offers = list(offers)
+
+		#Start trade on the first in the list
+		log('Starting a transaction based on one of the offers')
+		self.counterOffer = offers[0]
+		await self.doTransaction()
 
 
 	async def publishOffer(self) -> None:

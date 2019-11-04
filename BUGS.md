@@ -15,11 +15,6 @@ has to be fixed.
 
 ## Loss of funds (including trading beyond limits specified in orders)
 
-### 1. Offers returned by BL4P are not checked
-Although the BL4P server should only return offers that match the search query,
-clients can and should check this for themselves, before acting upon received
-offers.
-
 ### 2. BL4P fee amount is not checked
 Although the BL4P server should never require excessive fees,
 clients can and should check this for themselves, before executing transactions.

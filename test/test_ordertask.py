@@ -1178,6 +1178,13 @@ class TestOrderTask(unittest.TestCase):
 		self.assertEqual(order.remoteOfferID, 6)
 
 		#Multiple results:
+		#Non-matching offers returned by BL4P must not be selected.
+		offer0 = Mock()
+		offer1 = Mock()
+		offer2 = Mock()
+		offer0.matches = Mock(return_value = False)
+		offer1.matches = Mock(return_value = True)
+		offer2.matches = Mock(return_value = True)
 		msg = await self.outgoingMessages.get()
 		self.assertEqual(msg, messages.BL4PFindOffers(
 			localOrderID=42,
@@ -1186,13 +1193,17 @@ class TestOrderTask(unittest.TestCase):
 			))
 		task.setCallResult(messages.BL4PFindOffersResult(
 			request = None,
-			offers = ['foo', 'bar'],
+			offers = [offer0, offer1, offer2],
 			))
 
 		await searchTask
 
 		self.assertEqual(done, [True])
-		self.assertEqual(task.counterOffer, 'foo')
+		self.assertEqual(task.counterOffer, offer1)
+
+		offer0.matches.assert_called_with(order)
+		offer1.matches.assert_called_with(order)
+		offer2.matches.assert_called_with(order)
 
 
 
