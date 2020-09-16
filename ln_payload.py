@@ -17,6 +17,7 @@
 #    along with the BL4P Client. If not, see <http://www.gnu.org/licenses/>.
 
 import struct
+from typing import Tuple
 
 
 
@@ -31,9 +32,7 @@ Note that this format forces the fiat amount to be non-negative.
 class Payload:
 	@staticmethod
 	def decode(data: bytes) -> 'Payload':
-		fiatAmount = None #type: int
-		offerID = None #type; int
-		fiatAmount, offerID = struct.unpack('!QI', data)
+		fiatAmount, offerID = struct.unpack('!QI', data) #Tuple[int, int]
 		return Payload(fiatAmount, offerID)
 
 	def __init__(self, fiatAmount: int, offerID: int) -> None:

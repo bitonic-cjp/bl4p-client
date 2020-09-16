@@ -26,6 +26,10 @@ from .serialization import serialize, deserialize
 
 
 class Bl4pApi:
+	#This initialization is just to inform Mypy about data types.
+	receiveTask = None #type: asyncio.Future
+	sendTask    = None #type: asyncio.Future
+
 	def __init__(self, log: Callable[[str],None] = lambda s:None) -> None:
 		self.log = log #type: Callable[[str],None]
 		self.lastRequestID = 0 #type: int
@@ -43,8 +47,6 @@ class Bl4pApi:
 			url, extra_headers=header) #type: websockets.WebSocketClientProtocol
 
 		self.sendQueue = asyncio.Queue() #type: asyncio.Queue
-		self.receiveTask = None #type: asyncio.Future
-		self.sendTask    = None #type: asyncio.Future
 		self.receiveTask = asyncio.ensure_future(self.handleIncomingData()) #type: ignore #mypy has weird ideas about ensure_future
 		self.sendTask    = asyncio.ensure_future(self.sendOutgoingData()) #type: ignore #mypy has weird ideas about ensure_future
 

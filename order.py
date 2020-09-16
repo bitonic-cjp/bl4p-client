@@ -57,14 +57,14 @@ class Order(offer.Offer, StoredObject):
 	limitRateInverted   determined by derived class
 	remoteOfferID       determined on publishing
 	'''
+	#This initialization is just to inform Mypy about data types.
+	#TODO: find a way to make sure storage.Storage respects these types
+	amount    = None #type: int
+	limitRate = None #type: int
+	status    = None #type: int
+
 
 	def __init__(self, storage: storage.Storage, tableName: str, ID: int, limitRateInverted: int, **kwargs) -> None:
-		#This initialization is just to inform Mypy about data types.
-		#TODO: find a way to make sure storage.Storage respects these types
-		self.amount    = None #type: int
-		self.limitRate = None #type: int
-		self.status    = None #type: int
-
 		offer.Offer.__init__(self, ID=ID, **kwargs)
 		StoredObject.__init__(self, storage, tableName, ID)
 

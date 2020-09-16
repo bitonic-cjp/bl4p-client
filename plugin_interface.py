@@ -60,11 +60,6 @@ class PluginInterface(JSONRPC, messages.Handler):
 			})
 		self.client = client #type: bl4p_plugin.BL4PClient
 
-		#Output from the init method:
-		self.RPCPath = None #type: str
-		self.logFile = None #type: str
-		self.DBFile = None  #type: str
-
 		self.options = \
 		[
 		{
@@ -106,7 +101,7 @@ class PluginInterface(JSONRPC, messages.Handler):
 	async def startup(self):
 		#Keep handling messages until one message handler sets self.RPCPath
 		#(this happens on the init message)
-		while self.RPCPath is None:
+		while not hasattr(self, 'RPCPath'):
 			message = await self.getNextJSON() #type: Optional[Dict]
 			if message is None:
 				raise Exception('Plugin interface closed before init call')
@@ -137,17 +132,15 @@ class PluginInterface(JSONRPC, messages.Handler):
 
 
 	def storeOngoingRequest(self, name: str, request: OngoingRequest) -> None:
+		assert self.currentRequestID is not None
 		self.ongoingRequests[self.currentRequestID] = name, request
 
 
 	def findOngoingRequest(self, name: str, func: Callable) -> int:
-		ID = None #type: int
-		value = None #type: Tuple[str, OngoingRequest]
-		methodName = None #type: str
-		request = None #type: OngoingRequest
+		ID = -1 #type: int
 
 		for ID, value in self.ongoingRequests.items():
-			methodName, request = value
+			methodName, request = value #type: Tuple[str, OngoingRequest]
 			if methodName == name and func(request):
 				return ID
 		raise IndexError()
@@ -166,15 +159,12 @@ class PluginInterface(JSONRPC, messages.Handler):
 
 
 	def getManifest(self, **kwargs) -> Dict[str, Any]:
-		name = None #type: str
-		entry = None #type: Tuple[Callable, MethodType]
-		func = None #type: Callable
-		typ = None #type: MethodType
+		name = '' #type: str
 
 		methods = [] #type: List[Dict[str, str]]
 		hooks = [] #type: List[str]
 		for name, entry in self.methods.items():
-			func, typ = entry
+			func, typ = entry #type: Tuple[Callable, MethodType]
 			# Skip the builtin ones, they don't get reported
 			if name in ['getmanifest', 'init']:
 				continue
@@ -212,9 +202,9 @@ class PluginInterface(JSONRPC, messages.Handler):
 		filename = configuration['rpc-file'] #type: str
 		lndir = configuration['lightning-dir'] #type: str
 
-		self.RPCPath = os.path.join(lndir, filename)
-		self.logFile = options['bl4p.logfile']
-		self.DBFile = options['bl4p.dbfile']
+		self.RPCPath = os.path.join(lndir, filename) #type: str
+		self.logFile = options['bl4p.logfile'] #type: str
+		self.DBFile = options['bl4p.dbfile'] #type: str
 		#self.log('RPC path is ' + self.RPCPath)
 
 

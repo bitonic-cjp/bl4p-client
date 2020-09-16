@@ -21,7 +21,7 @@ import hashlib
 import os
 import signal
 import sys
-from typing import Tuple
+from typing import Optional, Tuple
 
 import secp256k1
 
@@ -38,7 +38,7 @@ sha256 = lambda preimage: hashlib.sha256(preimage).digest()
 
 
 
-async_stdio = None #type: Tuple[asyncio.StreamReader, asyncio.streams.StreamWriter]
+async_stdio = None #type: Optional[Tuple[asyncio.StreamReader, asyncio.streams.StreamWriter]]
 async def stdio() -> Tuple[asyncio.StreamReader, asyncio.streams.StreamWriter]:
 	global async_stdio
 	if async_stdio is not None:

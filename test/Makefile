@@ -23,8 +23,12 @@ test: typetest unittest
 
 current_dir = $(shell pwd)
 
+#Depends on mypy version:
+MYPY_OPTS =
+#MYPY_OPTS = --fast-parser
+
 typetest:
-	cd .. && MYPYPATH=$(current_dir)/mypy_stubs mypy --fast-parser bl4p_plugin.py
+	cd .. && MYPYPATH=$(current_dir)/mypy_stubs mypy $(MYPY_OPTS) bl4p_plugin.py
 
 unittest:
 	-rm -rf coverage-html

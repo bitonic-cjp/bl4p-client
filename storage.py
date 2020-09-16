@@ -27,6 +27,10 @@ Cursor = sqlite3.Cursor
 
 
 class StoredObject:
+	#This initialization is just to inform Mypy about data types.
+	#TODO: find a way to make sure storage.Storage respects these types
+	ID = None #type: int
+
 	@staticmethod
 	def createStoredObject(storage: 'Storage', tableName: str, **kwargs) -> int:
 		names = list(kwargs.keys()) #type: List[str]
@@ -43,10 +47,6 @@ class StoredObject:
 
 
 	def __init__(self, storage: 'Storage', tableName: str, ID: int) -> None:
-		#This initialization is just to inform Mypy about data types.
-		#TODO: find a way to make sure storage.Storage respects these types
-		self.ID = None #type: int
-
 		self._storage = storage #type: Storage
 		self._tableName = tableName #type: str
 		query = 'SELECT * from %s WHERE `ID` = ?' % tableName #type: str

@@ -1,4 +1,4 @@
-from typing import Iterable
+from typing import Iterable, Iterator
 
 from .offer_pb2 import Offer
 
@@ -59,6 +59,9 @@ class BL4P_SelfReportContents:
 
 	class PairList(Iterable[BL4P_SelfReportContents.pair]):
 		def add(self) -> BL4P_SelfReportContents.pair:
+			pass
+
+		def __iter__(self) -> Iterator[BL4P_SelfReportContents.pair]:
 			pass
 
 	items = None #type: PairList

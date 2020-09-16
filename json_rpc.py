@@ -18,7 +18,7 @@
 
 import asyncio
 import json
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
 import decodedbuffer
 from log import log, logException
@@ -31,6 +31,9 @@ MAX_BUFFER_LENGTH = 1024*1024 #type: int
 
 
 class JSONRPC:
+	#This initialization is just to inform Mypy about data types.
+	task = None #type: asyncio.Future
+
 	def __init__(self, inputStream: asyncio.StreamReader, outputStream: asyncio.StreamWriter) -> None:
 		self.inputStream = inputStream #type: asyncio.StreamReader
 		self.outputStream = outputStream #type: asyncio.StreamWriter
@@ -41,7 +44,6 @@ class JSONRPC:
 
 
 	def startup(self) -> None:
-		self.task = None #type: asyncio.Future
 		self.task = asyncio.ensure_future(self.handleIncomingData()) #type: ignore #mypy has weird ideas about ensure_future
 
 
@@ -77,9 +79,7 @@ class JSONRPC:
 		while True:
 			try:
 				#log('Input buffer: ' + self.inputBuffer.get())
-				request = None #type: Dict
-				length  = None #type: int
-				request, length = self.decoder.raw_decode(self.inputBuffer.get())
+				request, length = self.decoder.raw_decode(self.inputBuffer.get()) #Tuple[Dict, int]
 				assert type(request) == dict #TODO: unit test
 			except ValueError:
 				#probably the buffer is incomplete
@@ -101,43 +101,35 @@ class JSONRPC:
 
 	def handleJSON(self, request: Dict[str, Any]) -> None:
 		try:
-			ID      = None #type: int
-			error   = None #type: Dict[str, Any]
-			code    = None #type: int
-			message = None #type: str
-			result  = None #type: Any
-			method  = None #type: str
-			params  = None #type: Dict
-
 			if 'error' in request:
-				ID    = request['id']
-				error = request['error']
-				code = error['code']
-				message = error['message']
-				assert type(ID)      == int #TODO: unit test
-				assert type(code)    == int #TODO: unit test
-				assert type(message) == str #TODO: unit test
-				self.handleError(ID, code, message)
+				err_ID    = request['id']          #type: int  
+				err_error = request['error']       #type: Dict[str, Any]
+				err_code = err_error['code']       #type: int
+				err_message = err_error['message'] #type: str
+				assert type(err_ID)      == int #TODO: unit test
+				assert type(err_code)    == int #TODO: unit test
+				assert type(err_message) == str #TODO: unit test
+				self.handleError(err_ID, err_code, err_message)
 			elif 'result' in request:
-				ID     = request['id']
-				result = request['result']
-				assert type(ID) == int #TODO: unit test
+				res_ID     = request['id']     #type: int
+				res_result = request['result'] #type: Any
+				assert type(res_ID) == int #TODO: unit test
 				#result can be any type
-				self.handleResult(ID, result)
+				self.handleResult(res_ID, res_result)
 			elif 'id' in request:
-				ID     = request['id']
-				method = request['method']
-				params = request['params']
-				assert type(ID)     == int #TODO: unit test
-				assert type(method) == str #TODO: unit test
-				assert type(params) == dict #TODO: unit test
-				self.handleRequest(ID, method, params)
+				req_ID     = request['id']     #type: int
+				req_method = request['method'] #type: str
+				req_params = request['params'] #type: Dict
+				assert type(req_ID)     == int #TODO: unit test
+				assert type(req_method) == str #TODO: unit test
+				assert type(req_params) == dict #TODO: unit test
+				self.handleRequest(req_ID, req_method, req_params)
 			else:
-				method = request['method']
-				params = request['params']
-				assert type(method) == str #TODO: unit test
-				assert type(params) == dict #TODO: unit test
-				self.handleNotification(method, params)
+				not_method = request['method'] #type: str
+				not_params = request['params'] #type: Dict
+				assert type(not_method) == str #TODO: unit test
+				assert type(not_params) == dict #TODO: unit test
+				self.handleNotification(not_method, not_params)
 		except Exception: #TODO: remove (let the main task terminate)
 			logException()
 
@@ -151,7 +143,7 @@ class JSONRPC:
 	async def synCall(self, name: str, params: Dict = {}) -> Any:
 		ID = self.sendRequest(name, params) #type: int
 		while True:
-			message = await self.getNextJSON() #type: Dict
+			message = await self.getNextJSON() #type: Optional[Dict]
 
 			if message is None:
 				raise Exception('Connection closed during RPC call')

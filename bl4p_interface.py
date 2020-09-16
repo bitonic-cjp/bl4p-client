@@ -16,7 +16,7 @@
 #    You should have received a copy of the GNU General Public License
 #    along with the BL4P Client. If not, see <http://www.gnu.org/licenses/>.
 
-from typing import Any, Dict, TYPE_CHECKING
+from typing import Any, Dict, Optional, TYPE_CHECKING
 
 import secp256k1
 
@@ -48,11 +48,10 @@ class BL4PInterface(bl4p.Bl4pApi, messages.Handler):
 			})
 		self.client = client #type: bl4p_plugin.BL4PClient
 		self.activeRequests = {} #type: Dict[int, messages.BL4PRequest]
-		self.key = None #type: secp256k1.PrivateKey
 
 
 	async def startupInterface(self, url: str, userid: str, password: str, key: secp256k1.PrivateKey) -> None:
-		self.key = key
+		self.key = key #type: secp256k1.PrivateKey
 		await bl4p.Bl4pApi.startup(self, url, userid, password)
 
 		#Get our currently active orders
@@ -144,7 +143,7 @@ class BL4PInterface(bl4p.Bl4pApi, messages.Handler):
 		#log('BL4PInterface: Received result: ' + str(result))
 
 		request = self.activeRequests[result.request] #type: messages.BL4PRequest
-		message = None #type: messages.AnyMessage
+		message = None #type: Optional[messages.AnyMessage]
 
 		if isinstance(result, bl4p_pb2.BL4P_StartResult):
 			message = messages.BL4PStartResult(
@@ -194,7 +193,7 @@ class BL4PInterface(bl4p.Bl4pApi, messages.Handler):
 				request = request,
 				)
 
-		else:
+		if message is None:
 			log('Ignoring unrecognized message type from BL4P: ' + \
 				str(result.__class__))
 			return

@@ -30,11 +30,9 @@ if TYPE_CHECKING:
 
 from log import log, logException
 import messages
-import order
-from order import BuyOrder, SellOrder
+from order import BuyOrder, SellOrder, Order, STATUS_COMPLETED
 import settings
-import storage
-from storage import StoredObject
+from storage import StoredObject, Storage, Cursor
 
 
 
@@ -89,8 +87,17 @@ STATUS_CANCELED          = 5 #type: int
 
 
 class BuyTransaction(StoredObject):
+	#This initialization is just to inform Mypy about data types.
+	#TODO: find a way to make sure Storage respects these types
+	buyOrder        = None #type: int
+	status          = None #type: int
+	fiatAmount      = None #type: int
+	cryptoAmount    = None #type: int
+	paymentHash     = None #type: bytes
+	paymentPreimage = None #type: bytes
+
 	@staticmethod
-	def create(storage: storage.Storage,
+	def create(storage: Storage,
 		buyOrder: int, fiatAmount: int, cryptoAmount: int, paymentHash: bytes
 		) -> int:
 
@@ -109,23 +116,30 @@ class BuyTransaction(StoredObject):
 			)
 
 
-	def __init__(self, storage: storage.Storage, ID: int) -> None:
-		#This initialization is just to inform Mypy about data types.
-		#TODO: find a way to make sure storage.Storage respects these types
-		self.buyOrder        = None #type: int
-		self.status          = None #type: int
-		self.fiatAmount      = None #type: int
-		self.cryptoAmount    = None #type: int
-		self.paymentHash     = None #type: bytes
-		self.paymentPreimage = None #type: bytes
-
+	def __init__(self, storage: Storage, ID: int) -> None:
 		StoredObject.__init__(self, storage, 'buyTransactions', ID)
 
 
 
 class SellTransaction(StoredObject):
+	#This initialization is just to inform Mypy about data types.
+	#TODO: find a way to make sure Storage respects these types
+	sellOrder             = None #type: int
+	counterOffer          = None #type: int
+	status                = None #type: int
+	senderFiatAmount      = None #type: int
+	receiverFiatAmount    = None #type: int
+	maxSenderCryptoAmount = None #type: int
+	senderCryptoAmount    = None #type: int
+	receiverCryptoAmount  = None #type: int
+	senderTimeoutDelta    = None #type: int
+	lockedTimeoutDelta    = None #type: int
+	CLTVExpiryDelta       = None #type: int
+	paymentHash           = None #type: bytes
+	paymentPreimage       = None #type: bytes
+
 	@staticmethod
-	def create(storage: storage.Storage,
+	def create(storage: Storage,
 		sellOrder: int, counterOffer: int, senderFiatAmount: int, maxSenderCryptoAmount: int, receiverCryptoAmount: int, senderTimeoutDelta: int, lockedTimeoutDelta: int, CLTVExpiryDelta: int
 		) -> int:
 
@@ -153,41 +167,25 @@ class SellTransaction(StoredObject):
 			)
 
 
-	def __init__(self, storage: storage.Storage, ID: int) -> None:
-		#This initialization is just to inform Mypy about data types.
-		#TODO: find a way to make sure storage.Storage respects these types
-		self.sellOrder             = None #type: int
-		self.counterOffer          = None #type: int
-		self.status                = None #type: int
-		self.senderFiatAmount      = None #type: int
-		self.receiverFiatAmount    = None #type: int
-		self.maxSenderCryptoAmount = None #type: int
-		self.senderCryptoAmount    = None #type: int
-		self.receiverCryptoAmount  = None #type: int
-		self.senderTimeoutDelta    = None #type: int
-		self.lockedTimeoutDelta    = None #type: int
-		self.CLTVExpiryDelta       = None #type: int
-		self.paymentHash           = None #type: bytes
-		self.paymentPreimage       = None #type: bytes
-
+	def __init__(self, storage: Storage, ID: int) -> None:
 		StoredObject.__init__(self, storage, 'sellTransactions', ID)
 
 
 
 class CounterOffer(StoredObject):
+	#This initialization is just to inform Mypy about data types.
+	#TODO: find a way to make sure Storage respects these types
+	blob = None #type: bytes
+
 	@staticmethod
-	def create(storage: storage.Storage, counterOffer: offer.Offer) -> int:
+	def create(storage: Storage, counterOffer: offer.Offer) -> int:
 		return StoredObject.createStoredObject(
 			storage, 'counterOffers',
 			blob = counterOffer.toPB2().SerializeToString(),
 			)
 
 
-	def __init__(self, storage: storage.Storage, ID: int) -> None:
-		#This initialization is just to inform Mypy about data types.
-		#TODO: find a way to make sure storage.Storage respects these types
-		self.blob = None #type: bytes
-
+	def __init__(self, storage: Storage, ID: int) -> None:
 		StoredObject.__init__(self, storage, 'counterOffers', ID)
 		counterOffer = offer_pb2.Offer()
 		counterOffer.ParseFromString(self.blob)
@@ -206,19 +204,20 @@ class BL4PError(Exception):
 
 
 class OrderTask:
-	def __init__(self, client: 'bl4p_plugin.BL4PClient', s: storage.Storage, o: order.Order) -> None:
-		self.client = client               #type: bl4p_plugin.BL4PClient
-		self.storage = s                   #type: storage.Storage
-		self.callResult = None             #type: Optional[asyncio.Future]
+	task = None #type: asyncio.Future
+
+	def __init__(self, client: 'bl4p_plugin.BL4PClient', s: Storage, o: Order) -> None:
+		self.client = client #type: bl4p_plugin.BL4PClient
+		self.storage = s #type: Storage
+		self.callResult = None #type: Optional[asyncio.Future]
 		self.expectedCallResultType = None #type: Optional[Type]
 
-		self.order = o                     #type: order.Order
-		self.counterOffer = None           #type: offer.Offer
-		self.transaction = None            #type: Optional[Union[BuyTransaction, SellTransaction]]
+		self.order = o #type: Order
+		self.counterOffer = None #type: Optional[offer.Offer]
+		self.transaction = None #type: Optional[Union[BuyTransaction, SellTransaction]]
 
 
 	def startup(self) -> None:
-		self.task = None #type: asyncio.Future
 		self.task = asyncio.ensure_future(self.doTrading()) #type: ignore #mypy has weird ideas about ensure_future
 
 
@@ -232,7 +231,7 @@ class OrderTask:
 
 
 	def setCallResult(self, result: messages.AnyMessage) -> None:
-		if self.callResult is None:
+		if self.callResult is None or self.expectedCallResultType is None:
 			raise UnexpectedResult(
 				'Received a call result while no call was going on: ' + \
 				str(result)
@@ -265,7 +264,7 @@ class OrderTask:
 			else:
 				raise Exception('Unsupported order type - cannot use it in trade')
 
-			self.order.update(status=order.STATUS_COMPLETED)
+			self.order.update(status=STATUS_COMPLETED)
 
 		except asyncio.CancelledError:
 			pass #We're cancelled, so just quit the function
@@ -351,7 +350,7 @@ class OrderTask:
 		cursor = self.storage.execute(
 			'SELECT ID from sellTransactions WHERE sellOrder = ? AND status != ? AND status != ?',
 			[self.order.ID, STATUS_FINISHED, STATUS_CANCELED]
-			) #type: storage.Cursor
+			) #type: Cursor
 		IDs = [row[0] for row in cursor] #type: List[int]
 		assert len(IDs) < 2 #TODO: properly report database inconsistency error
 		if len(IDs) == 0:
@@ -377,6 +376,7 @@ class OrderTask:
 
 	async def doTransaction(self) -> None:
 		assert isinstance(self.order, SellOrder) #TODO (bug 13): enable buyer-initiated trade once supported
+		assert self.counterOffer is not None
 
 		log('Doing trade for local order ID' + str(self.order.ID))
 		log('  local order: ' + str(self.order))
@@ -483,6 +483,7 @@ class OrderTask:
 	async def doSelfReportingOnBL4P(self) -> None:
 		assert isinstance(self.order, SellOrder)
 		assert isinstance(self.transaction, SellTransaction)
+		assert self.counterOffer is not None
 
 		await self.call(messages.BL4PSelfReport(
 			localOrderID = self.order.ID,
@@ -507,6 +508,7 @@ class OrderTask:
 	async def doTransactionOnLightning(self) -> None:
 		assert isinstance(self.order, SellOrder)
 		assert isinstance(self.transaction, SellTransaction)
+		assert self.counterOffer is not None
 
 		#Send out over Lightning:
 		lightningResult = cast(messages.LNPayResult,
@@ -595,7 +597,7 @@ class OrderTask:
 		cursor = self.storage.execute(
 			'SELECT ID from buyTransactions WHERE buyOrder = ? AND status != ? AND status != ?',
 			[self.order.ID, STATUS_FINISHED, STATUS_CANCELED]
-			) #type: storage.Cursor
+			) #type: Cursor
 		IDs = [row[0] for row in cursor] #type: List[int]
 		assert len(IDs) < 2 #TODO: properly report database inconsistency error
 		if len(IDs) == 0:
@@ -628,7 +630,7 @@ class OrderTask:
 		cursor = self.storage.execute(
 			'SELECT ID from buyTransactions WHERE paymentHash = ?',
 			[message.paymentHash]
-			) #type: storage.Cursor
+			) #type: Cursor
 		transactions = [BuyTransaction(self.storage, row[0]) for row in cursor]
 		if transactions:
 			log('A transaction with this payment hash already exists in our database')

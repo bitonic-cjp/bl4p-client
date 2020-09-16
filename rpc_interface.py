@@ -17,7 +17,7 @@
 #    along with the BL4P Client. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
-from typing import Any, Dict, Tuple, TYPE_CHECKING
+from typing import Any, Dict, List, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
 	import bl4p_plugin #pragma: nocover
@@ -41,15 +41,12 @@ class RPCInterface(JSONRPC, messages.Handler):
 			messages.LNPay: self.sendPay,
 			})
 		self.client = client #type: bl4p_plugin.BL4PClient
-
-		self.nodeID = None #type: str
-
 		self.ongoingRequests = {} #type: Dict[int, Tuple[str, messages.AnyMessage]] #ID -> (methodname, message)
 
 
 	async def startupRPC(self) -> None:
 		info = await self.synCall('getinfo') #type: Dict
-		self.nodeID = info['id']
+		self.nodeID = info['id'] #type: str
 
 		JSONRPC.startup(self)
 
@@ -60,17 +57,13 @@ class RPCInterface(JSONRPC, messages.Handler):
 
 
 	def handleResult(self, ID: int, result: Any) -> None:
-		name = None #type: str
-		message = None #type: messages.AnyMessage
-		name, message = self.ongoingRequests[ID]
+		name, message = self.ongoingRequests[ID] #type: Tuple[str, messages.AnyMessage]
 		del self.ongoingRequests[ID]
 		self.handleStoredRequestResult(message, name, result)
 
 
 	def handleError(self, ID: int, code: int, message: str) -> None:
-		name = None #type: str
-		storedMessage = None #type: messages.AnyMessage
-		name, storedMessage = self.ongoingRequests[ID]
+		name, storedMessage = self.ongoingRequests[ID] #type: Tuple[str, messages.AnyMessage]
 		del self.ongoingRequests[ID]
 		self.handleStoredRequestError(storedMessage, name, code)
 

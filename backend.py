@@ -55,14 +55,13 @@ class Backend(messages.Handler):
 			messages.LNPayResult: self.handleLNPayResult,
 			})
 
-		self.storage = None #type: Optional[storage.Storage]
 
 		self.client = client #type: bl4p_plugin.BL4PClient
 		self.orderTasks = {} #type: Dict[int, ordertask.OrderTask] #localID -> OrderTask
 
 
 	def startup(self, DBFile: str) -> None:
-		self.storage = storage.Storage(DBFile)
+		self.storage = storage.Storage(DBFile) #type: storage.Storage
 
 		#Loading existing orders and initializing order tasks:
 		def loadOrders(tableName: str, orderClass: Type[Union[SellOrder, BuyOrder]], address: str) -> None:

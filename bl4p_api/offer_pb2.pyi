@@ -1,4 +1,4 @@
-from typing import Iterable
+from typing import Iterable, Iterator
 
 
 
@@ -23,6 +23,9 @@ class Offer:
 
 	class ConditionList(Iterable[Offer.Condition]):
 		def add(self) -> Offer.Condition:
+			pass
+
+		def __iter__(self) -> Iterator[Offer.Condition]:
 			pass
 
 
