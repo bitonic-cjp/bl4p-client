@@ -153,6 +153,9 @@ class JSONRPC:
 		while True:
 			message = await self.getNextJSON() #type: Dict
 
+			if message is None:
+				raise Exception('Connection closed during RPC call')
+
 			#These are ours:
 			if 'result' in message and 'id' in message and message['id'] == ID:
 				break
