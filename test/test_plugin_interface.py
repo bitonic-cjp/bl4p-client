@@ -38,13 +38,18 @@ class TestPluginInterface(unittest.TestCase):
 		self.interface = plugin_interface.PluginInterface(self.client, self.input, self.output)
 
 
-	def checkJSON(self, data, reference):
+	def checkJSON(self, data, *args):
 		obj, length = json.JSONDecoder().raw_decode(data.decode('UTF-8'))
-		self.assertEqual(obj, reference)
+		#If any is a match, accept
+		for reference in args:
+			if obj == reference:
+				return
+		#Otherwise, let this assertion fail
+		self.assertEqual(obj, args[0])
 
 
-	def checkJSONOutput(self, reference):
-		self.checkJSON(self.output.buffer, reference)
+	def checkJSONOutput(self, *args):
+		self.checkJSON(self.output.buffer, *args)
 		self.output.buffer = b''
 
 
@@ -385,7 +390,16 @@ class TestPluginInterface(unittest.TestCase):
 			'error':
 				{
 				'code': 1,
-				'message': "Error while processing does_not_exist: KeyError('does_not_exist',)",
+				'message': "Error while processing does_not_exist: KeyError('does_not_exist',)", #with comma
+				},
+			},
+			{
+			'jsonrpc': '2.0',
+			'id': 6,
+			'error':
+				{
+				'code': 1,
+				'message': "Error while processing does_not_exist: KeyError('does_not_exist')", #without comma
 				},
 			})
 
