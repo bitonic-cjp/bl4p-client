@@ -26,7 +26,9 @@ from json_rpc import JSONRPC
 from ln_payload import Payload
 from log import log
 import messages
+import onion_utils
 import settings
+
 
 
 class extendedLNPayMessage(messages.LNPay):
