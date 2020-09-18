@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-#    Copyright (C) 2019 by Bitonic B.V.
+#    Copyright (C) 2019-2020 by Bitonic B.V.
 #
 #    This file is part of the BL4P Client.
 #
