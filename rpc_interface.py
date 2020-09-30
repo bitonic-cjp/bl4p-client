@@ -33,6 +33,7 @@ import settings
 
 class extendedLNPayMessage(messages.LNPay):
 	senderCryptoAmount    = 0   #type: int
+	route                 = []  #type: List[Dict[str, Any]]
 
 
 
@@ -96,11 +97,14 @@ class RPCInterface(JSONRPC, messages.Handler):
 		if (name, messageClass) == ('getroute', messages.LNPay):
 			assert isinstance(message, messages.LNPay) #mypy is stupid
 
+			#TODO: handle getroute failures
+
 			route = result['route'] #type: List[Dict[str, Any]]
 
 			newMessage = extendedLNPayMessage(
 				localOrderID          = message.localOrderID,
 				destinationNodeID     = message.destinationNodeID,
+
 				paymentHash           = message.paymentHash,
 				recipientCryptoAmount = message.recipientCryptoAmount,
 				maxSenderCryptoAmount = message.maxSenderCryptoAmount,
@@ -108,34 +112,64 @@ class RPCInterface(JSONRPC, messages.Handler):
 				fiatAmount            = message.fiatAmount,
 				offerID               = message.offerID,
 
-				senderCryptoAmount    = route[0]["msatoshi"]
-				)
+				senderCryptoAmount    = route[0]['msatoshi'],
+				route                 = route,
+				) #type: extendedLNPayMessage
 
 			if newMessage.senderCryptoAmount > message.maxSenderCryptoAmount:
 				#TODO: proper handling of this
 				raise Exception('maxSenderCryptoAmount exceeded')
+			#TODO: check for message.minCLTVExpiryDelta
+
+			self.sendStoredRequest(newMessage, 'getinfo', {})
+
+		elif (name, messageClass) == ('getinfo', extendedLNPayMessage):
+			assert isinstance(message, extendedLNPayMessage) #mypy is stupid
+
+			#TODO: check if getinfo was OK
+
+			blockHeight = result['blockheight']
 
 			payload = Payload(message.fiatAmount, message.offerID) #type: Payload
 
-			self.sendStoredRequest(newMessage, 'sendpay',
-				{
-				'route': route,
-				'payment_hash': newMessage.paymentHash.hex(),
-				'msatoshi': newMessage.recipientCryptoAmount,
+			onionHopsData = onion_utils.makeCreateOnionHopsData(
+				message.route, payload.encode(), blockHeight) #type: List[Dict[str, Any]]
 
-				'realm': 254, #TODO
-				'data': payload.encode().hex(),
+			self.sendStoredRequest(message, 'createonion',
+				{
+				'hops': onionHopsData,
+				'payment_hash': message.paymentHash.hex(),
 				})
-		elif (name, messageClass) == ('sendpay', extendedLNPayMessage):
+
+		elif (name, messageClass) == ('createonion', extendedLNPayMessage):
 			assert isinstance(message, extendedLNPayMessage) #mypy is stupid
 
-			#TODO: maybe check if sendpay was OK
+			#TODO: check if createonion was OK
+
+			self.sendStoredRequest(message, 'sendonion',
+				{
+				'onion':          result['onion'],
+				'first_hop':      message.route[0],
+				'payment_hash':   message.paymentHash.hex(),
+				'label':          'BL4P payment',
+				'shared_secrets': result['shared_secrets'],
+				'msatoshi':       message.recipientCryptoAmount,
+				})
+
+		elif (name, messageClass) == ('sendonion', extendedLNPayMessage):
+			assert isinstance(message, extendedLNPayMessage) #mypy is stupid
+
+			#TODO: check if sendonion was OK
+
 			self.sendStoredRequest(message, 'waitsendpay',
 				{
 				'payment_hash': message.paymentHash.hex(),
 				})
+
 		elif (name, messageClass) == ('waitsendpay', extendedLNPayMessage):
 			assert isinstance(message, extendedLNPayMessage) #mypy is stupid
+
+			#TODO: check if waitsendpay was OK
 
 			assert result['status'] == 'complete' #TODO: what else?
 			paymentPreimage = bytes.fromhex(result['payment_preimage']) #type: bytes

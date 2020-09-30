@@ -210,11 +210,7 @@ class TestPluginInterface(unittest.TestCase):
 			{
 			'onion':
 				{
-				'hop_data':
-					{
-					'realm': 'fe',
-					'per_hop': 'f1f2f3f4f5f6f7f8c1c2c3c4',
-					},
+				'payload': '12fe424c34500cf1f2f3f4f5f6f7f8c1c2c3c4',
 				},
 			'htlc':
 				{
@@ -255,11 +251,7 @@ class TestPluginInterface(unittest.TestCase):
 			{
 			'onion':
 				{
-				'hop_data':
-					{
-					'realm': 'fe',
-					'per_hop': 'f1f2f3f4f5f6f7f8c1c2c3c4',
-					},
+				'payload': '12fe424c34500cf1f2f3f4f5f6f7f8c1c2c3c4',
 				},
 			'htlc':
 				{
@@ -291,7 +283,7 @@ class TestPluginInterface(unittest.TestCase):
 			})
 
 
-	def test_handleHTLCAccepted_wrongInput(self):
+	def test_handleHTLCAccepted_notOurPayload(self):
 		m = Mock(return_value=None)
 		with patch.object(plugin_interface, 'logException', m):
 			self.interface.handleRequest(
@@ -300,11 +292,37 @@ class TestPluginInterface(unittest.TestCase):
 				{
 				'onion':
 					{
-					'hop_data':
-						{
-						'realm': 'fe',
-						#per_hop is missing intentionally
-						},
+					'payload': '12fe4c4c34500cf1f2f3f4f5f6f7f8c1c2c3c4',
+					},
+				'htlc':
+					{
+					'msatoshi': 1234,
+					'cltv_expiry': 42,
+					'payment_hash': 'cafecafe',
+					},
+				})
+		m.assert_called_once_with()
+		self.checkJSONOutput(
+			{
+			'jsonrpc': '2.0',
+			'id': 6,
+			'result':
+				{
+				'result': 'continue',
+				},
+			})
+
+
+	def test_handleHTLCAccepted_wrongFormatPayload(self):
+		m = Mock(return_value=None)
+		with patch.object(plugin_interface, 'logException', m):
+			self.interface.handleRequest(
+				6,
+				'htlc_accepted',
+				{
+				'onion':
+					{
+					'payload': '11fe424c34500bf1f2f3f4f5f6f7f8c1c2c3',
 					},
 				'htlc':
 					{
@@ -321,37 +339,6 @@ class TestPluginInterface(unittest.TestCase):
 			'result':
 				{
 				'result': 'fail',
-				},
-			})
-
-
-	def test_handleHTLCAccepted_differentRealm(self):
-		self.interface.handleRequest(
-			6,
-			'htlc_accepted',
-			{
-			'onion':
-				{
-				'hop_data':
-					{
-					'realm': '00',
-					'per_hop': 'f1f2f3f4f5f6f7f8c1c2c3c4',
-					},
-				},
-			'htlc':
-				{
-				'msatoshi': 1234,
-				'cltv_expiry': 42,
-				'payment_hash': 'cafecafe',
-				},
-			})
-		self.checkJSONOutput(
-			{
-			'jsonrpc': '2.0',
-			'id': 6,
-			'result':
-				{
-				'result': 'continue',
 				},
 			})
 

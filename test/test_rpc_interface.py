@@ -90,30 +90,91 @@ class TestRPCInterface(unittest.TestCase):
 
 		self.rpc.handleResult(0,
 			{
-			'route': [{'msatoshi': 1247}, {'msatoshi': 1234}],
+			'route':
+				[
+				{
+				'id': 'Intermediate',
+				'msatoshi': 1247,
+				'delay': 12,
+				'channel': '103x1x1',
+				'style': 'legacy'
+				},
+				{
+				'id': 'Destination',
+				'msatoshi': 1234,
+				'delay': 10,
+				'channel': '199x2x3',
+				'style': 'legacy'
+				},
+				],
 			})
 
 		self.checkJSONOutput(
 			{
 			'jsonrpc': '2.0',
 			'id': 1,
-			'method': 'sendpay',
+			'method': 'getinfo',
 			'params':
 				{
-				'data': '00000000deadbeef00008008',
-				'msatoshi': 1234,
-				'payment_hash': '0123456789abcdef',
-				'realm': 254,
-				'route': [{'msatoshi': 1247}, {'msatoshi': 1234}]
 				},
 			})
 
-		self.rpc.handleResult(1, {})
+		self.rpc.handleResult(1,
+			{
+			'blockheight': 123456,
+			})
 
 		self.checkJSONOutput(
 			{
 			'jsonrpc': '2.0',
 			'id': 2,
+			'method': 'createonion',
+			'params':
+				{
+				'hops':
+					[
+					{'payload': '000000c7000002000300000000000004d20001e24a000000000000000000000000000000000000000000000000', 'pubkey': 'Intermediate'},
+					{'payload': '12fe424c34500c00000000deadbeef00008008', 'pubkey': 'Destination'}
+					],
+				'payment_hash': '0123456789abcdef',
+				}
+			})
+
+		self.rpc.handleResult(2,
+			{
+			'onion': 'The onion',
+			'shared_secrets': ['Secret 1', 'Secret 2'],
+			})
+
+		self.checkJSONOutput(
+			{
+			'jsonrpc': '2.0',
+			'id': 3,
+			'method': 'sendonion',
+			'params':
+				{
+				'onion': 'The onion',
+				'first_hop':
+					{
+					'id': 'Intermediate',
+					'msatoshi': 1247,
+					'delay': 12,
+					'channel': '103x1x1',
+					'style': 'legacy'
+					},
+				'payment_hash': '0123456789abcdef',
+				'label': 'BL4P payment',
+				'shared_secrets': ['Secret 1', 'Secret 2'],
+				'msatoshi': 1234,
+				},
+			})
+
+		self.rpc.handleResult(3, {})
+
+		self.checkJSONOutput(
+			{
+			'jsonrpc': '2.0',
+			'id': 4,
 			'method': 'waitsendpay',
 			'params':
 				{
@@ -121,7 +182,7 @@ class TestRPCInterface(unittest.TestCase):
 				},
 			})
 
-		self.rpc.handleResult(2,
+		self.rpc.handleResult(4,
 			{
 			'status': 'complete',
 			'payment_preimage': 'cafecafe',
@@ -178,17 +239,44 @@ class TestRPCInterface(unittest.TestCase):
 		self.rpc.handleMessage(msg)
 		self.rpc.handleResult(0,
 			{
-			'route': [{'msatoshi': 1247}, {'msatoshi': 1234}],
+			'route':
+				[
+				{
+				'id': 'Intermediate',
+				'msatoshi': 1247,
+				'delay': 12,
+				'channel': '103x1x1',
+				'style': 'legacy'
+				},
+				{
+				'id': 'Destination',
+				'msatoshi': 1234,
+				'delay': 10,
+				'channel': '199x2x3',
+				'style': 'legacy'
+				},
+				],
+			})
+
+		self.rpc.handleResult(1,
+			{
+			'blockheight': 123456,
+			})
+
+		self.rpc.handleResult(2,
+			{
+			'onion': 'The onion',
+			'shared_secrets': ['Secret 1', 'Secret 2'],
 			})
 
 		self.output.buffer = b''
 
-		self.rpc.handleResult(1, {})
+		self.rpc.handleResult(3, {})
 
 		self.checkJSONOutput(
 			{
 			'jsonrpc': '2.0',
-			'id': 2,
+			'id': 4,
 			'method': 'waitsendpay',
 			'params':
 				{
@@ -196,7 +284,7 @@ class TestRPCInterface(unittest.TestCase):
 				},
 			})
 
-		self.rpc.handleError(2, 203, 'Transaction was refused')
+		self.rpc.handleError(4, 203, 'Transaction was refused')
 
 		self.client.handleIncomingMessage.assert_called_once_with(messages.LNPayResult(
 			localOrderID = 6,

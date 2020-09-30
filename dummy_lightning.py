@@ -17,15 +17,21 @@
 #    along with the BL4P Client. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
+import json
 import os
 import signal
 import socket
+import struct
 import time
 import traceback
 
 from json_rpc import JSONRPC
 from log import log, logException
 from simplestruct import Struct
+
+
+
+CURRENT_BLOCK_HEIGHT = 1234567
 
 
 
@@ -38,9 +44,20 @@ class Transaction(Struct):
 	destCLTV        = 0
 	paymentHash     = '' #hex
 	paymentPreimage = '' #hex
-	realm           = 0
 	data            = '' #hex
 
+
+
+def decodeLegacyPayload(payload):
+	payload = bytes.fromhex(payload)
+	realm = payload[0]
+	assert realm == 0
+	msatoshi, cltv_value = struct.unpack('>QI', payload[9:21])
+	return \
+	{
+	'msatoshi'  : msatoshi,
+	'cltv_value': cltv_value,
+	}
 
 
 class RPCInterface(JSONRPC):
@@ -252,7 +269,8 @@ class Node:
 			{
 			'getinfo': self.getInfo,
 			'getroute': self.getRoute,
-			'sendpay': self.sendPay,
+			'createonion': self.createOnion,
+			'sendonion': self.sendOnion,
 			'waitsendpay': self.waitSendPay,
 			}[name]
 
@@ -270,7 +288,7 @@ class Node:
 
 
 	def getInfo(self, **kwargs):
-		return {'id': self.nodeID}
+		return {'id': self.nodeID, 'blockheight': CURRENT_BLOCK_HEIGHT}
 
 
 	def getRoute(self, id, msatoshi, cltv, **kwargs):
@@ -280,34 +298,48 @@ class Node:
 			'msatoshi': int(1.01*msatoshi), #simulated 1% fee
 			'delay': cltv + 100, #simulated 10 hops, 10 blocks per hop
 			'id': 'ID of some intermediate node',
+			'channel': '12345x10x2',
+			'style': 'legacy',
 		},
 		{
 			'msatoshi': msatoshi,
 			'delay': cltv,
 			'id': id,
+			'channel': '54321x25x1',
+			'style': 'legacy',
 		},
 		]
 		return {'route': route}
 
 
-	def sendPay(self, route, payment_hash, msatoshi, realm, data, **kwargs):
-		#TODO: realm, data is a fantasy interface, not yet in lightningd
+	def createOnion(self, hops, payment_hash, **kwargs):
+		assert len(hops) > 0
+		assert hops[-1]['pubkey'] != self.nodeID
 
-		assert len(route) > 0
-		assert route[-1]['id'] != self.nodeID
-		assert route[-1]['msatoshi'] == msatoshi
+		#Just a serialized version of the arguments:		
+		onion = json.dumps([hops, payment_hash]).encode('utf-8').hex()
+		shared_secrets = ['Secret 1', 'Secret 2']
+
+		return {'onion': onion, 'shared_secrets': shared_secrets}
+
+
+	def sendOnion(self, onion, first_hop, payment_hash, label, shared_secrets, msatoshi, **kwargs):
+		hops, payment_hash = json.JSONDecoder().raw_decode(bytes.fromhex(onion).decode('utf-8'))[0]
+
+		log('sendOnion: hops = ' + str(hops))
+
+		last_hop = decodeLegacyPayload(hops[-2]['payload']) #actually second-last in hops list
 
 		tx = Transaction(
 			sourceID = self.nodeID,
-			destID   = route[-1]['id'],
-			source_msatoshi = route[ 0]['msatoshi'],
-			dest_msatoshi   = route[-1]['msatoshi'],
-			sourceCLTV = route[ 0]['delay'],
-			destCLTV   = route[-1]['delay'],
+			destID   = hops[-1]['pubkey'],
+			source_msatoshi = first_hop['msatoshi'],
+			dest_msatoshi   = last_hop['msatoshi'],
+			sourceCLTV = CURRENT_BLOCK_HEIGHT + first_hop['delay'],
+			destCLTV   = last_hop['cltv_value'],
 			paymentHash = payment_hash,
 			paymentPreimage = None,
-			realm = realm,
-			data = data,
+			data = hops[-1]['payload'],
 			)
 
 		global nodes
@@ -346,15 +378,10 @@ class Node:
 
 		assert 'htlc_accepted' in self.pluginInterface.hooks
 
-		#TODO: per_hop is a fantasy interface, not yet in lightningd
 		ID = self.pluginInterface.sendRequest('htlc_accepted', {
 			'onion':
 				{
-				'hop_data':
-					{
-					'realm': bytes([tx.realm]).hex(),
-					'per_hop': tx.data,
-					},
+				'payload': tx.data,
 				},
 			'htlc':
 				{

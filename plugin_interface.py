@@ -30,6 +30,7 @@ from json_rpc import JSONRPC
 from ln_payload import Payload
 from log import log, logException
 import messages
+import onion_utils
 import settings
 
 
@@ -259,13 +260,7 @@ class PluginInterface(JSONRPC, messages.Handler):
 		Parameter format:
 		'onion':
 			{
-			'hop_data':
-				{
-				'realm': hex,
-				'per_hop': hex,
-				},
-			'next_onion': hex,
-			'shared_secret': hex,
+			'payload':
 			},
 		'htlc':
 			{
@@ -276,14 +271,17 @@ class PluginInterface(JSONRPC, messages.Handler):
 		'''
 		#We depend on C-Lightning to pass the expected types in onion, htlc
 
-		realm = bytes.fromhex(onion['hop_data']['realm'])[0] #type: int
-		if realm != 254: #TODO
+		onionPayload = bytes.fromhex(onion['payload']) #type: bytes
+		try:
+			payloadData = onion_utils.readCustomPayloadData(onionPayload) #type: bytes
+		except:
+			log('We failed to deserialize the payload data, so we won\'t handle this transaction:')
+			logException()
 			return {'result': 'continue'} #it's not handled by us
 
 		try:
 			paymentHash = bytes.fromhex(htlc['payment_hash']) #type: bytes
-			payload = Payload.decode(
-				bytes.fromhex(onion['hop_data']['per_hop'])) #type: Payload
+			payload = Payload.decode(payloadData) #type: Payload
 			cryptoAmount = htlc['msatoshi'] #type: int
 			CLTVExpiryDelta = htlc['cltv_expiry'] #type: int #TODO: check if this is a relative or absolute value. For now, relative is used everywhere.
 		except:

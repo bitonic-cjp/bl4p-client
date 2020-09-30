@@ -18,6 +18,9 @@
 import struct
 from typing import Any, Dict, List, Tuple
 
+from log import log, logException
+
+
 
 #ASCII-encoded "BL4P"
 BL4P_TLV_TYPE = 0x424C3450 #type: int
@@ -119,4 +122,18 @@ def makeCreateOnionHopsData(
 	{'pubkey': r['id'], 'payload': pl.hex()}
 	for r, pl in zip(route, payloads)
 	]
+
+
+def readCustomPayloadData(payload: bytes) -> bytes:
+	try:
+		TLVData = deserializeTLVPayload(payload) #type: Dict[int, bytes]
+	except:
+		log('Exception when trying to deserialize the onion payload:')
+		logException()
+		raise
+
+	if list(TLVData.keys()) != [BL4P_TLV_TYPE]:
+		log('Received an incoming transaction with unrecognized payload format')
+		raise Exception('Not our onion data format')
+	return TLVData[BL4P_TLV_TYPE]
 

@@ -129,7 +129,24 @@ class TestOnionUtils(unittest.TestCase):
 			])
 
 
+	def test_readCustomPayloadData(self):
+		self.assertEqual(
+			onion_utils.readCustomPayloadData(
+				bytes.fromhex('0afe424c345004cafebabe')
+				),
+				bytes.fromhex('cafebabe')
+			)
 
+		with self.assertRaises(Exception):
+			onion_utils.readCustomPayloadData(b'') #invalid format
+
+		with self.assertRaises(Exception):
+			onion_utils.readCustomPayloadData(
+				bytes.fromhex('0afe424c345104cafebabe') #different TLV type
+				)
+
+
+	
 if __name__ == '__main__':
 	unittest.main(verbosity=2)
 
