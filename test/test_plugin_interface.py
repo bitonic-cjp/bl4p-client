@@ -83,7 +83,7 @@ class TestPluginInterface(unittest.TestCase):
 		obj, length = json.JSONDecoder().raw_decode(output[0].decode('UTF-8'))
 		self.assertEqual(obj['id'], 0)
 		obj = obj['result']
-		self.assertEqual(obj['subscriptions'], ['test'])
+		self.assertEqual(obj['subscriptions'], [])
 		self.assertEqual(obj['options'][0]['name'], 'bl4p.logfile')
 		self.assertEqual(obj['options'][0]['default'], 'bl4p.log')
 		self.assertEqual(obj['options'][1]['name'], 'bl4p.dbfile')
@@ -358,11 +358,6 @@ class TestPluginInterface(unittest.TestCase):
 			paymentHash = b'\xca\xfe\xca\xfe',
 			))
 		self.assertEqual(self.output.buffer, b'')
-
-
-	def test_handleNotification(self):
-		#Just for coverage
-		self.interface.handleNotification('test', {})
 
 
 	def test_invalidRequest(self):

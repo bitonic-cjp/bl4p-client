@@ -90,10 +90,7 @@ class PluginInterface(JSONRPC, messages.Handler):
 		'htlc_accepted'         : (self.handleHTLCAccepted, MethodType.HOOK),
 		} #type: Dict[str, Tuple[Callable, MethodType]]
 
-		def testHandler(**kwargs):
-			log('Test notification received')
-
-		self.subscriptions = {'test': testHandler} #type: Dict[str, Callable]
+		self.subscriptions = {} #type: Dict[str, Callable]
 
 		self.currentRequestID = None #type: Optional[int]
 		self.ongoingRequests = {} #type: Dict[int, Tuple[str, OngoingRequest]] #ID -> (methodname, OngoingRequest)
