@@ -67,6 +67,9 @@ class RPCInterface(JSONRPC, messages.Handler):
 
 	def handleError(self, ID: int, code: int, message: str) -> None:
 		name, storedMessage = self.ongoingRequests[ID] #type: Tuple[str, messages.AnyMessage]
+		log('Received an error for call ID = %d, name = %s, message = %s' % \
+			(ID, name, str(storedMessage)))
+		log('Error code = %d, message = %s' % (code, message))
 		del self.ongoingRequests[ID]
 		self.handleStoredRequestError(storedMessage, name, code)
 
