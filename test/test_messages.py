@@ -40,20 +40,35 @@ class TestMessages(unittest.TestCase):
 		m.assert_called_once_with(obj)
 
 
-	def test_Router(self):
+	def test_Router_immediateForwarding(self):
 		m = Mock()
 		h = messages.Handler({Dummy: m})
 		r = messages.Router()
-		r.addHandler(h)
-
 		obj = Dummy()
+
+		r.addHandler(h)
+		r.startMessaging()
 		r.handleMessage(obj)
+
 		m.assert_called_once_with(obj)
 
 		#Cannot have two handlers handling the same message class:
 		h2 = messages.Handler({Dummy: m})
 		with self.assertRaises(Exception):
 			r.addHandler(h2)
+
+
+	def test_Router_delayedForwarding(self):
+		m = Mock()
+		h = messages.Handler({Dummy: m})
+		r = messages.Router()
+		obj = Dummy()
+
+		r.handleMessage(obj)
+		r.addHandler(h)
+		r.startMessaging()
+
+		m.assert_called_once_with(obj)
 
 
 

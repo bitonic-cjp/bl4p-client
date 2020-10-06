@@ -18,6 +18,7 @@
 
 from typing import Callable, Dict, List, Optional, Type, Union, cast
 
+from log import log
 from simplestruct import Struct
 
 from bl4p_api import offer as _offer
@@ -215,7 +216,11 @@ AnyMessageHandler = Union[
 
 class Handler:
 	def __init__(self, handlerMethods: Dict[type, AnyMessageHandler] = {}) -> None:
-		self.handlerMethods = handlerMethods #type: Dict[type, AnyMessageHandler]
+		#One-level deep deepcopy:
+		self.handlerMethods = \
+		{
+		k:v for k,v in handlerMethods.items()
+		} #type: Dict[type, AnyMessageHandler]
 
 
 	def handleMessage(self, message: AnyMessage) -> None:
@@ -225,10 +230,32 @@ class Handler:
 
 
 class Router(Handler):
+	def __init__(self) -> None:
+		Handler.__init__(self)
+		self.messagingStarted = False #type: bool
+		self.storedMessages = [] #type: List[AnyMessage]
+
+
 	def addHandler(self, handler: Handler) -> None:
 		for msgClass, method in handler.handlerMethods.items():
 			if msgClass in self.handlerMethods:
 				raise Exception(
 					'Router: cannot have multiple handlers for a single message class')
 			self.handlerMethods[msgClass] = method
+
+
+	def handleMessage(self, message: AnyMessage) -> None:
+		if self.messagingStarted:
+			return Handler.handleMessage(self, message)
+
+		log('Storing message because we haven\'t finished startup yet: ' + str(message.__class__))
+		self.storedMessages.append(message)
+
+
+	def startMessaging(self) -> None:
+		self.messagingStarted = True
+		
+		for message in self.storedMessages:
+			log('Handling stored message: ' + str(message.__class__))
+			Handler.handleMessage(self, message)
 
