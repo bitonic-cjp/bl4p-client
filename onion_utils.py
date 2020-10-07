@@ -51,6 +51,13 @@ def deserializeBigsize(data: bytes) -> Tuple[int, bytes]:
 		return first, data
 
 
+def serializeTruncatedInt(fmt: str, value):
+	data = struct.pack(fmt, value)
+	while data and data[0] == 0:
+		data = data[1:]
+	return data
+
+
 def serializeTLVPayload(TLVData: Dict[int, bytes]) -> bytes:
 	keys = list(TLVData.keys()) #type: List[int]
 	keys.sort()
@@ -93,17 +100,36 @@ def serializeStandardPayload(route_data: Dict[str, Any], blockHeight: int) -> by
 		chnBlockHeight = struct.pack('>I', int(chnBlockHeightStr))[-3:] #type: bytes
 		chnTxIndex = struct.pack('>I', int(chnTxIndexStr))[-3:] #type: bytes
 		chnOutputIndex = struct.pack('>H', int(chnOutputIndexStr)) #type: bytes
-		short_channel_id = realm + chnBlockHeight + chnTxIndex + chnOutputIndex #type: bytes
+		short_channel_id = chnBlockHeight + chnTxIndex + chnOutputIndex #type: bytes
 
 		amt_to_forward = route_data['msatoshi'] #type: int
 		outgoing_cltv_value = blockHeight + route_data['delay'] #type: int
 		return \
-			struct.pack('>9sQI',
+			realm + struct.pack('>8sQI',
 				short_channel_id,
 				amt_to_forward,
 				outgoing_cltv_value
 				) + 24*b'\0'
+	elif style == 'tlv':
+		#This may be Bitcoin-specific:
+		# Short Channel ID is composed of 3 bytes for the block height, 3
+		# bytes of tx index in block and 2 bytes of output index
+		chnBlockHeightStr, chnTxIndexStr, chnOutputIndexStr = \
+			route_data['channel'].split('x')
+		chnBlockHeight = struct.pack('>I', int(chnBlockHeightStr))[-3:]
+		chnTxIndex = struct.pack('>I', int(chnTxIndexStr))[-3:]
+		chnOutputIndex = struct.pack('>H', int(chnOutputIndexStr))
+		short_channel_id = chnBlockHeight + chnTxIndex + chnOutputIndex
 
+		amt_to_forward = route_data['msatoshi']
+		outgoing_cltv_value = blockHeight + route_data['delay']
+		return serializeTLVPayload({
+			2: serializeTruncatedInt('>Q', amt_to_forward),
+			4: serializeTruncatedInt('>I', outgoing_cltv_value),
+			6: short_channel_id,
+			})
+
+	log('Got unrecognized route data: ' + str(route_data))
 	raise Exception('Style not supported: ' + style)
 
 

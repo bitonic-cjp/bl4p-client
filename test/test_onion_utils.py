@@ -53,6 +53,20 @@ class TestOnionUtils(unittest.TestCase):
 		self.assertEqual(onion_utils.deserializeBigsize(b'\xff\xff\xff\xff\xff\xff\xff\xff\xffFoobar'), (0xffffffffffffffff, b'Foobar'))
 
 
+	def test_serializeTruncatedInt(self):
+		self.assertEqual(onion_utils.serializeTruncatedInt('>Q', 0x0), b'')
+		self.assertEqual(onion_utils.serializeTruncatedInt('>Q', 0x1), b'\x01')
+		self.assertEqual(onion_utils.serializeTruncatedInt('>Q', 0xff), b'\xff')
+		self.assertEqual(onion_utils.serializeTruncatedInt('>Q', 0x100), b'\x01\x00')
+		self.assertEqual(onion_utils.serializeTruncatedInt('>Q', 0xffffffffffffffff), b'\xff\xff\xff\xff\xff\xff\xff\xff')
+
+		self.assertEqual(onion_utils.serializeTruncatedInt('>I', 0x0), b'')
+		self.assertEqual(onion_utils.serializeTruncatedInt('>I', 0x1), b'\x01')
+		self.assertEqual(onion_utils.serializeTruncatedInt('>I', 0xff), b'\xff')
+		self.assertEqual(onion_utils.serializeTruncatedInt('>I', 0x100), b'\x01\x00')
+		self.assertEqual(onion_utils.serializeTruncatedInt('>I', 0xffffffff), b'\xff\xff\xff\xff')
+
+
 	def test_serializeTLVPayload(self):
 		self.assertEqual(
 			onion_utils.serializeTLVPayload({0x21: b'Foo', 0xcafebabe: b'Bar'}),
@@ -83,13 +97,29 @@ class TestOnionUtils(unittest.TestCase):
 				'00000067000001000100000000000003e90000007b000000000000000000000000000000000000000000000000'
 				))
 
+
+		self.assertEqual(
+			onion_utils.serializeStandardPayload(
+				{
+				'channel': '103x1x1',
+				'msatoshi': 1001,
+				'delay': 15,
+				'style': 'tlv',
+				},
+				108,
+				),
+			bytes.fromhex(
+				'11020203e904017b06080000670000010001'
+				))
+
+
 		with self.assertRaises(Exception):
 			onion_utils.serializeStandardPayload(
 				{
 				'channel': '103x1x1',
 				'msatoshi': 1001,
 				'delay': 15,
-				'style': 'Not so legacy',
+				'style': 'Not supported',
 				},
 				108,
 				)
