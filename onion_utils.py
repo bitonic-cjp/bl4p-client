@@ -51,8 +51,8 @@ def deserializeBigsize(data: bytes) -> Tuple[int, bytes]:
 		return first, data
 
 
-def serializeTruncatedInt(fmt: str, value):
-	data = struct.pack(fmt, value)
+def serializeTruncatedInt(fmt: str, value: int) -> bytes:
+	data = struct.pack(fmt, value) #type: bytes
 	while data and data[0] == 0:
 		data = data[1:]
 	return data
