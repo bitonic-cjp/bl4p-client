@@ -136,7 +136,7 @@ class TestRPCInterface(unittest.TestCase):
 					{'payload': '000000c7000002000300000000000004d20001e24a000000000000000000000000000000000000000000000000', 'pubkey': 'Intermediate'},
 					{'payload': '12fe424c34500c00000000deadbeef00008008', 'pubkey': 'Destination'}
 					],
-				'payment_hash': '0123456789abcdef',
+				'assocdata': '0123456789abcdef',
 				}
 			})
 

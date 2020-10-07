@@ -261,7 +261,7 @@ class PluginInterface(JSONRPC, messages.Handler):
 			},
 		'htlc':
 			{
-			'msatoshi': int,
+			'amount': str,
 			'cltv_expiry': int,
 			'payment_hash': hex,
 			}
@@ -279,7 +279,10 @@ class PluginInterface(JSONRPC, messages.Handler):
 		try:
 			paymentHash = bytes.fromhex(htlc['payment_hash']) #type: bytes
 			payload = Payload.decode(payloadData) #type: Payload
-			cryptoAmount = htlc['msatoshi'] #type: int
+			amount_str = htlc['amount'] #type: str
+			assert amount_str.endswith('msat') #TODO: may be Bitcoin-specific
+			amount_str = amount_str[:-4] #remove trailing 'msat'
+			cryptoAmount = int(amount_str) #type: int
 			CLTVExpiryDelta = htlc['cltv_expiry'] #type: int #TODO: check if this is a relative or absolute value. For now, relative is used everywhere.
 		except:
 			log('Refused incoming transaction because there is something wrong with it:')

@@ -214,7 +214,7 @@ class TestPluginInterface(unittest.TestCase):
 				},
 			'htlc':
 				{
-				'msatoshi': 1234,
+				'amount': '1234msat',
 				'cltv_expiry': 42,
 				'payment_hash': 'cafecafe',
 				},
@@ -255,7 +255,7 @@ class TestPluginInterface(unittest.TestCase):
 				},
 			'htlc':
 				{
-				'msatoshi': 1234,
+				'amount': '1234msat',
 				'cltv_expiry': 42,
 				'payment_hash': 'cafecafe',
 				},
@@ -296,7 +296,7 @@ class TestPluginInterface(unittest.TestCase):
 					},
 				'htlc':
 					{
-					'msatoshi': 1234,
+					'amount': '1234msat',
 					'cltv_expiry': 42,
 					'payment_hash': 'cafecafe',
 					},
@@ -326,7 +326,7 @@ class TestPluginInterface(unittest.TestCase):
 					},
 				'htlc':
 					{
-					'msatoshi': 1234,
+					'amount': '1234msat',
 					'cltv_expiry': 42,
 					'payment_hash': 'cafecafe',
 					},

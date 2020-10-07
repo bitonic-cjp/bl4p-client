@@ -312,12 +312,12 @@ class Node:
 		return {'route': route}
 
 
-	def createOnion(self, hops, payment_hash, **kwargs):
+	def createOnion(self, hops, assocdata, **kwargs):
 		assert len(hops) > 0
 		assert hops[-1]['pubkey'] != self.nodeID
 
 		#Just a serialized version of the arguments:		
-		onion = json.dumps([hops, payment_hash]).encode('utf-8').hex()
+		onion = json.dumps([hops, assocdata]).encode('utf-8').hex()
 		shared_secrets = ['Secret 1', 'Secret 2']
 
 		return {'onion': onion, 'shared_secrets': shared_secrets}
@@ -385,7 +385,7 @@ class Node:
 				},
 			'htlc':
 				{
-				'msatoshi': tx.dest_msatoshi,
+				'amount': str(tx.dest_msatoshi) + 'msat',
 				'cltv_expiry': tx.destCLTV, #TODO: check if this is a relative or absolute value. For now, relative is used everywhere.
 				'payment_hash': tx.paymentHash,
 				}

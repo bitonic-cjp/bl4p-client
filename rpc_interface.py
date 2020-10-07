@@ -141,7 +141,7 @@ class RPCInterface(JSONRPC, messages.Handler):
 			self.sendStoredRequest(message, 'createonion',
 				{
 				'hops': onionHopsData,
-				'payment_hash': message.paymentHash.hex(),
+				'assocdata': message.paymentHash.hex(),
 				})
 
 		elif (name, messageClass) == ('createonion', extendedLNPayMessage):
