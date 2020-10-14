@@ -78,7 +78,10 @@ class Backend(messages.Handler):
 
 
 	async def shutdown(self) -> None:
-		for task in self.orderTasks.values():
+		#self.orderTasks may be modified while we do this,
+		#so we make a copy first:
+		tasks = list(self.orderTasks.values()) #type: List[ordertask.OrderTask]
+		for task in tasks:
 			await task.shutdown()
 		self.storage.shutdown()
 
