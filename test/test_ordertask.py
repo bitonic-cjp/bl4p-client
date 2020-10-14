@@ -700,7 +700,7 @@ class TestOrderTask(unittest.TestCase):
 				'sellOrder': 42,
 				'counterOffer': 43,
 				'status': 0,
-				'senderTimeoutDelta': 100, #highest minimum
+				'senderTimeoutDelta': 500, #highest minimum
 				'lockedTimeoutDelta': 53, #lowest maximum
 				'CLTVExpiryDelta':    23, #highest minimum
 				'maxSenderCryptoAmount': maxSenderCryptoAmount,
@@ -719,7 +719,7 @@ class TestOrderTask(unittest.TestCase):
 				localOrderID=42,
 
 		                amount=senderFiatAmount,
-		                sender_timeout_delta_ms=100,
+		                sender_timeout_delta_ms=500,
 		                locked_timeout_delta_s=53,
 		                receiver_pays_fee=True,
 				))
@@ -738,7 +738,7 @@ class TestOrderTask(unittest.TestCase):
 				'sellOrder': 42,
 				'counterOffer': 43,
 				'status': ordertask.STATUS_STARTED,
-				'senderTimeoutDelta': 100,
+				'senderTimeoutDelta': 500,
 				'lockedTimeoutDelta': 53,
 				'CLTVExpiryDelta':    23,
 				'maxSenderCryptoAmount': maxSenderCryptoAmount,
@@ -774,7 +774,7 @@ class TestOrderTask(unittest.TestCase):
 				'sellOrder': 42,
 				'counterOffer': 43,
 				'status': ordertask.STATUS_LOCKED,
-				'senderTimeoutDelta': 100,
+				'senderTimeoutDelta': 500,
 				'lockedTimeoutDelta': 53,
 				'CLTVExpiryDelta':    23,
 				'maxSenderCryptoAmount': maxSenderCryptoAmount,
@@ -813,7 +813,7 @@ class TestOrderTask(unittest.TestCase):
 				'sellOrder': 42,
 				'counterOffer': 43,
 				'status': ordertask.STATUS_RECEIVED_PREIMAGE,
-				'senderTimeoutDelta': 100,
+				'senderTimeoutDelta': 500,
 				'lockedTimeoutDelta': 53,
 				'CLTVExpiryDelta':    23,
 				'maxSenderCryptoAmount': maxSenderCryptoAmount,
@@ -847,7 +847,7 @@ class TestOrderTask(unittest.TestCase):
 				'sellOrder': 42,
 				'counterOffer': 43,
 				'status': ordertask.STATUS_FINISHED,
-				'senderTimeoutDelta': 100,
+				'senderTimeoutDelta': 500,
 				'lockedTimeoutDelta': 53,
 				'CLTVExpiryDelta':    23,
 				'maxSenderCryptoAmount': maxSenderCryptoAmount,

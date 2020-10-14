@@ -141,8 +141,8 @@ class BuyOrder(Order):
 			#We require a minimum CLTV time for incoming funds
 			cltv_expiry_delta = (12, offer.CONDITION_NO_MAX),
 
-			#We require a maximum sender timeout for outgoming funds
-			sender_timeout = (100, 10000), #milliseconds
+			#We require a maximum sender timeout for outgoing funds
+			sender_timeout = (500, 10000), #milliseconds
 
 			#We require a maximum lock timeout for outgoing funds
 			locked_timeout = (0, 3600*24*14)
@@ -185,7 +185,7 @@ class SellOrder(Order):
 			cltv_expiry_delta = (0, 144),
 
 			#We require a maximum sender timeout for incoming funds
-			sender_timeout = (100, 10000), #milliseconds
+			sender_timeout = (500, 10000), #milliseconds
 
 			#We require a minimum lock timeout for incoming funds
 			#TODO (bug 6): We MUST NEVER make Lightning routes with
