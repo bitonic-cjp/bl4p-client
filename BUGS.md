@@ -37,6 +37,11 @@ than the original one.
 It should be less than the BL4P lock time.
 
 
+### 20. BL4P server connection absence is not handled well
+In case of connection issues, new payments should not be attempted,
+and in the case of ongoing payments, the user should be alarmed.
+
+
 ## Sub-optimal trading (within limits specified in orders)
 
 ### 7. All orders are immediately active
@@ -94,5 +99,5 @@ Currently, it equals the remaining order amount.
 
 ## Future and unknown bugs
 
-### 20. (This is the lowest non-assigned bug ID)
+### 21. (This is the lowest non-assigned bug ID)
 

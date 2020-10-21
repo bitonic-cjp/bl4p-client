@@ -89,6 +89,7 @@ class BL4PClient:
 		self.bl4pInterface = bl4p_interface.BL4PInterface(self) #type: bl4p_interface.BL4PInterface
 		#TODO (bug 14): make URL configurable
 		#TODO (bug 15): make user/pass/key configurable
+		#TODO (bug 20): handle BL4P server connection issues
 		key = secp256k1.PrivateKey(privkey=sha256(b'3'))
 		await self.bl4pInterface.startupInterface('ws://localhost:8000/', '3', '3', key)
 
