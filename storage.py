@@ -95,6 +95,12 @@ class Storage:
 	def makeTables(self) -> None:
 		cursor = self.connection.cursor() #type: Cursor
 		cursor.execute(
+			'CREATE TABLE IF NOT EXISTS `configuration` ('
+			'	`name`  TEXT,'
+			'	`value` TEXT'
+			')'
+			)
+		cursor.execute(
 			'CREATE TABLE IF NOT EXISTS `buyOrders` ('
 			'	`ID`        INTEGER,'
 			'	`limitRate` INTEGER,'
