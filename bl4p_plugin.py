@@ -87,11 +87,6 @@ class BL4PClient:
 		await self.rpcInterface.startupRPC() #Gets our LN node ID
 
 		self.bl4pInterface = bl4p_interface.BL4PInterface(self) #type: bl4p_interface.BL4PInterface
-		#TODO (bug 14): make URL configurable
-		#TODO (bug 15): make user/pass/key configurable
-		#TODO (bug 20): handle BL4P server connection issues
-		key = secp256k1.PrivateKey(privkey=sha256(b'3'))
-		await self.bl4pInterface.startupInterface('ws://localhost:8000/', '3', '3', key)
 
 		self.backend.setLNAddress(self.rpcInterface.nodeID)
 		#TODO (bug 16): get address from BL4P
@@ -100,9 +95,19 @@ class BL4PClient:
 
 		self.messageRouter.addHandler(self.backend)
 		self.messageRouter.addHandler(self.pluginInterface)
-		self.messageRouter.addHandler(self.bl4pInterface)
 		self.messageRouter.addHandler(self.rpcInterface)
 		self.messageRouter.startMessaging()
+
+		await self.startupBL4PInterface()
+
+
+	async def startupBL4PInterface(self) -> None:
+		#TODO (bug 14): make URL configurable
+		#TODO (bug 15): make user/pass/key configurable
+		#TODO (bug 20): handle BL4P server connection issues
+		key = secp256k1.PrivateKey(privkey=sha256(b'3'))
+		await self.bl4pInterface.startupInterface('ws://localhost:8000/', '3', '3', key)
+		self.messageRouter.addHandler(self.bl4pInterface)
 
 
 	async def shutdown(self) -> None:

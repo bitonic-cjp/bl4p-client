@@ -114,7 +114,7 @@ class TestPlugin(unittest.TestCase):
 		self.assertEqual(client.backend.BL4PAddress, 'BL4Pdummy')
 		self.assertEqual(DBFiles, ['bar'])
 
-		self.assertEqual(handlers, [client.backend, client.pluginInterface, client.bl4pInterface, client.rpcInterface])
+		self.assertEqual(handlers, [client.backend, client.pluginInterface, client.rpcInterface, client.bl4pInterface])
 
 
 	@asynciotest
