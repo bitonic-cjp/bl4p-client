@@ -102,11 +102,25 @@ class BL4PClient:
 
 
 	async def startupBL4PInterface(self) -> None:
+		conf = self.backend.configuration
+
 		#TODO (bug 14): make URL configurable
 		#TODO (bug 15): make user/pass/key configurable
+		conf.setValue('bl4p.url', 'ws://localhost:8000/')
+		conf.setValue('bl4p.username', '3')
+		conf.setValue('bl4p.password', '3')
+		conf.setValue('bl4p.privateKey', sha256(b'3').hex())
+
+
 		#TODO (bug 20): handle BL4P server connection issues
-		key = secp256k1.PrivateKey(privkey=sha256(b'3'))
-		await self.bl4pInterface.startupInterface('ws://localhost:8000/', '3', '3', key)
+		await self.bl4pInterface.startupInterface(
+			conf.getValue('bl4p.url'),
+			conf.getValue('bl4p.username'),
+			conf.getValue('bl4p.password'),
+			secp256k1.PrivateKey(privkey=bytes.fromhex(
+				conf.getValue('bl4p.privateKey')
+				)),
+			)
 		self.messageRouter.addHandler(self.bl4pInterface)
 
 

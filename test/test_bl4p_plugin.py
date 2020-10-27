@@ -33,6 +33,18 @@ import bl4p_plugin
 
 
 
+class MockConfiguration:
+	def __init__(self):
+		self.values = {}
+
+	def setValue(self, name, value):
+		self.values[name] = value
+
+	def getValue(self, name):
+		return self.values[name]
+
+
+
 class TestPlugin(unittest.TestCase):
 	def test_stdio(self):
 		proc = subprocess.run(
@@ -81,6 +93,7 @@ class TestPlugin(unittest.TestCase):
 		DBFiles = []
 		def backendStartup(DBFile):
 			DBFiles.append(DBFile)
+			client.backend.configuration = MockConfiguration()
 
 		client.messageRouter.addHandler = addHandler
 		with patch.object(bl4p_plugin, 'stdio', stdio):
