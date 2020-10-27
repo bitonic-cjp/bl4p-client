@@ -84,6 +84,7 @@ class MockStorage:
 		self.sellOrders = {}
 		self.sellTransactions = {}
 		self.counterOffers = {}
+		self.configuration = {}
 		self.counter = startCount
 
 
@@ -241,6 +242,19 @@ class MockStorage:
 			keys = list(data.keys())
 			values = [data[k] for k in keys]
 			return MockCursor([values], description=[(k,) for k in keys])
+
+		elif query == 'SELECT name, value from configuration':
+			data = list(self.configuration.items())
+			return MockCursor(data)
+		elif query == 'INSERT INTO configuration (name, value) VALUES (?, ?)':
+			name, value = data
+			self.configuration[name] = value
+			return MockCursor([])
+		elif query == 'UPDATE configuration SET (value) = (?) WHERE `name` = ?':
+			value, name = data
+			assert name in self.configuration
+			self.configuration[name] = value
+			return MockCursor([])
 
 		raise Exception('Query not recognized: ' + str(query))
 
