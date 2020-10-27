@@ -1,4 +1,4 @@
-#    Copyright (C) 2019 by Bitonic B.V.
+#    Copyright (C) 2019-2020 by Bitonic B.V.
 #
 #    This file is part of the BL4P Client.
 #
@@ -25,6 +25,7 @@ from utils import asynciotest, MockCursor, MockStorage
 sys.path.append('..')
 
 import backend
+import configuration
 import messages
 import order
 import ordertask
@@ -116,6 +117,8 @@ class TestBackend(unittest.TestCase):
 
 		self.assertTrue(isinstance(self.backend.storage, MockStorage))
 		self.assertEqual(self.backend.storage.DBFile, 'foo.file')
+		self.assertTrue(isinstance(self.backend.configuration, configuration.Configuration))
+		self.assertEqual(self.backend.configuration.storage, self.backend.storage)
 
 		self.assertEqual(set(self.backend.orderTasks.keys()), set([41, 42, 51]))
 		for ot in self.backend.orderTasks.values():

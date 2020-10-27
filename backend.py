@@ -23,6 +23,7 @@ from bl4p_api import offer
 if TYPE_CHECKING:
 	import bl4p_plugin #pragma: nocover
 
+import configuration
 from log import log, logException
 import messages
 import order
@@ -62,6 +63,7 @@ class Backend(messages.Handler):
 
 	def startup(self, DBFile: str) -> None:
 		self.storage = storage.Storage(DBFile) #type: storage.Storage
+		self.configuration = configuration.Configuration(self.storage) #type: configuration.Configuration
 
 		#Loading existing orders and initializing order tasks:
 		def loadOrders(tableName: str, orderClass: Type[Union[SellOrder, BuyOrder]], address: str) -> None:
