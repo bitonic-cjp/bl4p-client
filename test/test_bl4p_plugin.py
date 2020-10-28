@@ -35,7 +35,13 @@ import bl4p_plugin
 
 class MockConfiguration:
 	def __init__(self):
-		self.values = {}
+		self.values = \
+		{
+		'bl4p.url': 'ws://localhost:8000/',
+		'bl4p.username': 'foo',
+		'bl4p.password': 'bar',
+		'bl4p.privateKey': 'aa'*32,
+		}
 
 	def setValue(self, name, value):
 		self.values[name] = value
@@ -120,14 +126,34 @@ class TestPlugin(unittest.TestCase):
 
 		self.assertTrue(isinstance(client.bl4pInterface, BL4PInterface))
 		self.assertEqual(client.bl4pInterface.client, client)
-		self.assertEqual(client.bl4pInterface.startupArgs[:3], ('ws://localhost:8000/', '3', '3'))
+		self.assertEqual(client.bl4pInterface.startupArgs[:3], ('ws://localhost:8000/', 'foo', 'bar'))
 		self.assertTrue(isinstance(client.bl4pInterface.startupArgs[3], secp256k1.PrivateKey))
 
 		self.assertEqual(client.backend.LNAddress, 'fubar')
 		self.assertEqual(client.backend.BL4PAddress, 'BL4Pdummy')
 		self.assertEqual(DBFiles, ['bar'])
+		self.assertTrue(client.backend.bl4pIsConnected)
 
 		self.assertEqual(handlers, [client.backend, client.pluginInterface, client.rpcInterface, client.bl4pInterface])
+
+
+	@asynciotest
+	async def test_startup_noBL4P(self):
+		class BL4PInterface:
+			async def startupInterface(self, *args):
+				self.startupArgs = args
+				raise Exception('Intended test exception')
+
+		client = bl4p_plugin.BL4PClient()
+		client.backend.configuration = MockConfiguration()
+		client.bl4pInterface = BL4PInterface()
+
+		await client.startupBL4PInterface()
+
+		self.assertEqual(client.bl4pInterface.startupArgs[:3], ('ws://localhost:8000/', 'foo', 'bar'))
+		self.assertTrue(isinstance(client.bl4pInterface.startupArgs[3], secp256k1.PrivateKey))
+
+		self.assertFalse(client.backend.bl4pIsConnected)
 
 
 	@asynciotest

@@ -17,7 +17,6 @@
 #    along with the BL4P Client. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
-import hashlib
 import os
 import signal
 import sys
@@ -28,13 +27,9 @@ import secp256k1
 import backend
 import bl4p_interface
 import messages
-from log import log, setLogFile
+from log import log, logException, setLogFile
 import plugin_interface
 import rpc_interface
-
-
-
-sha256 = lambda preimage: hashlib.sha256(preimage).digest()
 
 
 
@@ -106,22 +101,29 @@ class BL4PClient:
 
 		#TODO (bug 14): make URL configurable
 		#TODO (bug 15): make user/pass/key configurable
-		conf.setValue('bl4p.url', 'ws://localhost:8000/')
-		conf.setValue('bl4p.username', '3')
-		conf.setValue('bl4p.password', '3')
-		conf.setValue('bl4p.privateKey', sha256(b'3').hex())
+		#conf.setValue('bl4p.url', 'ws://localhost:8000/')
+		#conf.setValue('bl4p.username', '3')
+		#conf.setValue('bl4p.password', '3')
+		#conf.setValue('bl4p.privateKey', sha256(b'3').hex())
 
 
 		#TODO (bug 20): handle BL4P server connection issues
-		await self.bl4pInterface.startupInterface(
-			conf.getValue('bl4p.url'),
-			conf.getValue('bl4p.username'),
-			conf.getValue('bl4p.password'),
-			secp256k1.PrivateKey(privkey=bytes.fromhex(
-				conf.getValue('bl4p.privateKey')
-				)),
-			)
+		try:
+			await self.bl4pInterface.startupInterface(
+				conf.getValue('bl4p.url'),
+				conf.getValue('bl4p.username'),
+				conf.getValue('bl4p.password'),
+				secp256k1.PrivateKey(privkey=bytes.fromhex(
+					conf.getValue('bl4p.privateKey')
+					)),
+				)
+		except:
+			logException()
+			log('Due to the above exception, we continue without connection to BL4P')
+			return
+
 		self.messageRouter.addHandler(self.bl4pInterface)
+		self.backend.setBL4PConnected(True)
 
 
 	async def shutdown(self) -> None:

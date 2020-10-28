@@ -59,6 +59,7 @@ class Backend(messages.Handler):
 
 		self.client = client #type: bl4p_plugin.BL4PClient
 		self.orderTasks = {} #type: Dict[int, ordertask.OrderTask] #localID -> OrderTask
+		self.bl4pIsConnected = False #type: bool
 
 
 	def startup(self, DBFile: str) -> None:
@@ -94,6 +95,11 @@ class Backend(messages.Handler):
 
 	def setBL4PAddress(self, address: str) -> None:
 		self.BL4PAddress = address #type: str
+
+
+	def setBL4PConnected(self, connected: bool) -> None:
+		self.bl4pIsConnected = connected
+		#TODO: this must affect whether order tasks are doing things
 
 
 	def handleBuyCommand(self, cmd: messages.BuyCommand) -> None:
