@@ -87,6 +87,7 @@ class PluginInterface(JSONRPC, messages.Handler):
 		'bl4p.buy'              : (self.buy               , MethodType.RPCMETHOD),
 		'bl4p.sell'             : (self.sell              , MethodType.RPCMETHOD),
 		'bl4p.list'             : (self.list              , MethodType.RPCMETHOD),
+		'bl4p.setconfig'        : (self.setConfig         , MethodType.RPCMETHOD),
 
 		'htlc_accepted'         : (self.handleHTLCAccepted, MethodType.HOOK),
 		} #type: Dict[str, Tuple[Callable, MethodType]]
@@ -242,6 +243,22 @@ class PluginInterface(JSONRPC, messages.Handler):
 			commandID = self.currentRequestID,
 			limitRate=limit_rate,
 			amount=amount
+			))
+
+		#Don't send a response now:
+		#It was already sent by the message handler
+		return NO_RESPONSE
+
+
+	def setConfig(self, values: Dict[str, str]) -> object:
+		assert isinstance(values, dict)
+		for k,v in values.items():
+			assert isinstance(k, str)
+			assert isinstance(v, str)
+
+		self.client.handleIncomingMessage(messages.SetConfigCommand(
+			commandID = self.currentRequestID,
+			values=values,
 			))
 
 		#Don't send a response now:

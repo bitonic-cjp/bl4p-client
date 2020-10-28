@@ -60,9 +60,10 @@ class TestBackend(unittest.TestCase):
 		self.assertEqual(self.backend.client, self.client)
 		self.assertEqual(self.backend.handlerMethods,
 			{
-			messages.BuyCommand : self.backend.handleBuyCommand,
-			messages.SellCommand: self.backend.handleSellCommand,
-			messages.ListCommand: self.backend.handleListCommand,
+			messages.BuyCommand      : self.backend.handleBuyCommand,
+			messages.SellCommand     : self.backend.handleSellCommand,
+			messages.ListCommand     : self.backend.handleListCommand,
+			messages.SetConfigCommand: self.backend.handleSetConfigCommand,
 
 			messages.BL4PStartResult      : self.backend.handleBL4PResult,
 			messages.BL4PSelfReportResult : self.backend.handleBL4PResult,
@@ -322,6 +323,31 @@ class TestBackend(unittest.TestCase):
 			with patch.object(backend, 'SellOrder', SellOrder):
 				with self.assertRaises(Exception):
 					self.backend.handleListCommand(cmd)
+
+
+	def test_handleSetConfigCommand(self):
+		self.backend.storage = MockStorage(test = self)
+		self.backend.BL4PAddress = 'BL4PAddress'
+
+		MS = MockStorage(test=self)
+		self.backend.configuration = configuration.Configuration(MS)
+
+		cmd = Mock()
+		cmd.commandID = 42
+		cmd.values = {'bl4p.username': 'foo', 'bl4p.password': 'bar'}
+
+		self.backend.handleSetConfigCommand(cmd)
+
+		self.assertEqual(self.backend.configuration.getValue('bl4p.username'), 'foo')
+		self.assertEqual(self.backend.configuration.getValue('bl4p.password'), 'bar')
+		self.assertEqual(MS.configuration['bl4p.username'], 'foo')
+		self.assertEqual(MS.configuration['bl4p.password'], 'bar')
+
+		self.assertEqual(self.outgoingMessages,
+			[messages.PluginCommandResult(
+				commandID=42,
+				result=None
+			)])
 
 
 	def test_handleBL4PResult(self):

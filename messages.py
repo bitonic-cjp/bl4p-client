@@ -43,6 +43,10 @@ class ListCommand(PluginCommand):
 	pass
 
 
+class SetConfigCommand(PluginCommand):
+	values = {} #type: Dict[str, str]
+
+
 class PluginCommandResult(Struct):
 	commandID = 0    #type: int
 	result    = None #type: Dict[str, str]
@@ -179,6 +183,7 @@ AnyMessage = Union[
 	BuyCommand,
 	SellCommand,
 	ListCommand,
+	SetConfigCommand,
 	PluginCommandResult,
 	PluginCommandError,
 	BL4PRequest,
@@ -195,6 +200,7 @@ AnyMessageHandler = Union[
 	Callable[[BuyCommand], None],
 	Callable[[SellCommand], None],
 	Callable[[ListCommand], None],
+	Callable[[SetConfigCommand], None],
 	Callable[[PluginCommandResult], None],
 	Callable[[PluginCommandError], None],
 	Callable[[BL4PStart], None],

@@ -52,9 +52,10 @@ def requireBL4PConnection(method):
 class Backend(messages.Handler):
 	def __init__(self, client: 'bl4p_plugin.BL4PClient') -> None:
 		messages.Handler.__init__(self, {
-			messages.BuyCommand : self.handleBuyCommand,
-			messages.SellCommand: self.handleSellCommand,
-			messages.ListCommand: self.handleListCommand,
+			messages.BuyCommand      : self.handleBuyCommand,
+			messages.SellCommand     : self.handleSellCommand,
+			messages.ListCommand     : self.handleListCommand,
+			messages.SetConfigCommand: self.handleSetConfigCommand,
 
 			messages.BL4PStartResult      : self.handleBL4PResult,
 			messages.BL4PSelfReportResult : self.handleBL4PResult,
@@ -168,6 +169,16 @@ class Backend(messages.Handler):
 		self.client.handleOutgoingMessage(messages.PluginCommandResult(
 			commandID = cmd.commandID,
 			result = {'sell': sell, 'buy': buy}
+			))
+
+
+	def handleSetConfigCommand(self, cmd: messages.SetConfigCommand) -> None:
+		for k, v in cmd.values.items():
+			self.configuration.setValue(k, v)
+
+		self.client.handleOutgoingMessage(messages.PluginCommandResult(
+			commandID = cmd.commandID,
+			result = None
 			))
 
 

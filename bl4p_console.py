@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-#    Copyright (C) 2018-2019 by Bitonic B.V.
+#    Copyright (C) 2018-2020 by Bitonic B.V.
 #
 #    This file is part of the BL4P Client.
 #
@@ -17,10 +17,15 @@
 #    along with the BL4P Client. If not, see <http://www.gnu.org/licenses/>.
 
 import decimal
+import hashlib
 import sys
 import traceback
 
 from lightningd import lightning
+
+
+
+sha256 = lambda preimage: hashlib.sha256(preimage).digest()
 
 
 
@@ -57,6 +62,22 @@ def cmd_sell():
 def cmd_list():
 	'List open orders'
 	return rpc.call('bl4p.list', {})
+
+
+def cmd_login():
+	'Change BL4P login settings'
+	#TODO (bug 14): make URL configurable
+	url = 'ws://localhost:8000/'
+	username = input('Username? ')
+	password = input('Password? ')
+	#TODO (bug 15): make key configurable
+	privateKey = sha256(password.encode('utf-8')).hex()
+	return rpc.call('bl4p.setconfig', {'values': {
+		'bl4p.url'       : url,
+		'bl4p.username'  : username,
+		'bl4p.password'  : password,
+		'bl4p.privateKey': privateKey,
+		}})
 
 
 def cmd_stop():
@@ -101,6 +122,7 @@ commands = \
 'buy'     : cmd_buy,
 'sell'    : cmd_sell,
 'list'    : cmd_list,
+'login'   : cmd_login,
 }
 
 def handleCommand(cmd):

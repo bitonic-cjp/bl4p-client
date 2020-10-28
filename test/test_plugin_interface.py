@@ -91,7 +91,8 @@ class TestPluginInterface(unittest.TestCase):
 		self.assertEqual(obj['options'][1]['default'], 'bl4p.db')
 		self.assertEqual(obj['hooks'], ['htlc_accepted'])
 		names = [m['name'] for m in obj['rpcmethods']]
-		self.assertEqual(set(names), set(['bl4p.getfiatcurrency', 'bl4p.getcryptocurrency', 'bl4p.buy', 'bl4p.sell', 'bl4p.list']))
+		self.assertEqual(set(names),
+			set(['bl4p.getfiatcurrency', 'bl4p.getcryptocurrency', 'bl4p.buy', 'bl4p.sell', 'bl4p.list', 'bl4p.setconfig']))
 
 		#init output
 		self.checkJSON(output[1],
@@ -232,6 +233,25 @@ class TestPluginInterface(unittest.TestCase):
 			'jsonrpc': '2.0',
 			'id': 6,
 			'result': {'sell':[], 'buy':[]},
+			})
+
+
+	def test_setConfig(self):
+		self.interface.handleRequest(6, 'bl4p.setconfig', {'values': {'foo': 'xx', 'bar': 'yy'}})
+		self.assertEqual(self.output.buffer, b'')
+		self.client.handleIncomingMessage.assert_called_once_with(messages.SetConfigCommand(
+			commandID=6,
+			values={'foo': 'xx', 'bar': 'yy'},
+			))
+		self.interface.handleMessage(messages.PluginCommandResult(
+			commandID=2,
+			result=None,
+			))
+		self.checkJSONOutput(
+			{
+			'jsonrpc': '2.0',
+			'id': 2,
+			'result': None,
 			})
 
 
