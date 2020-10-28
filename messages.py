@@ -48,6 +48,12 @@ class PluginCommandResult(Struct):
 	result    = None #type: Dict[str, str]
 
 
+class PluginCommandError(Struct):
+	commandID = 0    #type: int
+	code      = 0    #type: int
+	message   = ''   #type: str
+
+
 class BL4PRequest(Struct):
 	localOrderID = 0 #type: int #not transmitted - for local use only
 
@@ -174,6 +180,7 @@ AnyMessage = Union[
 	SellCommand,
 	ListCommand,
 	PluginCommandResult,
+	PluginCommandError,
 	BL4PRequest,
 	BL4PResult,
 	BL4PError,
@@ -189,6 +196,7 @@ AnyMessageHandler = Union[
 	Callable[[SellCommand], None],
 	Callable[[ListCommand], None],
 	Callable[[PluginCommandResult], None],
+	Callable[[PluginCommandError], None],
 	Callable[[BL4PStart], None],
 	Callable[[BL4PSelfReport], None],
 	Callable[[BL4PCancelStart], None],

@@ -35,6 +35,20 @@ import storage
 
 
 
+def requireBL4PConnection(method):
+	def wrapper(self, cmd):
+		if not self.bl4pIsConnected:
+			self.client.handleOutgoingMessage(messages.PluginCommandError(
+				commandID = cmd.commandID,
+				code = 1,
+				message = 'Cannot perform this action while not connected to a BL4P server'
+				))
+			return
+		method(self, cmd)
+	return wrapper
+
+
+
 class Backend(messages.Handler):
 	def __init__(self, client: 'bl4p_plugin.BL4PClient') -> None:
 		messages.Handler.__init__(self, {
@@ -102,6 +116,7 @@ class Backend(messages.Handler):
 		#TODO: this must affect whether order tasks are doing things
 
 
+	@requireBL4PConnection
 	def handleBuyCommand(self, cmd: messages.BuyCommand) -> None:
 		ID = BuyOrder.create(
 			self.storage,
@@ -111,7 +126,13 @@ class Backend(messages.Handler):
 		order = BuyOrder(self.storage, ID, self.LNAddress) #type: BuyOrder
 		self.addOrder(order)
 
+		self.client.handleOutgoingMessage(messages.PluginCommandResult(
+			commandID = cmd.commandID,
+			result = None
+			))
 
+
+	@requireBL4PConnection
 	def handleSellCommand(self, cmd: messages.SellCommand) -> None:
 		ID = SellOrder.create(
 			self.storage,
@@ -120,6 +141,11 @@ class Backend(messages.Handler):
 			) #type: int
 		order = SellOrder(self.storage, ID, self.BL4PAddress) #type: SellOrder
 		self.addOrder(order)
+
+		self.client.handleOutgoingMessage(messages.PluginCommandResult(
+			commandID = cmd.commandID,
+			result = None
+			))
 
 
 	def addOrder(self, order: Union[SellOrder, BuyOrder]) -> None:
@@ -138,7 +164,6 @@ class Backend(messages.Handler):
 				buy.append(order)
 			else:
 				raise Exception('Found an order of unknown type')
-			
 
 		self.client.handleOutgoingMessage(messages.PluginCommandResult(
 			commandID = cmd.commandID,

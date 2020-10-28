@@ -63,6 +63,7 @@ class TestPluginInterface(unittest.TestCase):
 			messages.LNFinish: self.interface.sendFinish,
 			messages.LNFail: self.interface.sendFail,
 			messages.PluginCommandResult: self.interface.sendPluginCommandResult,
+			messages.PluginCommandError: self.interface.sendPluginCommandError,
 			})
 
 		called = []
@@ -155,33 +156,64 @@ class TestPluginInterface(unittest.TestCase):
 
 
 	def test_Buy(self):
-		self.interface.handleRequest(0, 'bl4p.buy', {'limit_rate': 42, 'amount': 6})
-		self.checkJSONOutput(
-			{
-			'jsonrpc': '2.0',
-			'id': 0,
-			'result': None,
-			})
+		self.interface.handleRequest(2, 'bl4p.buy', {'limit_rate': 42, 'amount': 6})
+		self.assertEqual(self.output.buffer, b'')
 		self.client.handleIncomingMessage.assert_called_once_with(messages.BuyCommand(
-			commandID=None,
+			commandID=2,
 			limitRate=42,
 			amount=6,
 			))
+		self.interface.handleMessage(messages.PluginCommandResult(
+			commandID=2,
+			result=None,
+			))
+		self.checkJSONOutput(
+			{
+			'jsonrpc': '2.0',
+			'id': 2,
+			'result': None,
+			})
+
+
+	def test_Buy_error(self):
+		self.interface.handleRequest(2, 'bl4p.buy', {'limit_rate': 42, 'amount': 6})
+		self.assertEqual(self.output.buffer, b'')
+		self.client.handleIncomingMessage.assert_called_once_with(messages.BuyCommand(
+			commandID=2,
+			limitRate=42,
+			amount=6,
+			))
+		self.interface.handleMessage(messages.PluginCommandError(
+			commandID=2,
+			code=11,
+			message='fubar',
+			))
+		self.checkJSONOutput(
+			{
+			'jsonrpc': '2.0',
+			'id': 2,
+			'error': {'code': 11, 'message': 'fubar'},
+			})
 
 
 	def test_Sell(self):
-		self.interface.handleRequest(0, 'bl4p.sell', {'limit_rate': 42, 'amount': 6})
-		self.checkJSONOutput(
-			{
-			'jsonrpc': '2.0',
-			'id': 0,
-			'result': None,
-			})
+		self.interface.handleRequest(2, 'bl4p.sell', {'limit_rate': 42, 'amount': 6})
+		self.assertEqual(self.output.buffer, b'')
 		self.client.handleIncomingMessage.assert_called_once_with(messages.SellCommand(
-			commandID=None,
+			commandID=2,
 			limitRate=42,
 			amount=6,
 			))
+		self.interface.handleMessage(messages.PluginCommandResult(
+			commandID=2,
+			result=None,
+			))
+		self.checkJSONOutput(
+			{
+			'jsonrpc': '2.0',
+			'id': 2,
+			'result': None,
+			})
 
 
 	def test_List(self):

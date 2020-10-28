@@ -58,6 +58,7 @@ class PluginInterface(JSONRPC, messages.Handler):
 			messages.LNFail  : self.sendFail,
 
 			messages.PluginCommandResult: self.sendPluginCommandResult,
+			messages.PluginCommandError : self.sendPluginCommandError,
 			})
 		self.client = client #type: bl4p_plugin.BL4PClient
 
@@ -216,28 +217,36 @@ class PluginInterface(JSONRPC, messages.Handler):
 		return {'name': settings.cryptoName, 'divisor': settings.cryptoDivisor}
 
 
-	def buy(self, limit_rate: int, amount: int, **kwargs) -> None:
+	def buy(self, limit_rate: int, amount: int, **kwargs) -> object:
 		'Place an order for buying crypto-currency with fiat-currency'
 		assert isinstance(limit_rate, int)
 		assert isinstance(amount, int)
 
 		self.client.handleIncomingMessage(messages.BuyCommand(
-			commandID=None,
+			commandID = self.currentRequestID,
 			limitRate=limit_rate,
 			amount=amount
 			))
 
+		#Don't send a response now:
+		#It was already sent by the message handler
+		return NO_RESPONSE
 
-	def sell(self, limit_rate: int, amount: int, **kwargs) -> None:
+
+	def sell(self, limit_rate: int, amount: int, **kwargs) -> object:
 		'Place an order for selling crypto-currency for fiat-currency'
 		assert isinstance(limit_rate, int)
 		assert isinstance(amount, int)
 
 		self.client.handleIncomingMessage(messages.SellCommand(
-			commandID=None,
+			commandID = self.currentRequestID,
 			limitRate=limit_rate,
 			amount=amount
 			))
+
+		#Don't send a response now:
+		#It was already sent by the message handler
+		return NO_RESPONSE
 
 
 	def list(self, **kwargs) -> object:
@@ -248,7 +257,7 @@ class PluginInterface(JSONRPC, messages.Handler):
 			))
 
 		#Don't send a response now:
-		#It was already sent by the ListCommand handler
+		#It was already sent by the message handler
 		return NO_RESPONSE
 
 
@@ -342,4 +351,9 @@ class PluginInterface(JSONRPC, messages.Handler):
 	def sendPluginCommandResult(self, message: messages.PluginCommandResult) -> None:
 		self.sendResponse(message.commandID,
 			message.result)
+
+
+	def sendPluginCommandError(self, message: messages.PluginCommandError) -> None:
+		self.sendErrorResponse(message.commandID,
+			message.code, message.message)
 

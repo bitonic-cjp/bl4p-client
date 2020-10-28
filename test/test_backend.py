@@ -158,8 +158,10 @@ class TestBackend(unittest.TestCase):
 	def test_handleBuyCommand(self):
 		self.backend.storage = MockStorage(test = self)
 		self.backend.LNAddress = 'LNAddress'
+		self.backend.bl4pIsConnected = True
 
 		cmd = Mock()
+		cmd.commandID = 42
 		cmd.amount = 123
 		cmd.limitRate = 20000
 		with patch.object(backend.ordertask, 'OrderTask', MockOrderTask):
@@ -181,12 +183,42 @@ class TestBackend(unittest.TestCase):
 		self.assertEqual(stored['amount'], 123)
 		self.assertEqual(stored['limitRate'], 20000)
 
+		self.assertEqual(self.outgoingMessages,
+			[messages.PluginCommandResult(
+				commandID=42,
+				result=None
+			)])
+
+	def test_handleBuyCommand_noBL4P(self):
+		self.backend.storage = MockStorage(test = self)
+		self.backend.LNAddress = 'LNAddress'
+		self.backend.bl4pIsConnected = False
+
+		cmd = Mock()
+		cmd.commandID = 42
+		cmd.amount = 123
+		cmd.limitRate = 20000
+		with patch.object(backend.ordertask, 'OrderTask', MockOrderTask):
+			self.backend.handleBuyCommand(cmd)
+
+		self.assertEqual(set(self.backend.orderTasks.keys()), set([]))
+		self.assertEqual(set(self.backend.storage.buyOrders.keys()), set([]))
+
+		self.assertEqual(self.outgoingMessages,
+			[messages.PluginCommandError(
+				commandID=42,
+				code=1,
+				message='Cannot perform this action while not connected to a BL4P server'
+			)])
+
 
 	def test_handleSellCommand(self):
 		self.backend.storage = MockStorage(test = self)
 		self.backend.BL4PAddress = 'BL4PAddress'
+		self.backend.bl4pIsConnected = True
 
 		cmd = Mock()
+		cmd.commandID = 42
 		cmd.amount = 123
 		cmd.limitRate = 20000
 		with patch.object(backend.ordertask, 'OrderTask', MockOrderTask):
@@ -207,6 +239,35 @@ class TestBackend(unittest.TestCase):
 		self.assertEqual(stored['limitRate'], ot.order.limitRate)
 		self.assertEqual(stored['amount'], 123)
 		self.assertEqual(stored['limitRate'], 20000)
+
+		self.assertEqual(self.outgoingMessages,
+			[messages.PluginCommandResult(
+				commandID=42,
+				result=None
+			)])
+
+
+	def test_handleSellCommand_noBL4P(self):
+		self.backend.storage = MockStorage(test = self)
+		self.backend.BL4PAddress = 'BL4PAddress'
+		self.backend.bl4pIsConnected = False
+
+		cmd = Mock()
+		cmd.commandID = 42
+		cmd.amount = 123
+		cmd.limitRate = 20000
+		with patch.object(backend.ordertask, 'OrderTask', MockOrderTask):
+			self.backend.handleSellCommand(cmd)
+
+		self.assertEqual(set(self.backend.orderTasks.keys()), set([]))
+		self.assertEqual(set(self.backend.storage.sellOrders.keys()), set([]))
+
+		self.assertEqual(self.outgoingMessages,
+			[messages.PluginCommandError(
+				commandID=42,
+				code=1,
+				message='Cannot perform this action while not connected to a BL4P server'
+			)])
 
 
 	def test_handleListCommand(self):
