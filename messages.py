@@ -228,6 +228,11 @@ AnyMessageHandler = Union[
 
 
 
+class NoMessageHandler(Exception):
+	pass
+
+
+
 class Handler:
 	def __init__(self, handlerMethods: Dict[type, AnyMessageHandler] = {}) -> None:
 		#One-level deep deepcopy:
@@ -238,7 +243,10 @@ class Handler:
 
 
 	def handleMessage(self, message: AnyMessage) -> None:
-		handler = cast(Callable[[AnyMessage], None], self.handlerMethods[message.__class__])
+		try:
+			handler = cast(Callable[[AnyMessage], None], self.handlerMethods[message.__class__])
+		except KeyError:
+			raise NoMessageHandler('No message handler registered for ' + str(message.__class__))
 		handler(message)
 
 

@@ -39,6 +39,9 @@ class TestMessages(unittest.TestCase):
 		h.handleMessage(obj)
 		m.assert_called_once_with(obj)
 
+		with self.assertRaises(messages.NoMessageHandler):
+			h.handleMessage('foobar')
+
 
 	def test_Router_immediateForwarding(self):
 		m = Mock()

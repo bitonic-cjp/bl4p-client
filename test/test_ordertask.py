@@ -1137,6 +1137,19 @@ class TestOrderTask(unittest.TestCase):
 
 		searchTask = asyncio.ensure_future(task.doOfferSearch())
 
+		#No BL4P connection:
+		received = []
+		def raiseNoMessageHandler(msg):
+			received.append(msg)
+			raise messages.NoMessageHandler()
+		with patch.object(self.client, 'handleOutgoingMessage', raiseNoMessageHandler):
+			await asyncio.sleep(1)
+		self.assertEqual(received, [messages.BL4PFindOffers(
+			localOrderID=42,
+
+			query=order,
+			)])
+
 		#No results:
 		msg = await self.outgoingMessages.get()
 		self.assertEqual(msg, messages.BL4PFindOffers(

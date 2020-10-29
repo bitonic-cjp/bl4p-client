@@ -282,14 +282,19 @@ class OrderTask:
 		'''
 
 		while True:
-			queryResult = cast(messages.BL4PFindOffersResult,
-				await self.call(messages.BL4PFindOffers(
-					localOrderID=self.order.ID,
+			try:
+				queryResult = cast(messages.BL4PFindOffersResult,
+					await self.call(messages.BL4PFindOffers(
+						localOrderID=self.order.ID,
 
-					query=self.order
-					),
-					messages.BL4PFindOffersResult)
-				) #type: messages.BL4PFindOffersResult
+						query=self.order
+						),
+						messages.BL4PFindOffersResult)
+					) #type: messages.BL4PFindOffersResult
+			except messages.NoMessageHandler:
+				log('BL4P is not connected, so we can\'t search for offers right now')
+				await asyncio.sleep(1)
+				continue
 
 			if queryResult.offers: #found a matching offer
 				await self.doTransactionBasedOnOffers(queryResult.offers)
