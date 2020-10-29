@@ -251,6 +251,7 @@ class PluginInterface(JSONRPC, messages.Handler):
 
 
 	def setConfig(self, values: Dict[str, str]) -> object:
+		'Change configuration values'
 		assert isinstance(values, dict)
 		for k,v in values.items():
 			assert isinstance(k, str)
