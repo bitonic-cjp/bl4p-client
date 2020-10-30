@@ -71,35 +71,61 @@ class BL4PClient:
 
 
 	async def startup(self) -> None:
+		#The startup sequence is quite complex, with all kinds of
+		#inter-dependencies between subsystems.
+
+		#The first thing we can do is create the plugin interface
+		#(based on the stdio streams), and perform its startup sequence.
+		#This will give us the values of various (commandline) parameters
+		#passed to lightningd.
 		stdin, stdout = await stdio() #type: Tuple[asyncio.StreamReader, asyncio.streams.StreamWriter]
 		self.pluginInterface = plugin_interface.PluginInterface(self, stdin, stdout) #type: plugin_interface.PluginInterface
 		await self.pluginInterface.startup() #Guarantees that init is called
 
+		#The log filename is a commandline parameter.
+		#Now that we know it, we can start logging to it:
 		setLogFile(self.pluginInterface.logFile)
 
+		#The plugin interface start-up also informed us about the lightningd
+		#RPC path.
+		#Using this, we can create the RPC interface and start it up.
+		#This will give us our Lightning node ID.
 		reader, writer = await asyncio.open_unix_connection(path=self.pluginInterface.RPCPath) #type: ignore #mypy bug: it doesn't know open_unix_connection
 		self.rpcInterface = rpc_interface.RPCInterface(self, reader, writer) #type: rpc_interface.RPCInterface
-		await self.rpcInterface.startupRPC() #Gets our LN node ID
+		await self.rpcInterface.startupRPC()
 
+		#We can create the BL4P interface, but we cannot start it yet.
+		#Creating it doesn't really do anything and doesn't depend on anything.
 		self.bl4pInterface = bl4p_interface.BL4PInterface(self) #type: bl4p_interface.BL4PInterface
 
+		#We can inform the backend about certain information.
 		self.backend.setLNAddress(self.rpcInterface.nodeID)
 		#TODO (bug 16): get address from BL4P
 		self.backend.setBL4PAddress('BL4Pdummy')
+
+		#The DB file is a commandline parameter.
+		#Now that we know it and we passed the other information to the backend,
+		#we can start up the backend.
+		#This will load data from the DB file (like the configuration),
+		#and start certain tasks.
 		self.backend.startup(self.pluginInterface.DBFile)
 
+		#The subsystems that have been started can be added as message handlers.
 		self.messageRouter.addHandler(self.backend)
 		self.messageRouter.addHandler(self.pluginInterface)
 		self.messageRouter.addHandler(self.rpcInterface)
 		self.messageRouter.startMessaging()
 
+		#We can now start up the BL4P interface.
+		#This depends on configuration data from the backend.
 		await self.startupBL4PInterface()
 
 
 	async def startupBL4PInterface(self) -> None:
 		conf = self.backend.configuration
 
-		#TODO (bug 20): handle BL4P server connection issues (e.g. notify user)
+		#We try to startup the BL4P interface, using config settings from the
+		#backend.
 		try:
 			await self.bl4pInterface.startupInterface(
 				conf.getValue('bl4p.url'),
@@ -110,11 +136,14 @@ class BL4PClient:
 					)),
 				)
 		except:
+			#TODO (bug 20): handle BL4P server connection issues (e.g. notify user)
 			logException()
 			log('Due to the above exception, we continue without connection to BL4P')
 			return
 
+		#If startup was successful, we can add this interface as a message handler.
 		self.messageRouter.addHandler(self.bl4pInterface)
+		#We can also inform the backend that this connection is established.
 		self.backend.setBL4PConnected(True)
 
 
