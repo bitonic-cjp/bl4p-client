@@ -145,7 +145,7 @@ def handleCommand(cmd):
 
 
 print('''
-BL4P Client Copyright (C) 2018-2019 Bitonic B.V.
+BL4P Client Copyright (C) 2018-2020 Bitonic B.V.
 Enter 'help' for a list of commands. Enter 'license' for licensing information.
 ''')
 
