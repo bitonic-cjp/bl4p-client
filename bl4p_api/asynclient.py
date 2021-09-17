@@ -35,6 +35,7 @@ class Bl4pApi:
 
 	def __init__(self, log: Callable[[str],None] = lambda s:None) -> None:
 		self.log = log #type: Callable[[str],None]
+		#TODO (bug 21): to stop replay attacks, maybe start at a random number?
 		self.lastRequestID = 0 #type: int
 
 		self.handleResultOverride = None #type: Optional[Callable[[Any], None]]

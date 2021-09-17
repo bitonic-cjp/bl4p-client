@@ -42,6 +42,11 @@ In case of connection issues, new payments should not be attempted,
 and in the case of ongoing payments, the user should be alarmed.
 
 
+### 21. BL4P protocol request ID allows replay attacks
+... that is, if there is no TLS outer layer or if it has been broken.
+The problem is that it always starts at zero.
+
+
 ## Sub-optimal trading (within limits specified in orders)
 
 ### 7. All orders are immediately active
@@ -99,5 +104,5 @@ Currently, it equals the remaining order amount.
 
 ## Future and unknown bugs
 
-### 21. (This is the lowest non-assigned bug ID)
+### 22. (This is the lowest non-assigned bug ID)
 
