@@ -72,12 +72,12 @@ def cmd_login():
 	url = 'ws://localhost:8000/'
 	apiKey = input('API key? ')
 	#TODO (bug 15): make keys configurable
-	apiPrivateKey = base64.b64encode(sha512(apiKey.encode('utf-8'))).decode('utf-8')
+	apiSecret = base64.b64encode(sha512(apiKey.encode('utf-8'))).decode('utf-8')
 	signingPrivateKey = sha256(apiKey.encode('utf-8')).hex()
 	return rpc.call('bl4p.setconfig', {'values': {
 		'bl4p.url'              : url,
 		'bl4p.apiKey'           : apiKey,
-		'bl4p.apiPrivateKey'    : apiPrivateKey,
+		'bl4p.apiSecret'        : apiSecret,
 		'bl4p.signingPrivateKey': signingPrivateKey,
 		}})
 

@@ -40,11 +40,11 @@ class Bl4pApi:
 		self.handleResultOverride = None #type: Optional[Callable[[Any], None]]
 
 
-	async def startup(self, url: str, apiKey: str, apiPrivateKey: str) -> None:
+	async def startup(self, url: str, apiKey: str, apiSecret: str) -> None:
 		self.websocket = await websockets.connect(
 			url) #type: websockets.WebSocketClientProtocol
 		self.apiKey = apiKey.encode('utf-8') #type: bytes
-		self.apiPrivateKey = base64.b64decode(apiPrivateKey) #type: bytes
+		self.apiSecret = base64.b64decode(apiSecret) #type: bytes
 
 		self.sendQueue = asyncio.Queue() #type: asyncio.Queue
 		self.receiveTask = asyncio.ensure_future(self.handleIncomingData()) #type: ignore #mypy has weird ideas about ensure_future
@@ -111,7 +111,7 @@ class Bl4pApi:
 		message.api_key = self.apiKey
 
 		serializedRequest = serialize(message)
-		signature = hmac.new(self.apiPrivateKey, serializedRequest, hashlib.sha512).digest()
+		signature = hmac.new(self.apiSecret, serializedRequest, hashlib.sha512).digest()
 
 		#TODO: raise an exception here if the send task has stopped
 		self.sendQueue.put_nowait(serializedRequest + signature)

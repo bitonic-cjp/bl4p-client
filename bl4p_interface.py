@@ -50,9 +50,9 @@ class BL4PInterface(bl4p.Bl4pApi, messages.Handler):
 		self.activeRequests = {} #type: Dict[int, messages.BL4PRequest]
 
 
-	async def startupInterface(self, url: str, apiKey: str, apiPrivateKey: str, signingPrivateKey: secp256k1.PrivateKey) -> None:
+	async def startupInterface(self, url: str, apiKey: str, apiSecret: str, signingPrivateKey: secp256k1.PrivateKey) -> None:
 		self.key = signingPrivateKey #type: secp256k1.PrivateKey
-		await bl4p.Bl4pApi.startup(self, url, apiKey, apiPrivateKey)
+		await bl4p.Bl4pApi.startup(self, url, apiKey, apiSecret)
 
 		#Get our currently active orders
 		result = await self.synCall(bl4p_pb2.BL4P_ListOffers()) #type: bl4p_pb2.BL4P_ListOffersResult

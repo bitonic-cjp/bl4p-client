@@ -31,17 +31,17 @@ class Bl4pApi:
 		pass
 
 
-	def __init__(self, url, apiKey, privateKey):
+	def __init__(self, url, apiKey, apiSecret):
 		'''
 		:param url: The websocket URL
 		:param apiKey: The API key
-		:param privateKey: The base64-encoded private key
+		:param apiSecret: The base64-encoded API secret
 		'''
 
 		self.websocket = websocket.WebSocket()
 
 		self.apiKey = apiKey
-		self.privateKey = base64.b64decode(privateKey)
+		self.apiSecret = base64.b64decode(apiSecret)
 		self.websocket.connect(url)
 		self.lastRequestID = 0
 
@@ -55,7 +55,7 @@ class Bl4pApi:
 		request.request = self.lastRequestID
 		serializedRequest = serialize(request)
 
-		signature = hmac.new(self.privateKey, serializedRequest, hashlib.sha512).digest()
+		signature = hmac.new(self.apiSecret, serializedRequest, hashlib.sha512).digest()
 
 		self.websocket.send(serializedRequest + signature, opcode=websocket.ABNF.OPCODE_BINARY)
 

@@ -130,7 +130,7 @@ class BL4PClient:
 			await self.bl4pInterface.startupInterface(
 				conf.getValue('bl4p.url'),
 				conf.getValue('bl4p.apiKey'),
-				conf.getValue('bl4p.apiPrivateKey'),
+				conf.getValue('bl4p.apiSecret'),
 				secp256k1.PrivateKey(privkey=bytes.fromhex(
 					conf.getValue('bl4p.signingPrivateKey')
 					)),

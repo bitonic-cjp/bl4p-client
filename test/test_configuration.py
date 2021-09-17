@@ -36,7 +36,7 @@ class TestConfiguration(unittest.TestCase):
 			{
 			'bl4p.url'              : 'PresetURL',
 			'bl4p.apiKey'           : '',
-			'bl4p.apiPrivateKey'    : '',
+			'bl4p.apiSecret'        : '',
 			'bl4p.signingPrivateKey': '',
 			})
 		self.assertEqual(storage.configuration, conf.values)

@@ -39,7 +39,7 @@ class MockConfiguration:
 		{
 		'bl4p.url': 'ws://localhost:8000/',
 		'bl4p.apiKey': 'foo',
-		'bl4p.apiPrivateKey': 'bar',
+		'bl4p.apiSecret': 'bar',
 		'bl4p.signingPrivateKey': 'aa'*32,
 		}
 
