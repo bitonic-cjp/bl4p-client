@@ -1,4 +1,4 @@
-#    Copyright (C) 2019 by Bitonic B.V.
+#    Copyright (C) 2019-2021 by Bitonic B.V.
 #
 #    This file is part of BL4P Client.
 #
@@ -106,13 +106,10 @@ class TestBL4PInterface(unittest.TestCase):
 
 
 	def doSingleSendTest(self, msgIn, expectedMsgOut):
-		self.interface.sendQueue = Mock()
-		self.interface.lastRequestID = 6
+		self.interface.sendRequest = Mock(return_value=6)
 		self.interface.handleMessage(msgIn)
-		self.assertEqual(self.interface.lastRequestID, 7)
-		expectedMsgOut.request = 6
-		self.interface.sendQueue.put_nowait.assert_called_with(
-			serialize(expectedMsgOut)
+		self.interface.sendRequest.assert_called_with(
+			expectedMsgOut
 			)
 		self.assertEqual(self.interface.activeRequests[6], msgIn)
 

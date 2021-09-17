@@ -20,6 +20,6 @@ class WebSocketClientProtocol:
 
 
 
-async def connect(uri: str, extra_headers: Dict[str,str]) -> WebSocketClientProtocol:
+async def connect(uri: str) -> WebSocketClientProtocol:
 	pass
 

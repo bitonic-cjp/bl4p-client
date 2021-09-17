@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-#    Copyright (C) 2018-2020 by Bitonic B.V.
+#    Copyright (C) 2018-2021 by Bitonic B.V.
 #
 #    This file is part of the BL4P Client.
 #
@@ -16,6 +16,7 @@
 #    You should have received a copy of the GNU General Public License
 #    along with the BL4P Client. If not, see <http://www.gnu.org/licenses/>.
 
+import base64
 import decimal
 import hashlib
 import sys
@@ -26,6 +27,7 @@ from lightningd import lightning
 
 
 sha256 = lambda preimage: hashlib.sha256(preimage).digest()
+sha512 = lambda preimage: hashlib.sha512(preimage).digest()
 
 
 
@@ -68,15 +70,15 @@ def cmd_login():
 	'Change BL4P login settings'
 	#TODO (bug 14): make URL configurable
 	url = 'ws://localhost:8000/'
-	username = input('Username? ')
-	password = input('Password? ')
-	#TODO (bug 15): make key configurable
-	privateKey = sha256(password.encode('utf-8')).hex()
+	apiKey = input('API key? ')
+	#TODO (bug 15): make keys configurable
+	apiPrivateKey = base64.b64encode(sha512(apiKey.encode('utf-8'))).decode('utf-8')
+	signingPrivateKey = sha256(apiKey.encode('utf-8')).hex()
 	return rpc.call('bl4p.setconfig', {'values': {
-		'bl4p.url'       : url,
-		'bl4p.username'  : username,
-		'bl4p.password'  : password,
-		'bl4p.privateKey': privateKey,
+		'bl4p.url'              : url,
+		'bl4p.apiKey'           : apiKey,
+		'bl4p.apiPrivateKey'    : apiPrivateKey,
+		'bl4p.signingPrivateKey': signingPrivateKey,
 		}})
 
 
@@ -145,7 +147,7 @@ def handleCommand(cmd):
 
 
 print('''
-BL4P Client Copyright (C) 2018-2020 Bitonic B.V.
+BL4P Client Copyright (C) 2018-2021 Bitonic B.V.
 Enter 'help' for a list of commands. Enter 'license' for licensing information.
 ''')
 

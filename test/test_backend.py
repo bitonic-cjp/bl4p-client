@@ -1,4 +1,4 @@
-#    Copyright (C) 2019-2020 by Bitonic B.V.
+#    Copyright (C) 2019-2021 by Bitonic B.V.
 #
 #    This file is part of the BL4P Client.
 #
@@ -334,14 +334,14 @@ class TestBackend(unittest.TestCase):
 
 		cmd = Mock()
 		cmd.commandID = 42
-		cmd.values = {'bl4p.username': 'foo', 'bl4p.password': 'bar'}
+		cmd.values = {'bl4p.apiKey': 'foo', 'bl4p.apiPrivateKey': 'bar'}
 
 		self.backend.handleSetConfigCommand(cmd)
 
-		self.assertEqual(self.backend.configuration.getValue('bl4p.username'), 'foo')
-		self.assertEqual(self.backend.configuration.getValue('bl4p.password'), 'bar')
-		self.assertEqual(MS.configuration['bl4p.username'], 'foo')
-		self.assertEqual(MS.configuration['bl4p.password'], 'bar')
+		self.assertEqual(self.backend.configuration.getValue('bl4p.apiKey'), 'foo')
+		self.assertEqual(self.backend.configuration.getValue('bl4p.apiPrivateKey'), 'bar')
+		self.assertEqual(MS.configuration['bl4p.apiKey'], 'foo')
+		self.assertEqual(MS.configuration['bl4p.apiPrivateKey'], 'bar')
 
 		self.assertEqual(self.outgoingMessages,
 			[messages.PluginCommandResult(

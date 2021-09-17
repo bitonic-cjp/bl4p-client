@@ -1,4 +1,4 @@
-#    Copyright (C) 2020 by Bitonic B.V.
+#    Copyright (C) 2020-2021 by Bitonic B.V.
 #
 #    This file is part of the BL4P Client.
 #
@@ -28,10 +28,10 @@ class Configuration:
 
 		defaultValues = \
 		{
-		'bl4p.url'       : '',
-		'bl4p.username'  : '',
-		'bl4p.password'  : '',
-		'bl4p.privateKey': '',
+		'bl4p.url'              : '',
+		'bl4p.apiKey'           : '',
+		'bl4p.apiPrivateKey'    : '',
+		'bl4p.signingPrivateKey': '',
 		} #type: Dict[str, str]
 
 		self.values = {} #type: Dict[str, str]
@@ -73,11 +73,11 @@ def main() -> None: #pragma: nocover
 
 	c = Configuration(s) #type: Configuration
 
-	pw= c.getValue('bl4p.password')
+	pw= c.getValue('bl4p.apiKey')
 	print(pw)
 	pw += ' foo'
-	c.setValue('bl4p.password', pw)
-	pw= c.getValue('bl4p.password')
+	c.setValue('bl4p.apiKey', pw)
+	pw= c.getValue('bl4p.apiKey')
 	print(pw)
 
 	s.shutdown()

@@ -1,4 +1,4 @@
-#    Copyright (C) 2020 by Bitonic B.V.
+#    Copyright (C) 2020-2021 by Bitonic B.V.
 #
 #    This file is part of the BL4P Client.
 #
@@ -34,10 +34,10 @@ class TestConfiguration(unittest.TestCase):
 
 		self.assertEqual(conf.values,
 			{
-			'bl4p.url'       : 'PresetURL',
-			'bl4p.username'  : '',
-			'bl4p.password'  : '',
-			'bl4p.privateKey': '',
+			'bl4p.url'              : 'PresetURL',
+			'bl4p.apiKey'           : '',
+			'bl4p.apiPrivateKey'    : '',
+			'bl4p.signingPrivateKey': '',
 			})
 		self.assertEqual(storage.configuration, conf.values)
 
@@ -46,12 +46,12 @@ class TestConfiguration(unittest.TestCase):
 		storage = MockStorage()
 		conf = configuration.Configuration(storage)
 
-		self.assertEqual(conf.getValue('bl4p.username'), '')
+		self.assertEqual(conf.getValue('bl4p.apiKey'), '')
 
-		conf.setValue('bl4p.username', 'foo')			
+		conf.setValue('bl4p.apiKey', 'foo')			
 
-		self.assertEqual(storage.configuration['bl4p.username'], 'foo')
-		self.assertEqual(conf.getValue('bl4p.username'), 'foo')
+		self.assertEqual(storage.configuration['bl4p.apiKey'], 'foo')
+		self.assertEqual(conf.getValue('bl4p.apiKey'), 'foo')
 
 
 

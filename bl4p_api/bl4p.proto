@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 /*
-    Copyright (C) 2018 by Bitonic B.V.
+    Copyright (C) 2018-2021 by Bitonic B.V.
 
     This file is part of the BL4P API.
 
@@ -24,37 +24,34 @@ syntax = "proto3";
 
     A single API endpoint is used for both:
     - public information (e.g. listening to engine events, getting asset definitions)
-    - account operations (e.g. listing account mutations, managing orders)
-
-    Account operations are only available if the connection is /authorized/ (explained below)
-    using an API key generated for an account.
+    - account operations (e.g. querying account mutations, managing orders)
 
     Client software should make a WebSocket connection to:
 
         wss://bl3p.eu
 
-    (The client should upgrade the HTTP connection to WebSocket right away, no other HTTP requests
-    are supported.)
-
-# Authenticating
-
-    If the client wishes to use account operations, the upgrade request sent as part of the
-    Websocket handshake must include an `Authorization` HTTP header with a value of the form:
-
-        <keyid>:<pass>
-
-    Here, <keyid> and <pass> are the id and password corresponding to one of your API keys.
-
-    For example, if one of your keys has id `401069d8d3737bc94c9ad00aa5fd8725` and
-    pass `810a5bdaafc6dd30b1d9979215935871`, then the `Authorization` header should look like:
-
-        Authorization: 401069d8d3737bc94c9ad00aa5fd8725:810a5bdaafc6dd30b1d9979215935871
-
 # Message framing and encoding
 
-    Websocket messages in both directions start with a 32-bit little-endian unsigned integer specifying
-    a Protobuf message type. The remainder of the message is a Protobuf-encoded message of the
-    specified type.
+    Client-to-server:
+        1. a 32-bit little-endian unsigned integer specifying a Protobuf request type
+        2. a Protobuf-encoded message of the specified type
+
+    Requests whose protobuf message begins with an `api_key` field are authenticated
+    requests. For authenticated requests:
+    - the `api_key` field must be set to the 16-byte uuid of the API key you wish you use
+    - parts 1 and 2 are followed by a 64 byte HMAC_SHA512 checksum over parts 1 and 2,
+      using the 64 byte secret corresponding to the specified key.
+
+    For requests that contain a request id, the request id must be greater than the request id of any
+    previous request submitted using the same API key. That is, request ids also serve as nonces.
+
+    The nonce and signature ensure that if a man-in-the-middle compromises the TLS
+    connection and acquires the ability to drop and inject messages, they cannot replay
+    existing requests or sign new requests.
+
+    Server-to-client:
+        1. a 32-bit little-endian unsigned integer specifying a Protobuf message type
+        2. a Protobuf-encoded message of the specified type
 
 # Requests and responses
 
@@ -151,11 +148,12 @@ message Error {
 }
 
 message BL4P_Start {
-    uint64 request = 1;
-    BL4P_Amount amount = 2;
-    uint32 sender_timeout_delta_ms = 3;
-    uint32 locked_timeout_delta_s = 4;
-    bool receiver_pays_fee = 5;
+	bytes api_key = 1;
+    uint64 request = 2;
+    BL4P_Amount amount = 3;
+    uint32 sender_timeout_delta_ms = 4;
+    uint32 locked_timeout_delta_s = 5;
+    bool receiver_pays_fee = 6;
 }
 
 message BL4P_StartResult {
@@ -174,9 +172,10 @@ message BL4P_SelfReportContents {
 }
 
 message BL4P_SelfReport {
-    uint64 request = 1;
-    bytes report = 2; //serialized BL4P_SelfReportContents
-    bytes signature = 3;
+	bytes api_key = 1;
+    uint64 request = 2;
+    bytes report = 3; //serialized BL4P_SelfReportContents
+    bytes signature = 4;
 }
 
 message BL4P_SelfReportResult {
@@ -184,8 +183,9 @@ message BL4P_SelfReportResult {
 }
 
 message BL4P_CancelStart {
-    uint64 request = 1;
-    BL4P_CryptoData payment_hash = 2;
+	bytes api_key = 1;
+    uint64 request = 2;
+    BL4P_CryptoData payment_hash = 3;
 }
 
 message BL4P_CancelStartResult {
@@ -193,13 +193,14 @@ message BL4P_CancelStartResult {
 }
 
 message BL4P_Send {
-    uint64 request = 1;
-    BL4P_Amount sender_amount = 2;
-    BL4P_CryptoData payment_hash = 3;
-    uint32 max_locked_timeout_delta_s = 4;
+	bytes api_key = 1;
+    uint64 request = 2;
+    BL4P_Amount sender_amount = 3;
+    BL4P_CryptoData payment_hash = 4;
+    uint32 max_locked_timeout_delta_s = 5;
 
-    bytes report = 5; //serialized BL4P_SelfReportContents
-    bytes signature = 6;
+    bytes report = 6; //serialized BL4P_SelfReportContents
+    bytes signature = 7;
 }
 
 message BL4P_SendResult {
@@ -208,8 +209,9 @@ message BL4P_SendResult {
 }
 
 message BL4P_Receive {
-    uint64 request = 1;
-    BL4P_CryptoData payment_preimage = 2;
+	bytes api_key = 1;
+    uint64 request = 2;
+    BL4P_CryptoData payment_preimage = 3;
 }
 
 message BL4P_ReceiveResult {
@@ -217,8 +219,9 @@ message BL4P_ReceiveResult {
 }
 
 message BL4P_GetStatus {
-    uint64 request = 1;
-    BL4P_CryptoData payment_hash = 2;
+	bytes api_key = 1;
+    uint64 request = 2;
+    BL4P_CryptoData payment_hash = 3;
 }
 
 message BL4P_GetStatusResult {
@@ -227,8 +230,9 @@ message BL4P_GetStatusResult {
 }
 
 message BL4P_AddOffer {
-    uint64 request = 1;
-    Offer offer = 2;
+	bytes api_key = 1;
+    uint64 request = 2;
+    Offer offer = 3;
 }
 
 message BL4P_AddOfferResult {
@@ -237,7 +241,8 @@ message BL4P_AddOfferResult {
 }
 
 message BL4P_ListOffers {
-    uint64 request = 1;
+	bytes api_key = 1;
+    uint64 request = 2;
 }
 
 message BL4P_ListOffersResult {
@@ -251,8 +256,9 @@ message BL4P_ListOffersResult {
 }
 
 message BL4P_RemoveOffer {
-    uint64 request = 1;
-    uint64 offerID = 2;
+	bytes api_key = 1;
+    uint64 request = 2;
+    uint64 offerID = 3;
 }
 
 message BL4P_RemoveOfferResult {
@@ -260,8 +266,9 @@ message BL4P_RemoveOfferResult {
 }
 
 message BL4P_FindOffers {
-    uint64 request = 1;
-    Offer query = 2;
+	bytes api_key = 1;
+    uint64 request = 2;
+    Offer query = 3;
 }
 
 message BL4P_FindOffersResult {

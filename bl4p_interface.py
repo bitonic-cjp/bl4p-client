@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-#    Copyright (C) 2019-2020 by Bitonic B.V.
+#    Copyright (C) 2019-2021 by Bitonic B.V.
 #
 #    This file is part of the BL4P Client.
 #
@@ -50,9 +50,9 @@ class BL4PInterface(bl4p.Bl4pApi, messages.Handler):
 		self.activeRequests = {} #type: Dict[int, messages.BL4PRequest]
 
 
-	async def startupInterface(self, url: str, userid: str, password: str, key: secp256k1.PrivateKey) -> None:
-		self.key = key #type: secp256k1.PrivateKey
-		await bl4p.Bl4pApi.startup(self, url, userid, password)
+	async def startupInterface(self, url: str, apiKey: str, apiPrivateKey: str, signingPrivateKey: secp256k1.PrivateKey) -> None:
+		self.key = signingPrivateKey #type: secp256k1.PrivateKey
+		await bl4p.Bl4pApi.startup(self, url, apiKey, apiPrivateKey)
 
 		#Get our currently active orders
 		result = await self.synCall(bl4p_pb2.BL4P_ListOffers()) #type: bl4p_pb2.BL4P_ListOffersResult

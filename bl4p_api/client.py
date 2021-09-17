@@ -1,4 +1,4 @@
-#    Copyright (C) 2018 by Bitonic B.V.
+#    Copyright (C) 2018-2021 by Bitonic B.V.
 #
 #    This file is part of the BL4P API.
 #
@@ -15,6 +15,9 @@
 #    You should have received a copy of the GNU General Public License
 #    along with the BL4P API. If not, see <http://www.gnu.org/licenses/>.
 
+import base64
+import hashlib
+import hmac
 import websocket
 
 from . import bl4p_pb2
@@ -28,15 +31,18 @@ class Bl4pApi:
 		pass
 
 
-	def __init__(self, url, userid, password):
+	def __init__(self, url, apiKey, privateKey):
+		'''
+		:param url: The websocket URL
+		:param apiKey: The API key
+		:param privateKey: The base64-encoded private key
+		'''
+
 		self.websocket = websocket.WebSocket()
 
-		header = \
-		{
-		'User-Agent': 'Python Bl4pApi',
-		'Authorization': userid + ':' + password,
-		}
-		self.websocket.connect(url, header=header)
+		self.apiKey = apiKey
+		self.privateKey = base64.b64decode(privateKey)
+		self.websocket.connect(url)
 		self.lastRequestID = 0
 
 
@@ -45,8 +51,13 @@ class Bl4pApi:
 
 
 	def apiCall(self, request):
+		request.api_key = self.apiKey
 		request.request = self.lastRequestID
-		self.websocket.send(serialize(request), opcode=websocket.ABNF.OPCODE_BINARY)
+		serializedRequest = serialize(request)
+
+		signature = hmac.new(self.privateKey, serializedRequest, hashlib.sha512).digest()
+
+		self.websocket.send(serializedRequest + signature, opcode=websocket.ABNF.OPCODE_BINARY)
 
 		while True:
 			result = self.websocket.recv()

@@ -1,4 +1,4 @@
-#    Copyright (C) 2019-2020 by Bitonic B.V.
+#    Copyright (C) 2019-2021 by Bitonic B.V.
 #
 #    This file is part of the BL4P API.
 #
@@ -16,6 +16,9 @@
 #    along with the BL4P API. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
+import base64
+import hashlib
+import hmac
 import traceback
 from typing import Any, Callable, Dict, Optional
 import websockets
@@ -37,14 +40,11 @@ class Bl4pApi:
 		self.handleResultOverride = None #type: Optional[Callable[[Any], None]]
 
 
-	async def startup(self, url: str, userid: str, password: str) -> None:
-		header = \
-		{
-		'User-Agent': 'Python Bl4pApi',
-		'Authorization': userid + ':' + password,
-		} #type: Dict[str, str]
+	async def startup(self, url: str, apiKey: str, apiPrivateKey: str) -> None:
 		self.websocket = await websockets.connect(
-			url, extra_headers=header) #type: websockets.WebSocketClientProtocol
+			url) #type: websockets.WebSocketClientProtocol
+		self.apiKey = apiKey.encode('utf-8') #type: bytes
+		self.apiPrivateKey = base64.b64decode(apiPrivateKey) #type: bytes
 
 		self.sendQueue = asyncio.Queue() #type: asyncio.Queue
 		self.receiveTask = asyncio.ensure_future(self.handleIncomingData()) #type: ignore #mypy has weird ideas about ensure_future
@@ -108,9 +108,13 @@ class Bl4pApi:
 	def sendRequest(self, message: Any) -> int:
 		message.request = self.lastRequestID
 		self.lastRequestID += 1
+		message.api_key = self.apiKey
+
+		serializedRequest = serialize(message)
+		signature = hmac.new(self.apiPrivateKey, serializedRequest, hashlib.sha512).digest()
 
 		#TODO: raise an exception here if the send task has stopped
-		self.sendQueue.put_nowait(serialize(message))
+		self.sendQueue.put_nowait(serializedRequest + signature)
 		return message.request
 
 

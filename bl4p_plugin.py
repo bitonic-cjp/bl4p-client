@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-#    Copyright (C) 2019-2020 by Bitonic B.V.
+#    Copyright (C) 2019-2021 by Bitonic B.V.
 #
 #    This file is part of the BL4P Client.
 #
@@ -129,10 +129,10 @@ class BL4PClient:
 		try:
 			await self.bl4pInterface.startupInterface(
 				conf.getValue('bl4p.url'),
-				conf.getValue('bl4p.username'),
-				conf.getValue('bl4p.password'),
+				conf.getValue('bl4p.apiKey'),
+				conf.getValue('bl4p.apiPrivateKey'),
 				secp256k1.PrivateKey(privkey=bytes.fromhex(
-					conf.getValue('bl4p.privateKey')
+					conf.getValue('bl4p.signingPrivateKey')
 					)),
 				)
 		except:

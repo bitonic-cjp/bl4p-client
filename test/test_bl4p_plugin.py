@@ -1,4 +1,4 @@
-#    Copyright (C) 2019-2020 by Bitonic B.V.
+#    Copyright (C) 2019-2021 by Bitonic B.V.
 #
 #    This file is part of the BL4P Client.
 #
@@ -38,9 +38,9 @@ class MockConfiguration:
 		self.values = \
 		{
 		'bl4p.url': 'ws://localhost:8000/',
-		'bl4p.username': 'foo',
-		'bl4p.password': 'bar',
-		'bl4p.privateKey': 'aa'*32,
+		'bl4p.apiKey': 'foo',
+		'bl4p.apiPrivateKey': 'bar',
+		'bl4p.signingPrivateKey': 'aa'*32,
 		}
 
 	def setValue(self, name, value):
