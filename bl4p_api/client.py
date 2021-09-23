@@ -40,7 +40,7 @@ class Bl4pApi:
 
 		self.websocket = websocket.WebSocket()
 
-		self.apiKey = apiKey
+		self.apiKey = apiKey.encode('utf-8')
 		self.apiSecret = base64.b64decode(apiSecret)
 		self.websocket.connect(url)
 		#TODO (bug 21): to stop replay attacks, maybe start at a random number?
