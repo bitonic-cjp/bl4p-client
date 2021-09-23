@@ -23,6 +23,7 @@ import sys
 import traceback
 
 from lightningd import lightning
+import secp256k1
 
 
 
@@ -70,15 +71,21 @@ def cmd_login():
 	'Change BL4P login settings'
 	#TODO (bug 14): make URL configurable
 	url = 'ws://localhost:8000/'
-	apiKey = input('API key? ')
+
 	#TODO (bug 15): make keys configurable
-	apiSecret = base64.b64encode(sha512(apiKey.encode('utf-8'))).decode('utf-8')
-	signingPrivateKey = sha256(apiKey.encode('utf-8')).hex()
+	signingPrivateKey = sha256(b'')
+	pk = secp256k1.PrivateKey(privkey=signingPrivateKey)
+	signingPublicKey = pk.pubkey.serialize()
+	print('Public key (hex-encoded): ', signingPublicKey.hex())
+
+	apiKey = input('API key? ')
+	apiSecret = input('API secret (base64-encoded): ')
+
 	return rpc.call('bl4p.setconfig', {'values': {
 		'bl4p.url'              : url,
 		'bl4p.apiKey'           : apiKey,
 		'bl4p.apiSecret'        : apiSecret,
-		'bl4p.signingPrivateKey': signingPrivateKey,
+		'bl4p.signingPrivateKey': signingPrivateKey.hex(),
 		}})
 
 
