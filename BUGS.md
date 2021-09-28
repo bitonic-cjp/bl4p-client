@@ -89,10 +89,6 @@ protocol.
 In fact, it's currently hardcoded to be localhost.
 
 
-### 15. Fixed BL4P acount name, password and private key
-It's currently '3', '3' and SHA256('3').
-
-
 ### 16. Fixed BL4P address
 It's currently 'BL4Pdummy'.
 Might not matter anymore if buyer-initiated trade is removed.

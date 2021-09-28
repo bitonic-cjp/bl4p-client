@@ -19,6 +19,7 @@
 import base64
 import decimal
 import hashlib
+import os
 import sys
 import traceback
 
@@ -72,9 +73,17 @@ def cmd_login():
 	#TODO (bug 14): make URL configurable
 	url = 'ws://localhost:8000/'
 
-	#TODO (bug 15): make keys configurable
-	signingPrivateKey = sha256(b'')
-	pk = secp256k1.PrivateKey(privkey=signingPrivateKey)
+	currentConfig = rpc.call('bl4p.getconfig', {})['values']
+
+	signingPrivateKeyHex = currentConfig['bl4p.signingPrivateKey']
+	if signingPrivateKeyHex == '':
+		print('We don\'t have a signing key yet; generating a new one.')
+		signingPrivateKeyHex = os.urandom(32).hex()
+		rpc.call('bl4p.setconfig', {'values': {
+			'bl4p.signingPrivateKey': signingPrivateKeyHex,
+			}})
+
+	pk = secp256k1.PrivateKey(privkey=bytes.fromhex(signingPrivateKeyHex))
 	signingPublicKey = pk.pubkey.serialize()
 	print('Public key (hex-encoded): ', signingPublicKey.hex())
 
@@ -85,7 +94,6 @@ def cmd_login():
 		'bl4p.url'              : url,
 		'bl4p.apiKey'           : apiKey,
 		'bl4p.apiSecret'        : apiSecret,
-		'bl4p.signingPrivateKey': signingPrivateKey.hex(),
 		}})
 
 
