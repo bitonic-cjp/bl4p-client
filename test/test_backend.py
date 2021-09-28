@@ -63,6 +63,7 @@ class TestBackend(unittest.TestCase):
 			messages.BuyCommand      : self.backend.handleBuyCommand,
 			messages.SellCommand     : self.backend.handleSellCommand,
 			messages.ListCommand     : self.backend.handleListCommand,
+			messages.GetConfigCommand: self.backend.handleGetConfigCommand,
 			messages.SetConfigCommand: self.backend.handleSetConfigCommand,
 
 			messages.BL4PStartResult      : self.backend.handleBL4PResult,
@@ -347,6 +348,37 @@ class TestBackend(unittest.TestCase):
 			[messages.PluginCommandResult(
 				commandID=42,
 				result=None
+			)])
+
+
+	def test_handleGetConfigCommand(self):
+		self.backend.storage = MockStorage(test = self)
+		self.backend.BL4PAddress = 'BL4PAddress'
+
+		MS = MockStorage(test=self)
+		MS.configuration['bl4p.apiKey'] = 'foo'
+		MS.configuration['bl4p.apiSecret'] = 'bar'
+
+		self.backend.configuration = configuration.Configuration(MS)
+
+		cmd = Mock()
+		cmd.commandID = 42
+
+		self.backend.handleGetConfigCommand(cmd)
+
+		self.assertEqual(self.outgoingMessages,
+			[messages.PluginCommandResult(
+				commandID=42,
+				result=\
+					{
+					'values':
+						{
+						'bl4p.url'              : '',
+						'bl4p.apiKey'           : 'foo',
+						'bl4p.apiSecret'        : 'bar',
+						'bl4p.signingPrivateKey': '',
+						}
+					}
 			)])
 
 

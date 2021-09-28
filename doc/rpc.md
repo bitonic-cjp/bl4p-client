@@ -165,3 +165,23 @@ Currently supported configuration keys are:
 
 TBD: what if keys are not valid setting names
 
+
+## bl4p.getconfig
+
+### Input:
+
+(None)
+
+### Output:
+
+* **values** (dict of str -> str):
+  key: value pairs of all configuration values.
+
+### Description:
+
+Gets all BL4P configuration values.
+
+### Errors:
+
+(None)
+

@@ -56,6 +56,7 @@ class Backend(messages.Handler):
 			messages.SellCommand     : self.handleSellCommand,
 			messages.ListCommand     : self.handleListCommand,
 			messages.SetConfigCommand: self.handleSetConfigCommand,
+			messages.GetConfigCommand: self.handleGetConfigCommand,
 
 			messages.BL4PStartResult      : self.handleBL4PResult,
 			messages.BL4PSelfReportResult : self.handleBL4PResult,
@@ -179,6 +180,15 @@ class Backend(messages.Handler):
 		self.client.handleOutgoingMessage(messages.PluginCommandResult(
 			commandID = cmd.commandID,
 			result = None
+			))
+
+
+	def handleGetConfigCommand(self, cmd: messages.GetConfigCommand) -> None:
+		values = self.configuration.getAllValues() #type: Dict[str, str]
+
+		self.client.handleOutgoingMessage(messages.PluginCommandResult(
+			commandID = cmd.commandID,
+			result = {'values': values}
 			))
 
 

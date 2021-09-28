@@ -53,6 +53,14 @@ class TestConfiguration(unittest.TestCase):
 		self.assertEqual(storage.configuration['bl4p.apiKey'], 'foo')
 		self.assertEqual(conf.getValue('bl4p.apiKey'), 'foo')
 
+		self.assertEqual(conf.getAllValues(),
+			{
+			'bl4p.url'              : '',
+			'bl4p.apiKey'           : 'foo',
+			'bl4p.apiSecret'        : '',
+			'bl4p.signingPrivateKey': '',
+			})
+
 
 
 if __name__ == '__main__':

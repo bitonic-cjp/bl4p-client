@@ -88,6 +88,7 @@ class PluginInterface(JSONRPC, messages.Handler):
 		'bl4p.sell'             : (self.sell              , MethodType.RPCMETHOD),
 		'bl4p.list'             : (self.list              , MethodType.RPCMETHOD),
 		'bl4p.setconfig'        : (self.setConfig         , MethodType.RPCMETHOD),
+		'bl4p.getconfig'        : (self.getConfig         , MethodType.RPCMETHOD),
 
 		'htlc_accepted'         : (self.handleHTLCAccepted, MethodType.HOOK),
 		} #type: Dict[str, Tuple[Callable, MethodType]]
@@ -260,6 +261,17 @@ class PluginInterface(JSONRPC, messages.Handler):
 		self.client.handleIncomingMessage(messages.SetConfigCommand(
 			commandID = self.currentRequestID,
 			values=values,
+			))
+
+		#Don't send a response now:
+		#It was already sent by the message handler
+		return NO_RESPONSE
+
+
+	def getConfig(self) -> object:
+		'Get configuration values'
+		self.client.handleIncomingMessage(messages.GetConfigCommand(
+			commandID = self.currentRequestID,
 			))
 
 		#Don't send a response now:

@@ -65,6 +65,10 @@ class Configuration:
 		return self.values[name]
 
 
+	def getAllValues(self) -> Dict[str, str]:
+		return self.values.copy()
+
+
 
 def main() -> None: #pragma: nocover
 	import storage as storageModule
