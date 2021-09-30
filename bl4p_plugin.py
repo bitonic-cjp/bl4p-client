@@ -114,11 +114,14 @@ class BL4PClient:
 		self.messageRouter.addHandler(self.backend)
 		self.messageRouter.addHandler(self.pluginInterface)
 		self.messageRouter.addHandler(self.rpcInterface)
-		self.messageRouter.startMessaging()
 
 		#We can now start up the BL4P interface.
 		#This depends on configuration data from the backend.
 		await self.startupBL4PInterface()
+
+		#Only start messaging at the very end
+		log('Startup has finished; we can now start messaging.')
+		self.messageRouter.startMessaging()
 
 
 	async def startupBL4PInterface(self) -> None:
