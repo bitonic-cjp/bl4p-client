@@ -1,4 +1,4 @@
-#    Copyright (C) 2019-2020 by Bitonic B.V.
+#    Copyright (C) 2019-2021 by Bitonic B.V.
 #
 #    This file is part of the BL4P Client.
 #
@@ -122,7 +122,7 @@ class TestOrder(unittest.TestCase):
 
 		self.assertEqual(buy.getConditionMin(offer.Condition.CLTV_EXPIRY_DELTA), 12)
 		self.assertEqual(buy.getConditionMax(offer.Condition.CLTV_EXPIRY_DELTA), offer.CONDITION_NO_MAX)
-		self.assertEqual(buy.getConditionMin(offer.Condition.SENDER_TIMEOUT), 500)
+		self.assertEqual(buy.getConditionMin(offer.Condition.SENDER_TIMEOUT), 2000)
 		self.assertEqual(buy.getConditionMax(offer.Condition.SENDER_TIMEOUT), 10000)
 		self.assertEqual(buy.getConditionMin(offer.Condition.LOCKED_TIMEOUT), 0)
 		self.assertEqual(buy.getConditionMax(offer.Condition.LOCKED_TIMEOUT), 3600*24*14)
@@ -146,7 +146,7 @@ class TestOrder(unittest.TestCase):
 
 		self.assertEqual(sell.getConditionMin(offer.Condition.CLTV_EXPIRY_DELTA), 0)
 		self.assertEqual(sell.getConditionMax(offer.Condition.CLTV_EXPIRY_DELTA), 144)
-		self.assertEqual(sell.getConditionMin(offer.Condition.SENDER_TIMEOUT), 500)
+		self.assertEqual(sell.getConditionMin(offer.Condition.SENDER_TIMEOUT), 2000)
 		self.assertEqual(sell.getConditionMax(offer.Condition.SENDER_TIMEOUT), 10000)
 		self.assertEqual(sell.getConditionMin(offer.Condition.LOCKED_TIMEOUT), 3600*24)
 		self.assertEqual(sell.getConditionMax(offer.Condition.LOCKED_TIMEOUT), offer.CONDITION_NO_MAX)

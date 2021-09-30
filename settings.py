@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-#    Copyright (C) 2019 by Bitonic B.V.
+#    Copyright (C) 2019-2021 by Bitonic B.V.
 #
 #    This file is part of the BL4P Client.
 #
@@ -16,9 +16,27 @@
 #    You should have received a copy of the GNU General Public License
 #    along with the BL4P Client. If not, see <http://www.gnu.org/licenses/>.
 
+from bl4p_api import offer
+
+
+
 cryptoName    = 'btc'        #type: str
 cryptoDivisor = 100000000000 #type: int #in mSatoshi
 
 fiatName    = 'eur'  #type: str
 fiatDivisor = 100000 #type: int         #in mCent
+
+#We require a minimum CLTV time for incoming funds
+buyOrderCLTVExpiryDeltaRange  = (12     , offer.CONDITION_NO_MAX)
+#We require a maximum sender timeout for outgoing funds
+buyOrderSenderTimeoutRange    = (2000   , 10000                 ) #milliseconds
+#We require a maximum lock timeout for outgoing funds
+buyOrderLockedTimeoutRange    = (0      , 3600*24*14            ) #seconds
+
+#We require a maximum CLTV time for outgoing funds
+sellOrderCLTVExpiryDeltaRange = (0      , 144                   )
+#We require a maximum sender timeout for incoming funds
+sellOrderSenderTimeoutRange   = (2000   , 10000                 ) #milliseconds
+#We require a minimum lock timeout for incoming funds
+sellOrderLockedTimeoutRange   = (3600*24, offer.CONDITION_NO_MAX) #seconds
 

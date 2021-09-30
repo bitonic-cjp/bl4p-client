@@ -1,4 +1,4 @@
-#    Copyright (C) 2018-2020 by Bitonic B.V.
+#    Copyright (C) 2018-2021 by Bitonic B.V.
 #
 #    This file is part of BL4P client.
 #
@@ -138,14 +138,9 @@ class BuyOrder(Order):
 				max_amount=0, max_amount_divisor=settings.cryptoDivisor, currency=settings.cryptoName, exchange='ln'
 				),
 
-			#We require a minimum CLTV time for incoming funds
-			cltv_expiry_delta = (12, offer.CONDITION_NO_MAX),
-
-			#We require a maximum sender timeout for outgoing funds
-			sender_timeout = (500, 10000), #milliseconds
-
-			#We require a maximum lock timeout for outgoing funds
-			locked_timeout = (0, 3600*24*14)
+			cltv_expiry_delta = settings.buyOrderCLTVExpiryDeltaRange,
+			sender_timeout    = settings.buyOrderSenderTimeoutRange,
+			locked_timeout    = settings.buyOrderLockedTimeoutRange,
 			)
 
 
@@ -181,15 +176,10 @@ class SellOrder(Order):
 				max_amount=0, max_amount_divisor=settings.fiatDivisor, currency=settings.fiatName, exchange='bl3p.eu'
 				),
 
-			#We require a maximum CLTV time for outgoing funds
-			cltv_expiry_delta = (0, 144),
-
-			#We require a maximum sender timeout for incoming funds
-			sender_timeout = (500, 10000), #milliseconds
-
-			#We require a minimum lock timeout for incoming funds
+			cltv_expiry_delta = settings.sellOrderCLTVExpiryDeltaRange,
+			sender_timeout = settings.sellOrderSenderTimeoutRange,
 			#TODO (bug 6): We MUST NEVER make Lightning routes with
 			#a longer time than the lock timeout
-			locked_timeout = (3600*24, offer.CONDITION_NO_MAX),
+			locked_timeout = settings.sellOrderLockedTimeoutRange,
 			)
 

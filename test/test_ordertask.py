@@ -1,4 +1,4 @@
-#    Copyright (C) 2019-2020 by Bitonic B.V.
+#    Copyright (C) 2019-2021 by Bitonic B.V.
 #
 #    This file is part of the BL4P Client.
 #
@@ -700,7 +700,7 @@ class TestOrderTask(unittest.TestCase):
 				'sellOrder': 42,
 				'counterOffer': 43,
 				'status': 0,
-				'senderTimeoutDelta': 500, #highest minimum
+				'senderTimeoutDelta': 2000, #highest minimum
 				'lockedTimeoutDelta': 53, #lowest maximum
 				'CLTVExpiryDelta':    23, #highest minimum
 				'maxSenderCryptoAmount': maxSenderCryptoAmount,
@@ -719,7 +719,7 @@ class TestOrderTask(unittest.TestCase):
 				localOrderID=42,
 
 		                amount=senderFiatAmount,
-		                sender_timeout_delta_ms=500,
+		                sender_timeout_delta_ms=2000,
 		                locked_timeout_delta_s=53,
 		                receiver_pays_fee=True,
 				))
@@ -738,7 +738,7 @@ class TestOrderTask(unittest.TestCase):
 				'sellOrder': 42,
 				'counterOffer': 43,
 				'status': ordertask.STATUS_STARTED,
-				'senderTimeoutDelta': 500,
+				'senderTimeoutDelta': 2000,
 				'lockedTimeoutDelta': 53,
 				'CLTVExpiryDelta':    23,
 				'maxSenderCryptoAmount': maxSenderCryptoAmount,
@@ -774,7 +774,7 @@ class TestOrderTask(unittest.TestCase):
 				'sellOrder': 42,
 				'counterOffer': 43,
 				'status': ordertask.STATUS_LOCKED,
-				'senderTimeoutDelta': 500,
+				'senderTimeoutDelta': 2000,
 				'lockedTimeoutDelta': 53,
 				'CLTVExpiryDelta':    23,
 				'maxSenderCryptoAmount': maxSenderCryptoAmount,
@@ -813,7 +813,7 @@ class TestOrderTask(unittest.TestCase):
 				'sellOrder': 42,
 				'counterOffer': 43,
 				'status': ordertask.STATUS_RECEIVED_PREIMAGE,
-				'senderTimeoutDelta': 500,
+				'senderTimeoutDelta': 2000,
 				'lockedTimeoutDelta': 53,
 				'CLTVExpiryDelta':    23,
 				'maxSenderCryptoAmount': maxSenderCryptoAmount,
@@ -847,7 +847,7 @@ class TestOrderTask(unittest.TestCase):
 				'sellOrder': 42,
 				'counterOffer': 43,
 				'status': ordertask.STATUS_FINISHED,
-				'senderTimeoutDelta': 500,
+				'senderTimeoutDelta': 2000,
 				'lockedTimeoutDelta': 53,
 				'CLTVExpiryDelta':    23,
 				'maxSenderCryptoAmount': maxSenderCryptoAmount,
