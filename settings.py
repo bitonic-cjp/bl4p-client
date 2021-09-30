@@ -26,17 +26,17 @@ cryptoDivisor = 100000000000 #type: int #in mSatoshi
 fiatName    = 'eur'  #type: str
 fiatDivisor = 100000 #type: int         #in mCent
 
-#We require a minimum CLTV time for incoming funds
+#We require a minimum CLTV time for incoming crypto funds
 buyOrderCLTVExpiryDeltaRange  = (12     , offer.CONDITION_NO_MAX)
-#We require a maximum sender timeout for outgoing funds
+#We require a maximum sender timeout for outgoing fiat funds
 buyOrderSenderTimeoutRange    = (2000   , 10000                 ) #milliseconds
-#We require a maximum lock timeout for outgoing funds
+#We require a maximum lock timeout for outgoing fiat funds
 buyOrderLockedTimeoutRange    = (0      , 3600*24*14            ) #seconds
 
-#We require a maximum CLTV time for outgoing funds
+#We require a maximum CLTV time for outgoing crypto funds
 sellOrderCLTVExpiryDeltaRange = (0      , 144                   )
-#We require a maximum sender timeout for incoming funds
+#We require a maximum sender timeout for incoming fiat funds
 sellOrderSenderTimeoutRange   = (2000   , 10000                 ) #milliseconds
-#We require a minimum lock timeout for incoming funds
+#We require a minimum lock timeout for incoming fiat funds
 sellOrderLockedTimeoutRange   = (3600*24, offer.CONDITION_NO_MAX) #seconds
 
