@@ -53,7 +53,7 @@ class TestStorage(unittest.TestCase):
 			tables[name] = sql
 
 		#Ignore the presence of other tables
-		self.assertEqual(tables['configuration'],        'CREATE TABLE `configuration` ( `name` TEXT, `value` TEXT)')
+		self.assertEqual(tables['configuration'],    'CREATE TABLE `configuration` ( `name` TEXT, `value` TEXT)')
 		self.assertEqual(tables['buyOrders'],        'CREATE TABLE `buyOrders` ( `ID` INTEGER, `limitRate` INTEGER, `amount` INTEGER, `status` INTEGER, PRIMARY KEY(`ID`))')
 		self.assertEqual(tables['sellOrders'],       'CREATE TABLE `sellOrders` ( `ID` INTEGER, `limitRate` INTEGER, `amount` INTEGER, `status` INTEGER, PRIMARY KEY(`ID`))')
 		self.assertEqual(tables['counterOffers'],    'CREATE TABLE `counterOffers` ( `ID` INTEGER, `blob` BLOB, PRIMARY KEY(`ID`))')
