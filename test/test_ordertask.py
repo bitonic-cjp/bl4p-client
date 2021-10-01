@@ -75,11 +75,11 @@ class TestOrderTask(unittest.TestCase):
 
 	def test_SellTransaction(self):
 		with patch.object(ordertask.StoredObject, 'createStoredObject', Mock(return_value=43)):
-			self.assertEqual(ordertask.SellTransaction.create('foo', 'baa', 'bab', 'bac', 'bad', 'bae', 'baf', 'bag', 'bah'), 43)
+			self.assertEqual(ordertask.SellTransaction.create('foo', 'baa', 'bab', 'bac', 'bae', 'baf', 'bag', 'bah'), 43)
 
 			ordertask.StoredObject.createStoredObject.assert_called_once_with(
 				'foo', 'sellTransactions',
-				sellOrder='baa', counterOffer='bab', senderFiatAmount='bac', maxSenderCryptoAmount='bad', receiverCryptoAmount='bae', senderTimeoutDelta='baf', lockedTimeoutDelta='bag', CLTVExpiryDelta='bah',
+				sellOrder='baa', counterOffer='bab', senderFiatAmount='bac', receiverCryptoAmount='bae', senderTimeoutDelta='baf', lockedTimeoutDelta='bag', CLTVExpiryDelta='bah',
 				status=0, receiverFiatAmount=None, senderCryptoAmount=None, paymentHash=None, paymentPreimage=None,
 				)
 
@@ -634,6 +634,9 @@ class TestOrderTask(unittest.TestCase):
 		o1.ID = 6
 		o1.address = 'buyerAddress'
 
+		#We're going to match the sell order (order) twice with the
+		#counter-offer (o1).
+
 		remainingAmount = order.amount
 		for i in range(2):
 			self.storage.reset(startCount=43) #clean up from previous iteration
@@ -641,35 +644,40 @@ class TestOrderTask(unittest.TestCase):
 			order.setAmount = Mock() #Replace mock object with a fresh one
 
 			#Expected data:
+			nominalCryptoAmount = \
+			[
+			100000000000000, #1000 BTC = min(1234, 1000)
+			22900000000000,  # 229 BTC = min(1234 - 1005, 1000)
+			][i]
+			nominalFiatAmount = \
+			[
+			200000000, #2000 EUR = 1000 BTC * buyer limit rate
+			45800000,  #458 EUR  =  229 BTC * buyer limit rate
+			][i]
+			minReceiverFiatAmount = \
+			[
+			190000000, #1900   EUR = 1000 BTC * seller limit rate
+			 43510000, # 435.1 EUR =  229 BTC * seller limit rate
+			][i]
 			maxSenderCryptoAmount = \
 			[
-			105263157445776, #1052 BTC = 2000 EUR / seller limit rate
-			22400000000000,  #224 BTC = 1234 BTC - 1010 BTC
+			101000000000000, #1010    BTC = 1.01 * 1000 BTC
+			 23129000000000, # 231.29 BTC = 1.01 *  229 BTC
 			][i]
 			senderCryptoAmount = \
 			[
-			101000000000000, #1010 BTC
-			maxSenderCryptoAmount,
-			][i]
-			receiverCryptoAmount = \
-			[
-			100000000000001, #1000 BTC
-			21280000500001,  #212.8 BTC = 425.6 BTC * buyer limit rate
+			100500000000000, #1005 BTC, just slightly more than nominalCryptoAmount
+			 23500000000000, # 235 BTC, just slightly more than nominalCryptoAmount
 			][i]
 			receiverCryptoAmount_str = \
 			[
-			'1000.00000000001',
-			'212.80000500001',
-			][i]
-			senderFiatAmount = \
-			[
-			200000000, #2000 EUR
-			42560001,  #425.6 EUR = 224 BTC * seller limit rate
+			'1000.00000000000', #1000 BTC, Equals the nominal amount
+			'229.00000000000',  # 229 BTC, Equals the nominal amount
 			][i]
 			receiverFiatAmount = \
 			[
-			190000000, #1900 EUR
-			40000000,  #400 EUR
+			199000000, #1990 EUR, just slightly less than nominalFiatAmount
+			45000000,  # 450 EUR, just slightly less than nominalFiatAmount
 			][i]
 
 			#Offers get found
@@ -703,10 +711,9 @@ class TestOrderTask(unittest.TestCase):
 				'senderTimeoutDelta': 2000, #highest minimum
 				'lockedTimeoutDelta': 53, #lowest maximum
 				'CLTVExpiryDelta':    23, #highest minimum
-				'maxSenderCryptoAmount': maxSenderCryptoAmount,
 				'senderCryptoAmount': None,
-				'receiverCryptoAmount': receiverCryptoAmount,
-				'senderFiatAmount': senderFiatAmount,
+				'receiverCryptoAmount': nominalCryptoAmount,
+				'senderFiatAmount': nominalFiatAmount,
 				'receiverFiatAmount': None,
 				'paymentHash': None,
 				'paymentPreimage': None,
@@ -718,14 +725,14 @@ class TestOrderTask(unittest.TestCase):
 			self.assertEqual(msg, messages.BL4PStart(
 				localOrderID=42,
 
-		                amount=senderFiatAmount,
+		                amount=nominalFiatAmount,
 		                sender_timeout_delta_ms=2000,
 		                locked_timeout_delta_s=53,
 		                receiver_pays_fee=True,
 				))
 			task.setCallResult(messages.BL4PStartResult(
 				request=None,
-				senderAmount=senderFiatAmount,
+				senderAmount=nominalFiatAmount,
 				receiverAmount=receiverFiatAmount,
 				paymentHash=paymentHash,
 				))
@@ -741,10 +748,9 @@ class TestOrderTask(unittest.TestCase):
 				'senderTimeoutDelta': 2000,
 				'lockedTimeoutDelta': 53,
 				'CLTVExpiryDelta':    23,
-				'maxSenderCryptoAmount': maxSenderCryptoAmount,
 				'senderCryptoAmount': None,
-				'receiverCryptoAmount': receiverCryptoAmount,
-				'senderFiatAmount': senderFiatAmount,
+				'receiverCryptoAmount': nominalCryptoAmount,
+				'senderFiatAmount': nominalFiatAmount,
 				'receiverFiatAmount': receiverFiatAmount,
 				'paymentHash': paymentHash,
 				'paymentPreimage': None,
@@ -777,10 +783,9 @@ class TestOrderTask(unittest.TestCase):
 				'senderTimeoutDelta': 2000,
 				'lockedTimeoutDelta': 53,
 				'CLTVExpiryDelta':    23,
-				'maxSenderCryptoAmount': maxSenderCryptoAmount,
 				'senderCryptoAmount': None,
-				'receiverCryptoAmount': receiverCryptoAmount,
-				'senderFiatAmount': senderFiatAmount,
+				'receiverCryptoAmount': nominalCryptoAmount,
+				'senderFiatAmount': nominalFiatAmount,
 				'receiverFiatAmount': receiverFiatAmount,
 				'paymentHash': paymentHash,
 				'paymentPreimage': None,
@@ -792,10 +797,10 @@ class TestOrderTask(unittest.TestCase):
 
 				destinationNodeID     = 'buyerAddress',
 				paymentHash           = paymentHash,
-				recipientCryptoAmount = receiverCryptoAmount,
+				recipientCryptoAmount = nominalCryptoAmount,
 				maxSenderCryptoAmount = maxSenderCryptoAmount,
 				minCLTVExpiryDelta    = 23,
-				fiatAmount            = senderFiatAmount,
+				fiatAmount            = nominalFiatAmount,
 				offerID               = 6,
 				))
 			task.setCallResult(messages.LNPayResult(
@@ -816,15 +821,16 @@ class TestOrderTask(unittest.TestCase):
 				'senderTimeoutDelta': 2000,
 				'lockedTimeoutDelta': 53,
 				'CLTVExpiryDelta':    23,
-				'maxSenderCryptoAmount': maxSenderCryptoAmount,
 				'senderCryptoAmount': senderCryptoAmount,
-				'receiverCryptoAmount': receiverCryptoAmount,
-				'senderFiatAmount': senderFiatAmount,
+				'receiverCryptoAmount': nominalCryptoAmount,
+				'senderFiatAmount': nominalFiatAmount,
 				'receiverFiatAmount': receiverFiatAmount,
 				'paymentHash': paymentHash,
 				'paymentPreimage': paymentPreimage,
 				}})
 			remainingAmount -= senderCryptoAmount
+			if remainingAmount < 0 :
+				remainingAmount = 0
 			order.setAmount.assert_called_once_with(remainingAmount)
 			order.amount = remainingAmount
 			order.updateOfferMaxAmounts()
@@ -850,10 +856,9 @@ class TestOrderTask(unittest.TestCase):
 				'senderTimeoutDelta': 2000,
 				'lockedTimeoutDelta': 53,
 				'CLTVExpiryDelta':    23,
-				'maxSenderCryptoAmount': maxSenderCryptoAmount,
 				'senderCryptoAmount': senderCryptoAmount,
-				'receiverCryptoAmount': receiverCryptoAmount,
-				'senderFiatAmount': senderFiatAmount,
+				'receiverCryptoAmount': nominalCryptoAmount,
+				'senderFiatAmount': nominalFiatAmount,
 				'receiverFiatAmount': receiverFiatAmount,
 				'paymentHash': paymentHash,
 				'paymentPreimage': paymentPreimage,
@@ -916,7 +921,7 @@ class TestOrderTask(unittest.TestCase):
 		                offerID               = 43,
 
 		                recipientCryptoAmount = 10000,
-		                maxSenderCryptoAmount = 11000,
+		                maxSenderCryptoAmount = 10100,
 		                fiatAmount            = 1200,
 
 		                minCLTVExpiryDelta    = 78,
@@ -942,7 +947,6 @@ class TestOrderTask(unittest.TestCase):
 
 				'senderFiatAmount': 1200,
 				'receiverCryptoAmount': 10000,
-				'maxSenderCryptoAmount': 11000,
 
 				'senderTimeoutDelta': 34,
 				'lockedTimeoutDelta': 56,
@@ -1012,7 +1016,6 @@ class TestOrderTask(unittest.TestCase):
 
 			'senderFiatAmount': 1200,
 			'receiverCryptoAmount': 10000,
-			'maxSenderCryptoAmount': 11000,
 
 			'senderTimeoutDelta': 34,
 			'lockedTimeoutDelta': 56,
@@ -1033,7 +1036,7 @@ class TestOrderTask(unittest.TestCase):
 		                offerID               = 43,
 
 		                recipientCryptoAmount = 10000,
-		                maxSenderCryptoAmount = 11000,
+		                maxSenderCryptoAmount = 10100,
 		                fiatAmount            = 1200,
 
 		                minCLTVExpiryDelta    = 78,
@@ -1072,7 +1075,6 @@ class TestOrderTask(unittest.TestCase):
 			'senderTimeoutDelta': 34,
 			'lockedTimeoutDelta': 56,
 			'CLTVExpiryDelta':    78,
-			'maxSenderCryptoAmount': 11000,
 			'receiverCryptoAmount': 10000,
 			'senderFiatAmount': 1200,
 			'paymentHash': b'foo',

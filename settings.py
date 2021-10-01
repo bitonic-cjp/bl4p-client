@@ -40,3 +40,8 @@ sellOrderSenderTimeoutRange   = (2000   , 10000                 ) #milliseconds
 #We require a minimum lock timeout for incoming fiat funds
 sellOrderLockedTimeoutRange   = (3600*24, offer.CONDITION_NO_MAX) #seconds
 
+#Maximum Lightning fee percentage.
+#The amount of BTC lost in a sell transaction may exceed the limit of an order
+#by this much.
+maxLightningFee = 0.01
+

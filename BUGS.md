@@ -15,11 +15,6 @@ has to be fixed.
 
 ## Loss of funds (including trading beyond limits specified in orders)
 
-### 2. BL4P fee amount is not checked
-Although the BL4P server should never require excessive fees,
-clients can and should check this for themselves, before executing transactions.
-
-
 ### 4. No check on ongoing outgoing Lightning transactions.
 After a crash, a duplicate Lightning transaction might be sent out.
 
