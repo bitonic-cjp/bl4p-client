@@ -124,22 +124,22 @@ class BuyTransaction(StoredObject):
 class SellTransaction(StoredObject):
 	#This initialization is just to inform Mypy about data types.
 	#TODO: find a way to make sure Storage respects these types
-	sellOrder             = None #type: int
-	counterOffer          = None #type: int
-	status                = None #type: int
-	senderFiatAmount      = None #type: int
-	receiverFiatAmount    = None #type: int
-	senderCryptoAmount    = None #type: int
-	receiverCryptoAmount  = None #type: int
-	senderTimeoutDelta    = None #type: int
-	lockedTimeoutDelta    = None #type: int
-	CLTVExpiryDelta       = None #type: int
-	paymentHash           = None #type: bytes
-	paymentPreimage       = None #type: bytes
+	sellOrder          = None #type: int
+	counterOffer       = None #type: int
+	status             = None #type: int
+	buyerFiatAmount    = None #type: int
+	sellerFiatAmount   = None #type: int
+	buyerCryptoAmount  = None #type: int
+	sellerCryptoAmount = None #type: int
+	senderTimeoutDelta = None #type: int
+	lockedTimeoutDelta = None #type: int
+	CLTVExpiryDelta    = None #type: int
+	paymentHash        = None #type: bytes
+	paymentPreimage    = None #type: bytes
 
 	@staticmethod
 	def create(storage: Storage,
-		sellOrder: int, counterOffer: int, senderFiatAmount: int, receiverCryptoAmount: int, senderTimeoutDelta: int, lockedTimeoutDelta: int, CLTVExpiryDelta: int
+		sellOrder: int, counterOffer: int, buyerFiatAmount: int, buyerCryptoAmount: int, senderTimeoutDelta: int, lockedTimeoutDelta: int, CLTVExpiryDelta: int
 		) -> int:
 
 		return StoredObject.createStoredObject(
@@ -150,11 +150,11 @@ class SellTransaction(StoredObject):
 
 			status = STATUS_INITIAL,
 
-			senderFiatAmount   = senderFiatAmount, #amount of sender of fiat
-			receiverFiatAmount = None,             #amount of receiver of fiat
+			buyerFiatAmount  = buyerFiatAmount, #buyer-side fiat amount
+			sellerFiatAmount = None,            #seller-side fiat amount
 
-			senderCryptoAmount    = None,                  #amount of sender of crypto
-			receiverCryptoAmount  = receiverCryptoAmount,  #amount of sender of crypto
+			buyerCryptoAmount  = buyerCryptoAmount,  #buyer-side crypto amount
+			sellerCryptoAmount = None,               #seller-side crypto amount
 
 			senderTimeoutDelta = senderTimeoutDelta,
 			lockedTimeoutDelta = lockedTimeoutDelta,
@@ -389,12 +389,12 @@ class OrderTask:
 		fiatAmountDivisor = settings.fiatDivisor #type: int
 
 		#Choose the largest crypto amount accepted by both
-		nominalCryptoAmount = min(
+		buyerCryptoAmount = min(
 			cryptoAmountDivisor * self.order.bid.max_amount // self.order.bid.max_amount_divisor,
 			cryptoAmountDivisor * self.counterOffer.ask.max_amount // self.counterOffer.ask.max_amount_divisor
 			) #type: int
-		log('nominalCryptoAmount = ' + str(nominalCryptoAmount))
-		assert nominalCryptoAmount > 0
+		log('buyerCryptoAmount = ' + str(buyerCryptoAmount))
+		assert buyerCryptoAmount > 0
 
 		#The optimum fiat price for us is the highest:
 		#this follows from the counter offer
@@ -403,14 +403,14 @@ class OrderTask:
 		#    = (btc * bid * ask_divisor) / (ask * bid_divisor)
 		#Implementation note:
 		#The correctness of this code might depend on Python's unlimited size integers.
-		nominalFiatAmount = \
-			(fiatAmountDivisor * nominalCryptoAmount * self.counterOffer.bid.max_amount         * self.counterOffer.ask.max_amount_divisor) // \
+		buyerFiatAmount = \
+			(fiatAmountDivisor * buyerCryptoAmount   * self.counterOffer.bid.max_amount         * self.counterOffer.ask.max_amount_divisor) // \
 			(                    cryptoAmountDivisor * self.counterOffer.bid.max_amount_divisor * self.counterOffer.ask.max_amount) #type: int
-		maxNominalFiatAmount = (nominalFiatAmount * self.counterOffer.bid.max_amount) // self.counterOffer.bid.max_amount_divisor #type: int
-		if nominalFiatAmount > maxNominalFiatAmount:
-			nominalFiatAmount = maxNominalFiatAmount
-		log('nominalFiatAmount = ' + str(nominalFiatAmount))
-		assert nominalFiatAmount > 0
+		maxBuyerFiatAmount = (buyerFiatAmount * self.counterOffer.bid.max_amount) // self.counterOffer.bid.max_amount_divisor #type: int
+		if buyerFiatAmount > maxBuyerFiatAmount:
+			buyerFiatAmount = maxBuyerFiatAmount
+		log('buyerFiatAmount = ' + str(buyerFiatAmount))
+		assert buyerFiatAmount > 0
 
 		#Choose the sender timeout limit as small as possible
 		sender_timeout_delta_ms = getMinConditionValue(
@@ -437,8 +437,8 @@ class OrderTask:
 			sellOrder    = self.order.ID,
 			counterOffer = counterOfferID,
 
-			senderFiatAmount   = nominalFiatAmount,
-			receiverCryptoAmount  = nominalCryptoAmount,
+			buyerFiatAmount   = buyerFiatAmount,
+			buyerCryptoAmount  = buyerCryptoAmount,
 
 			senderTimeoutDelta = sender_timeout_delta_ms,
 			lockedTimeoutDelta = locked_timeout_delta_s,
@@ -458,7 +458,7 @@ class OrderTask:
 			await self.call(messages.BL4PStart(
 				localOrderID = self.order.ID,
 
-				amount = self.transaction.senderFiatAmount,
+				amount = self.transaction.buyerFiatAmount,
 				sender_timeout_delta_ms = self.transaction.senderTimeoutDelta,
 				locked_timeout_delta_s = self.transaction.lockedTimeoutDelta,
 				receiver_pays_fee = True
@@ -466,29 +466,29 @@ class OrderTask:
 				messages.BL4PStartResult)
 			) #type: messages.BL4PStartResult
 
-		assert startResult.senderAmount == self.transaction.senderFiatAmount
+		assert startResult.senderAmount == self.transaction.buyerFiatAmount
 
 		#Minimum: this is what we are prepared to receive
 		fiatAmountDivisor = settings.fiatDivisor #type: int
 		cryptoAmountDivisor = settings.cryptoDivisor #type: int
-		nominalFiatAmount = self.transaction.senderFiatAmount
-		nominalCryptoAmount = self.transaction.receiverCryptoAmount
-		minReceiverFiatAmount = \
-			(fiatAmountDivisor * nominalCryptoAmount * self.order.ask.max_amount         * self.order.bid.max_amount_divisor) // \
+		buyerFiatAmount = self.transaction.buyerFiatAmount
+		buyerCryptoAmount = self.transaction.buyerCryptoAmount
+		minSellerFiatAmount = \
+			(fiatAmountDivisor * buyerCryptoAmount   * self.order.ask.max_amount         * self.order.bid.max_amount_divisor) // \
 			(                    cryptoAmountDivisor * self.order.ask.max_amount_divisor * self.order.bid.max_amount) #type: int
-		log('minReceiverFiatAmount = ' + str(minReceiverFiatAmount))
-		assert minReceiverFiatAmount <= nominalFiatAmount
+		log('minSellerFiatAmount = ' + str(minSellerFiatAmount))
+		assert minSellerFiatAmount <= buyerFiatAmount
 
 		#Check that we're not receiving too little:
-		receiverFiatAmount = startResult.receiverAmount
-		log('receiverFiatAmount = ' + str(receiverFiatAmount))
-		if receiverFiatAmount < minReceiverFiatAmount:
+		sellerFiatAmount = startResult.receiverAmount
+		log('sellerFiatAmount = ' + str(sellerFiatAmount))
+		if sellerFiatAmount < minSellerFiatAmount:
 			log('We\'ll receive too little; canceling the transaction.')
 			await self.cancelIncomingFiatFunds()
 			return
 
 		self.transaction.update(
-			receiverFiatAmount = receiverFiatAmount,
+			sellerFiatAmount = sellerFiatAmount,
 			paymentHash = startResult.paymentHash,
 			status = STATUS_STARTED,
 			)
@@ -508,7 +508,7 @@ class OrderTask:
 				{
 		                'paymentHash'         : self.transaction.paymentHash.hex(),
 		                'offerID'             : str(self.counterOffer.ID),
-		                'receiverCryptoAmount': formatCryptoAmount(self.transaction.receiverCryptoAmount),
+		                'receiverCryptoAmount': formatCryptoAmount(self.transaction.buyerCryptoAmount),
 		                'cryptoCurrency'      : self.order.bid.currency,
 				},
 			),
@@ -526,11 +526,11 @@ class OrderTask:
 		assert isinstance(self.transaction, SellTransaction)
 		assert self.counterOffer is not None
 
-		maxSenderCryptoAmount = int(
+		maxSellerCryptoAmount = int(
 			(1 + settings.maxLightningFee) *
-			self.transaction.receiverCryptoAmount
+			self.transaction.buyerCryptoAmount
 			) #type: int
-		log('maxSenderCryptoAmount = ' + str(maxSenderCryptoAmount))
+		log('maxSellerCryptoAmount = ' + str(maxSellerCryptoAmount))
 
 		#Send out over Lightning:
 		lightningResult = cast(messages.LNPayResult,
@@ -539,10 +539,10 @@ class OrderTask:
 
 				destinationNodeID     = self.counterOffer.address,
 				paymentHash           = self.transaction.paymentHash,
-				recipientCryptoAmount = self.transaction.receiverCryptoAmount,
-				maxSenderCryptoAmount = maxSenderCryptoAmount,
+				recipientCryptoAmount = self.transaction.buyerCryptoAmount,
+				maxSenderCryptoAmount = maxSellerCryptoAmount,
 				minCLTVExpiryDelta    = self.transaction.CLTVExpiryDelta,
-				fiatAmount            = self.transaction.senderFiatAmount,
+				fiatAmount            = self.transaction.buyerFiatAmount,
 				offerID               = self.counterOffer.ID,
 				),
 				messages.LNPayResult)
@@ -558,11 +558,11 @@ class OrderTask:
 		log('We got the preimage from the LN payment')
 
 		self.transaction.update(
-			senderCryptoAmount = lightningResult.senderCryptoAmount,
+			sellerCryptoAmount = lightningResult.senderCryptoAmount,
 			paymentPreimage = lightningResult.paymentPreimage,
 			status = STATUS_RECEIVED_PREIMAGE,
 			)
-		newAmount = self.order.amount - self.transaction.senderCryptoAmount
+		newAmount = self.order.amount - self.transaction.sellerCryptoAmount
 		if newAmount < 0:
 			#This is possible due to Lightning fees
 			log('We\'ve exceeded the order amount by ' + str(-newAmount))
