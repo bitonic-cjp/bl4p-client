@@ -50,8 +50,14 @@ class TestBackend(unittest.TestCase):
 		self.outgoingMessages = []
 		def handleOutgoingMessage(msg):
 			self.outgoingMessages.append(msg)
+
+		self.bl4pIsConnected = True
+		def isBL4PConnected():
+			return self.bl4pIsConnected
+
 		self.client = Mock()
 		self.client.handleOutgoingMessage = handleOutgoingMessage
+		self.client.isBL4PConnected = isBL4PConnected
 
 		self.backend = backend.Backend(self.client)
 
@@ -194,7 +200,7 @@ class TestBackend(unittest.TestCase):
 	def test_handleBuyCommand_noBL4P(self):
 		self.backend.storage = MockStorage(test = self)
 		self.backend.LNAddress = 'LNAddress'
-		self.backend.bl4pIsConnected = False
+		self.bl4pIsConnected = False
 
 		cmd = Mock()
 		cmd.commandID = 42
@@ -217,7 +223,6 @@ class TestBackend(unittest.TestCase):
 	def test_handleSellCommand(self):
 		self.backend.storage = MockStorage(test = self)
 		self.backend.BL4PAddress = 'BL4PAddress'
-		self.backend.bl4pIsConnected = True
 
 		cmd = Mock()
 		cmd.commandID = 42
@@ -252,7 +257,7 @@ class TestBackend(unittest.TestCase):
 	def test_handleSellCommand_noBL4P(self):
 		self.backend.storage = MockStorage(test = self)
 		self.backend.BL4PAddress = 'BL4PAddress'
-		self.backend.bl4pIsConnected = False
+		self.bl4pIsConnected = False
 
 		cmd = Mock()
 		cmd.commandID = 42

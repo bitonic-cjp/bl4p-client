@@ -132,7 +132,7 @@ class TestPlugin(unittest.TestCase):
 		self.assertEqual(client.backend.LNAddress, 'fubar')
 		self.assertEqual(client.backend.BL4PAddress, 'BL4Pdummy')
 		self.assertEqual(DBFiles, ['bar'])
-		self.assertTrue(client.backend.bl4pIsConnected)
+		self.assertTrue(client.isBL4PConnected())
 
 		self.assertEqual(handlers, [client.backend, client.pluginInterface, client.rpcInterface, client.bl4pInterface])
 
@@ -153,7 +153,7 @@ class TestPlugin(unittest.TestCase):
 		self.assertEqual(client.bl4pInterface.startupArgs[:3], ('ws://localhost:8000/', 'foo', 'bar'))
 		self.assertTrue(isinstance(client.bl4pInterface.startupArgs[3], secp256k1.PrivateKey))
 
-		self.assertFalse(client.backend.bl4pIsConnected)
+		self.assertFalse(client.isBL4PConnected())
 
 
 	@asynciotest

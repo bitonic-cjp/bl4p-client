@@ -68,6 +68,7 @@ class BL4PClient:
 	def __init__(self) -> None:
 		self.backend = backend.Backend(self) #type: backend.Backend
 		self.messageRouter = messages.Router() #type: messages.Router
+		self.bl4pIsConnected = False #type: bool
 
 
 	async def startup(self) -> None:
@@ -146,8 +147,8 @@ class BL4PClient:
 
 		#If startup was successful, we can add this interface as a message handler.
 		self.messageRouter.addHandler(self.bl4pInterface)
-		#We can also inform the backend that this connection is established.
-		self.backend.setBL4PConnected(True)
+		#TODO: this must affect whether order tasks are doing things
+		self.bl4pIsConnected = True
 
 
 	async def shutdown(self) -> None:
@@ -155,6 +156,10 @@ class BL4PClient:
 		await self.bl4pInterface.shutdown()
 		await self.rpcInterface.shutdown()
 		await self.pluginInterface.shutdown()
+
+
+	def isBL4PConnected(self) -> bool:
+		return self.bl4pIsConnected
 
 
 	def handleIncomingMessage(self, message: messages.AnyMessage) -> None:
