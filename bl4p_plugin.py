@@ -68,7 +68,7 @@ class BL4PClient:
 	def __init__(self) -> None:
 		self.backend = backend.Backend(self) #type: backend.Backend
 		self.messageRouter = messages.Router() #type: messages.Router
-		self.bl4pIsConnected = False #type: bool
+		self.bl4pConnectedFuture = asyncio.Future() #type: asyncio.Future
 
 
 	async def startup(self) -> None:
@@ -147,8 +147,7 @@ class BL4PClient:
 
 		#If startup was successful, we can add this interface as a message handler.
 		self.messageRouter.addHandler(self.bl4pInterface)
-		#TODO: this must affect whether order tasks are doing things
-		self.bl4pIsConnected = True
+		self.bl4pConnectedFuture.set_result(True)
 
 
 	async def shutdown(self) -> None:
@@ -159,7 +158,11 @@ class BL4PClient:
 
 
 	def isBL4PConnected(self) -> bool:
-		return self.bl4pIsConnected
+		return self.bl4pConnectedFuture.done()
+
+
+	async def waitForBL4PConnection(self) -> None:
+		await self.bl4pConnectedFuture
 
 
 	def handleIncomingMessage(self, message: messages.AnyMessage) -> None:

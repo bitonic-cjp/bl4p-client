@@ -242,6 +242,13 @@ class OrderTask:
 		self.callResult.set_result(result)
 
 
+	async def waitForBL4PConnection(self) -> None:
+		if not self.client.isBL4PConnected():
+			log('Order task: waiting for BL4P connection')
+			await self.client.waitForBL4PConnection()
+			log('Order task: BL4P connection is present; continuing')
+
+
 	async def doTrading(self) -> None:
 		try:
 			if isinstance(self.order, BuyOrder):
@@ -279,6 +286,7 @@ class OrderTask:
 		Then, it performs a single transaction based on the found offer.
 		'''
 
+		await self.waitForBL4PConnection()
 		while True:
 			try:
 				queryResult = cast(messages.BL4PFindOffersResult,
@@ -330,6 +338,8 @@ class OrderTask:
 
 
 	async def publishOffer(self) -> None:
+		await self.waitForBL4PConnection()
+
 		result = cast(messages.BL4PAddOfferResult,
 			await self.call(messages.BL4PAddOffer(
 				localOrderID=self.order.ID,
@@ -452,6 +462,7 @@ class OrderTask:
 	async def startTransactionOnBL4P(self) -> None:
 		assert isinstance(self.order, SellOrder)
 		assert isinstance(self.transaction, SellTransaction)
+		await self.waitForBL4PConnection()
 
 		#Create transaction on the exchange:
 		startResult = cast(messages.BL4PStartResult,
@@ -500,6 +511,7 @@ class OrderTask:
 		assert isinstance(self.order, SellOrder)
 		assert isinstance(self.transaction, SellTransaction)
 		assert self.counterOffer is not None
+		await self.waitForBL4PConnection()
 
 		await self.call(messages.BL4PSelfReport(
 			localOrderID = self.order.ID,
@@ -575,6 +587,7 @@ class OrderTask:
 	async def receiveFiatFunds(self) -> None:
 		assert isinstance(self.order, SellOrder)
 		assert isinstance(self.transaction, SellTransaction)
+		await self.waitForBL4PConnection()
 
 		receiveResult = cast(messages.BL4PReceiveResult,
 			await self.call(messages.BL4PReceive(
@@ -597,6 +610,7 @@ class OrderTask:
 	async def cancelIncomingFiatFunds(self) -> None:
 		assert isinstance(self.order, SellOrder)
 		assert isinstance(self.transaction, SellTransaction)
+		await self.waitForBL4PConnection()
 
 		await self.call(messages.BL4PCancelStart(
 			localOrderID=self.order.ID,
@@ -652,6 +666,7 @@ class OrderTask:
 
 		log('Received incoming Lightning transaction')
 		#TODO: log transaction characteristics
+		#TODO: maybe refuse tx if we're not connected to BL4P
 
 		#Check if this is a new notification for an already ongoing tx.
 		cursor = self.storage.execute(
@@ -732,6 +747,7 @@ class OrderTask:
 	async def sendFundsOnBL4P(self) -> None:
 		assert isinstance(self.order, BuyOrder)
 		assert isinstance(self.transaction, BuyTransaction)
+		await self.waitForBL4PConnection()
 
 		try:
 			#Lock fiat funds:

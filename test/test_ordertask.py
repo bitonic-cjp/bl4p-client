@@ -49,6 +49,24 @@ class TestOrderTask(unittest.TestCase):
 		self.client.handleOutgoingMessage = handleOutgoingMessage
 
 
+	@asynciotest
+	async def test_waitForBL4PConnection(self):
+		self.client.isBL4PConnected = Mock(return_value=True)
+		task = ordertask.OrderTask(self.client, self.storage, None)
+		await task.waitForBL4PConnection()
+		self.client.isBL4PConnected.assert_called_with()
+
+		self.client.isBL4PConnected = Mock(return_value=False)
+		calls = []
+		async def waitForBL4PConnection():
+			calls.append(None)
+		self.client.waitForBL4PConnection = waitForBL4PConnection
+		task = ordertask.OrderTask(self.client, self.storage, None)
+		await task.waitForBL4PConnection()
+		self.client.isBL4PConnected.assert_called_with()
+		self.assertEqual(len(calls), 1)
+
+
 	def test_BuyTransaction(self):
 		with patch.object(ordertask.StoredObject, 'createStoredObject', Mock(return_value=43)):
 			self.assertEqual(ordertask.BuyTransaction.create('foo', 'baa', 'bab', 'bac', 'bad'), 43)
