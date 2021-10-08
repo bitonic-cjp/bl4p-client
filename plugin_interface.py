@@ -209,12 +209,12 @@ class PluginInterface(JSONRPC, messages.Handler):
 		#self.log('RPC path is ' + self.RPCPath)
 
 
-	def getFiatCurrency(self) -> Dict[str, Any]:
+	def getFiatCurrency(self, **kwargs) -> Dict[str, Any]:
 		'Returns information about the fiat-currency'
 		return {'name': settings.fiatName, 'divisor': settings.fiatDivisor}
 
 
-	def getCryptoCurrency(self) -> Dict[str, Any]:
+	def getCryptoCurrency(self, **kwargs) -> Dict[str, Any]:
 		'Returns information about the crypto-currency'
 		return {'name': settings.cryptoName, 'divisor': settings.cryptoDivisor}
 
@@ -251,7 +251,7 @@ class PluginInterface(JSONRPC, messages.Handler):
 		return NO_RESPONSE
 
 
-	def setConfig(self, values: Dict[str, str]) -> object:
+	def setConfig(self, values: Dict[str, str], **kwargs) -> object:
 		'Change configuration values'
 		assert isinstance(values, dict)
 		for k,v in values.items():
@@ -268,7 +268,7 @@ class PluginInterface(JSONRPC, messages.Handler):
 		return NO_RESPONSE
 
 
-	def getConfig(self) -> object:
+	def getConfig(self, **kwargs) -> object:
 		'Get configuration values'
 		self.client.handleIncomingMessage(messages.GetConfigCommand(
 			commandID = self.currentRequestID,
