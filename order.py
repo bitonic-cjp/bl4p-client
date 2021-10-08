@@ -47,9 +47,9 @@ class Order(offer.Offer, StoredObject):
 	[Class: Offer]
 	ID                  stored
 	bid,ask
-		max_amount  determined from Order attributes            mCent,mSatoshi        mSatoshi,mCent
-		currency    determined from settings (must not change!)
-		exchange    determined from settings (must not change!)
+	    max_amount      determined from Order attributes            mCent,mSatoshi        mSatoshi,mCent
+	    currency        determined from settings (must not change!)
+	    exchange        determined from settings (must not change!)
 	address             determined from LN
 	conditions          determined from settings
 
