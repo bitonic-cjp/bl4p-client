@@ -69,6 +69,7 @@ class TestBackend(unittest.TestCase):
 			messages.BuyCommand      : self.backend.handleBuyCommand,
 			messages.SellCommand     : self.backend.handleSellCommand,
 			messages.ListCommand     : self.backend.handleListCommand,
+			messages.CancelCommand   : self.backend.handleCancelCommand,
 			messages.GetConfigCommand: self.backend.handleGetConfigCommand,
 			messages.SetConfigCommand: self.backend.handleSetConfigCommand,
 
@@ -310,12 +311,12 @@ class TestBackend(unittest.TestCase):
 					{
 					'buy' :
 						[
-						{'amount': 123, 'limitRate': 19000},
+						{'ID': 41, 'amount': 123, 'limitRate': 19000},
 						],
 					'sell':
 						[
-						{'amount': 456, 'limitRate': 20000},
-						{'amount': 789, 'limitRate': 21000},
+						{'ID': 51, 'amount': 456, 'limitRate': 20000},
+						{'ID': 52, 'amount': 789, 'limitRate': 21000},
 						],
 					}
 			)])

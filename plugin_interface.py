@@ -87,6 +87,7 @@ class PluginInterface(JSONRPC, messages.Handler):
 		'bl4p.buy'              : (self.buy               , MethodType.RPCMETHOD),
 		'bl4p.sell'             : (self.sell              , MethodType.RPCMETHOD),
 		'bl4p.list'             : (self.list              , MethodType.RPCMETHOD),
+		'bl4p.cancel'           : (self.cancel            , MethodType.RPCMETHOD),
 		'bl4p.setconfig'        : (self.setConfig         , MethodType.RPCMETHOD),
 		'bl4p.getconfig'        : (self.getConfig         , MethodType.RPCMETHOD),
 
@@ -284,6 +285,19 @@ class PluginInterface(JSONRPC, messages.Handler):
 
 		self.client.handleIncomingMessage(messages.ListCommand(
 			commandID = self.currentRequestID,
+			))
+
+		#Don't send a response now:
+		#It was already sent by the message handler
+		return NO_RESPONSE
+
+
+	def cancel(self, orderID: int, **kwargs) -> object:
+		'Cancel an active order'
+
+		self.client.handleIncomingMessage(messages.CancelCommand(
+			commandID = self.currentRequestID,
+			orderID = orderID,
 			))
 
 		#Don't send a response now:

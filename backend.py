@@ -55,6 +55,7 @@ class Backend(messages.Handler):
 			messages.BuyCommand      : self.handleBuyCommand,
 			messages.SellCommand     : self.handleSellCommand,
 			messages.ListCommand     : self.handleListCommand,
+			messages.CancelCommand   : self.handleCancelCommand,
 			messages.SetConfigCommand: self.handleSetConfigCommand,
 			messages.GetConfigCommand: self.handleGetConfigCommand,
 
@@ -153,7 +154,7 @@ class Backend(messages.Handler):
 		sell = [] #type: List[Dict[str, int]]
 		buy  = [] #type: List[Dict[str, int]]
 		for ID, task in self.orderTasks.items():
-			order = {'limitRate': task.order.limitRate, 'amount': task.order.amount} #type: Dict[str, int]
+			order = {'ID': ID, 'limitRate': task.order.limitRate, 'amount': task.order.amount} #type: Dict[str, int]
 			if isinstance(task.order, SellOrder):
 				sell.append(order)
 			elif isinstance(task.order, BuyOrder):
@@ -164,6 +165,14 @@ class Backend(messages.Handler):
 		self.client.handleOutgoingMessage(messages.PluginCommandResult(
 			commandID = cmd.commandID,
 			result = {'sell': sell, 'buy': buy}
+			))
+
+
+	def handleCancelCommand(self, cmd: messages.CancelCommand) -> None:
+		#TODO
+		self.client.handleOutgoingMessage(messages.PluginCommandResult(
+			commandID = cmd.commandID,
+			result = {'foo': 'bar'}
 			))
 
 

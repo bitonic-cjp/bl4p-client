@@ -68,6 +68,20 @@ def cmd_list():
 	return rpc.call('bl4p.list', {})
 
 
+def cmd_cancel():
+	'Cancel an open order'
+	orderList = rpc.call('bl4p.list', {})
+	orderList = orderList['sell'] + orderList['buy']
+	orderList.sort(key = lambda o: o['ID'])
+	if not orderList:
+		print('There are no open orders to be canceled')
+		return
+	for order in orderList:
+		print(order)
+	ID = int(input('ID of order to cancel: '))
+	return rpc.call('bl4p.cancel', {'orderID': ID})
+
+
 def cmd_login():
 	'Change BL4P login settings'
 	#TODO (bug 14): make URL configurable
@@ -139,6 +153,7 @@ commands = \
 'buy'     : cmd_buy,
 'sell'    : cmd_sell,
 'list'    : cmd_list,
+'cancel'  : cmd_cancel,
 'login'   : cmd_login,
 }
 

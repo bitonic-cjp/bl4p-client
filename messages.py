@@ -43,6 +43,10 @@ class ListCommand(PluginCommand):
 	pass
 
 
+class CancelCommand(PluginCommand):
+	orderID = 0 #type: int
+
+
 class SetConfigCommand(PluginCommand):
 	values = {} #type: Dict[str, str]
 
@@ -187,6 +191,7 @@ AnyMessage = Union[
 	BuyCommand,
 	SellCommand,
 	ListCommand,
+	CancelCommand,
 	SetConfigCommand,
 	GetConfigCommand,
 	PluginCommandResult,
@@ -205,6 +210,7 @@ AnyMessageHandler = Union[
 	Callable[[BuyCommand], None],
 	Callable[[SellCommand], None],
 	Callable[[ListCommand], None],
+	Callable[[CancelCommand], None],
 	Callable[[GetConfigCommand], None],
 	Callable[[SetConfigCommand], None],
 	Callable[[PluginCommandResult], None],
