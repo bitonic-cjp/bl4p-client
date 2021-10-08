@@ -154,7 +154,7 @@ class MockStorage:
 			for i in range(len(names)):
 				self.buyOrders[ID][names[i]] = data[i]
 			return MockCursor([])
-		elif query == 'SELECT `ID` FROM `buyOrders` WHERE `status` = 0':
+		elif query == 'SELECT `ID` FROM `buyOrders` WHERE `status` = 0 OR `status` = 2':
 			self.test.assertEqual(data, [])
 			return [[x] for x in self.buyOrders.keys()]
 		elif query == 'SELECT * from buyOrders WHERE `ID` = ?':
@@ -220,7 +220,7 @@ class MockStorage:
 			for i in range(len(names)):
 				self.sellOrders[ID][names[i]] = data[i]
 			return MockCursor([])
-		elif query == 'SELECT `ID` FROM `sellOrders` WHERE `status` = 0':
+		elif query == 'SELECT `ID` FROM `sellOrders` WHERE `status` = 0 OR `status` = 2':
 			self.test.assertEqual(data, [])
 			return [[x] for x in self.sellOrders.keys()]
 		elif query == 'SELECT * from sellOrders WHERE `ID` = ?':
@@ -256,5 +256,5 @@ class MockStorage:
 			self.configuration[name] = value
 			return MockCursor([])
 
-		raise Exception('Query not recognized: ' + str(query))
+		raise Exception('Query not recognized: ' + repr(query))
 

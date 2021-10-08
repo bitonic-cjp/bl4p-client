@@ -26,9 +26,13 @@ from storage import StoredObject
 '''
 Order status
 Active -> Completed
+Active -> CancelRequested -> Canceled
+Active -> Canceled
 '''
-STATUS_ACTIVE = 0    #type: int
-STATUS_COMPLETED = 1 #type: int
+STATUS_ACTIVE           = 0 #type: int
+STATUS_COMPLETED        = 1 #type: int
+STATUS_CANCEL_REQUESTED = 2 #type: int
+STATUS_CANCELED         = 3 #type: int
 
 
 

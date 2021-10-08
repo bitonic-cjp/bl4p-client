@@ -30,7 +30,8 @@ if TYPE_CHECKING:
 
 from log import log, logException
 import messages
-from order import BuyOrder, SellOrder, Order, STATUS_COMPLETED
+from order import BuyOrder, SellOrder, Order
+import order
 import settings
 from storage import StoredObject, Storage, Cursor
 
@@ -228,6 +229,17 @@ class OrderTask:
 		await self.task
 
 
+	def cancel(self) -> None:
+		if self.transaction is None:
+			self.order.update(status=order.STATUS_CANCELED)
+			self.task.cancel()
+		else:
+			#TODO: cancel ongoing transaction if possible.
+			#For now, just let an ongoing transaction complete, and then cancel
+			#the order.
+			self.order.update(status=order.STATUS_CANCEL_REQUESTED)
+
+
 	def setCallResult(self, result: messages.AnyMessage) -> None:
 		if self.callResult is None or self.expectedCallResultType is None:
 			raise UnexpectedResult(
@@ -254,25 +266,28 @@ class OrderTask:
 			if isinstance(self.order, BuyOrder):
 				await self.continueBuyTransaction()
 				await self.publishOffer()
-				while self.order.amount > 0:
-					await self.waitForIncomingTransaction()
-					log('Remaining in buy order: ' + \
-						str(self.order.amount))
-				log('Finished with buy order')
+				tradeFunction = self.waitForIncomingTransaction
 			elif isinstance(self.order, SellOrder):
 				await self.continueSellTransaction()
-				while self.order.amount > 0:
-					await self.doOfferSearch()
-					log('Remaining in sell order: ' + \
-						str(self.order.amount))
-				log('Finished with sell order')
+				tradeFunction = self.doOfferSearch
 			else:
 				raise Exception('Unsupported order type - cannot use it in trade')
 
-			self.order.update(status=STATUS_COMPLETED)
+			while self.order.amount > 0:
+				await tradeFunction()
+				log('Remaining in order: ' + \
+					str(self.order.amount))
+				if self.order.status == order.STATUS_CANCEL_REQUESTED:
+					log('Order cancelation was requested - canceling it now')
+					self.order.update(status=order.STATUS_CANCELED)
+					return
+
+			log('Finished with order')
+			self.order.update(status=order.STATUS_COMPLETED)
 
 		except asyncio.CancelledError:
-			pass #We're cancelled, so just quit the function
+			log('Order task got canceled')
+			#We're cancelled, so just quit the function
 		except:
 			log('Exception in order task:')
 			logException()
