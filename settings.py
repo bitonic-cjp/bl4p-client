@@ -29,7 +29,7 @@ fiatDivisor = 100000 #type: int         #in mCent
 #We require a minimum CLTV time for incoming crypto funds
 buyOrderCLTVExpiryDeltaRange  = (12     , offer.CONDITION_NO_MAX)
 #We require a maximum sender timeout for outgoing fiat funds
-buyOrderSenderTimeoutRange    = (2000   , 10000                 ) #milliseconds
+buyOrderSenderTimeoutRange    = (10000  , 30000                 ) #milliseconds
 #We require a maximum lock timeout for outgoing fiat funds
 buyOrderLockedTimeoutRange    = (0      , 3600*24*14            ) #seconds
 

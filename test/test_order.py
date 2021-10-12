@@ -122,8 +122,8 @@ class TestOrder(unittest.TestCase):
 
 		self.assertEqual(buy.getConditionMin(offer.Condition.CLTV_EXPIRY_DELTA), 12)
 		self.assertEqual(buy.getConditionMax(offer.Condition.CLTV_EXPIRY_DELTA), offer.CONDITION_NO_MAX)
-		self.assertEqual(buy.getConditionMin(offer.Condition.SENDER_TIMEOUT), 2000)
-		self.assertEqual(buy.getConditionMax(offer.Condition.SENDER_TIMEOUT), 10000)
+		self.assertEqual(buy.getConditionMin(offer.Condition.SENDER_TIMEOUT), 10000)
+		self.assertEqual(buy.getConditionMax(offer.Condition.SENDER_TIMEOUT), 30000)
 		self.assertEqual(buy.getConditionMin(offer.Condition.LOCKED_TIMEOUT), 0)
 		self.assertEqual(buy.getConditionMax(offer.Condition.LOCKED_TIMEOUT), 3600*24*14)
 
