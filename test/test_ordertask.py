@@ -49,6 +49,29 @@ class TestOrderTask(unittest.TestCase):
 		self.client.handleOutgoingMessage = handleOutgoingMessage
 
 
+	async def shutdownOrderTask(self, task):
+		#While we await for task.shutdown, the task calls BL4P to remove the
+		#offer; it then awaits for the result.
+		#However, we can't give it the result since we're awaiting shutdown.
+		#To work around this, we patch the waitForIncomingMessage method, so
+		#that the task receives the message it expects once it starts waiting
+		#for it.
+
+		async def waitForIncomingMessage(expectedResultType):
+			self.assertEqual(expectedResultType, messages.BL4PRemoveOfferResult)
+			return messages.BL4PRemoveOfferResult(request = None)
+
+		with patch.object(task, 'waitForIncomingMessage', waitForIncomingMessage):
+			await task.shutdown()
+
+		msg = await self.outgoingMessages.get()
+		self.assertEqual(msg, messages.BL4PRemoveOffer(
+			localOrderID=42,
+
+			offerID=6,
+			))
+
+
 	@asynciotest
 	async def test_waitForBL4PConnection(self):
 		self.client.isBL4PConnected = Mock(return_value=True)
@@ -354,7 +377,7 @@ class TestOrderTask(unittest.TestCase):
 
 		msg = await self.outgoingMessages.get()
 
-		await task.shutdown()
+		await self.shutdownOrderTask(task)
 
 
 	@asynciotest
@@ -517,7 +540,7 @@ class TestOrderTask(unittest.TestCase):
 		#Continues to next iteration:
 		await asyncio.sleep(0.1)
 
-		await task.shutdown()
+		await self.shutdownOrderTask(task)
 
 
 	@asynciotest
@@ -572,7 +595,7 @@ class TestOrderTask(unittest.TestCase):
 			paymentPreimage = b'bar'
 			))
 
-		await task.shutdown()
+		await self.shutdownOrderTask(task)
 
 
 	@asynciotest
@@ -625,7 +648,7 @@ class TestOrderTask(unittest.TestCase):
 			paymentHash     = b'foo',
 			))
 
-		await task.shutdown()
+		await self.shutdownOrderTask(task)
 
 
 	@asynciotest

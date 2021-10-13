@@ -221,6 +221,18 @@ class OrderTask:
 
 
 	async def shutdown(self) -> None:
+		#Note: calling this method can be a bit risky, since it awaits for the
+		#task to finish.
+		#After receiving the CancelledError exception, the task still performs
+		#one last action, which involves an RPC call to the BL4P server; the
+		#result of this call is awaited in the task.
+		#If this result doesn't arrive (e.g. because the task responsible for
+		#delivering the message is awaiting this method), this method won't
+		#finish.
+		#In the way the client code works, this should not be a problem, since
+		#shutdown is typically called by a task started in bl4p_plugin.py,
+		#while the RPC result is delivered by a different task started in
+		#asynclient.py.
 		self.task.cancel()
 		await self.task
 
@@ -292,6 +304,16 @@ class OrderTask:
 			log('Exception in order task:')
 			logException()
 
+		#These could have old values from something earlier that got
+		#interrupted.
+		#Set them back to None, so that the following un-publishing call can
+		#proceed normally.
+		self.callResult = None
+		self.expectedCallResultType = None
+
+		log('End of order task, so removing the order from the market:')
+		await self.unpublishOffer()
+
 		self.client.backend.handleOrderTaskFinished(self.order.ID)
 
 
@@ -355,6 +377,10 @@ class OrderTask:
 	async def publishOffer(self) -> None:
 		await self.waitForBL4PConnection()
 
+		if self.order.remoteOfferID is not None:
+			log('The offer was already published - no need to re-publish it')
+			return
+
 		result = cast(messages.BL4PAddOfferResult,
 			await self.call(messages.BL4PAddOffer(
 				localOrderID=self.order.ID,
@@ -363,9 +389,27 @@ class OrderTask:
 				),
 				messages.BL4PAddOfferResult)
 			) #type: messages.BL4PAddOfferResult
+
 		remoteID = result.ID #type: int
 		self.order.remoteOfferID = remoteID
 		log('Local ID %d gets remote ID %s' % (self.order.ID, remoteID))
+
+
+	async def unpublishOffer(self) -> None:
+		await self.waitForBL4PConnection()
+
+		if self.order.remoteOfferID is None:
+			log('The offer was not published - no need to un-publish it')
+			return
+
+		await self.call(messages.BL4PRemoveOffer(
+			localOrderID=self.order.ID,
+
+			offerID=self.order.remoteOfferID,
+			),
+			messages.BL4PRemoveOfferResult)
+
+		self.order.remoteOfferID = None
 
 
 	########################################################################
@@ -839,20 +883,17 @@ class OrderTask:
 	########################################################################
 
 	async def updateOrderAfterTransaction(self) -> None:
-		if self.order.remoteOfferID is not None:
-			#Remove offer from the market
-			log('Removing old offer from the market')
-			await self.call(messages.BL4PRemoveOffer(
-				localOrderID=self.order.ID,
+		if self.order.remoteOfferID is None:
+			return
 
-				offerID=self.order.remoteOfferID,
-				),
-				messages.BL4PRemoveOfferResult)
+		#Remove offer from the market
+		log('Removing old offer from the market')
+		await self.unpublishOffer()
 
-			#Re-add offer to the market
-			if self.order.amount > 0:
-				log('Re-adding the offer to the market')
-				await self.publishOffer()
+		#Re-add offer to the market
+		if self.order.amount > 0:
+			log('Re-adding the offer to the market')
+			await self.publishOffer()
 
 
 	async def call(self, message: messages.AnyMessage, expectedResultType: Type) -> messages.AnyMessage:
