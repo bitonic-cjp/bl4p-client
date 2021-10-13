@@ -19,7 +19,7 @@
 import asyncio
 import copy
 import hashlib
-from typing import TYPE_CHECKING, cast, Awaitable, Callable, List, Optional, Type, Union
+from typing import TYPE_CHECKING, cast, Any, Awaitable, Callable, Dict, List, Optional, Type, Union
 
 from bl4p_api import offer
 from bl4p_api import offer_pb2
@@ -85,6 +85,16 @@ STATUS_RECEIVED_PREIMAGE = 3 #type: int
 STATUS_FINISHED          = 4 #type: int
 STATUS_CANCELED          = 5 #type: int
 
+TxStatus2str = \
+{
+STATUS_INITIAL           : 'initial',
+STATUS_STARTED           : 'started',
+STATUS_LOCKED            : 'locked',
+STATUS_RECEIVED_PREIMAGE : 'received preimage',
+STATUS_FINISHED          : 'finished',
+STATUS_CANCELED          : 'canceled',
+}
+
 
 
 class BuyTransaction(StoredObject):
@@ -119,6 +129,17 @@ class BuyTransaction(StoredObject):
 
 	def __init__(self, storage: Storage, ID: int) -> None:
 		StoredObject.__init__(self, storage, 'buyTransactions', ID)
+
+
+	def getListInfo(self) -> Dict[str, Any]:
+		'Return information intended for the list RPC call'
+
+		return \
+		{
+		'status'      : TxStatus2str[self.status],
+		'fiatAmount'  : self.fiatAmount,
+		'cryptoAmount': self.cryptoAmount,
+		}
 
 
 
@@ -168,6 +189,19 @@ class SellTransaction(StoredObject):
 
 	def __init__(self, storage: Storage, ID: int) -> None:
 		StoredObject.__init__(self, storage, 'sellTransactions', ID)
+
+
+	def getListInfo(self) -> Dict[str, Any]:
+		'Return information intended for the list RPC call'
+
+		return \
+		{
+		'status'            : TxStatus2str[self.status],
+		'buyerFiatAmount'   : self.buyerFiatAmount,
+		'sellerFiatAmount'  : self.sellerFiatAmount,
+		'buyerCryptoAmount' : self.buyerCryptoAmount,
+		'sellerCryptoAmount': self.sellerCryptoAmount,
+		}
 
 
 
@@ -250,6 +284,31 @@ class OrderTask:
 			#For now, just let an ongoing transaction complete, and then cancel
 			#the order.
 			self.order.update(status=order.STATUS_CANCEL_REQUESTED)
+
+
+	def getListInfo(self)-> Dict[str, Any]:
+		'Return information intended for the list RPC call'
+
+		orderStatus = \
+		{
+		order.STATUS_ACTIVE          : 'active',
+		order.STATUS_COMPLETED       : 'completed',
+		order.STATUS_CANCEL_REQUESTED: 'cancel requested',
+		order.STATUS_CANCELED        : 'canceled',
+		}[self.order.status]
+
+		ret = \
+		{
+		'ID': self.order.ID,
+		'status': orderStatus,
+		'limitRate': self.order.limitRate,
+		'amount': self.order.amount,
+		}
+
+		if self.transaction is not None:
+			ret['transaction'] = self.transaction.getListInfo()
+
+		return ret
 
 
 	def setCallResult(self, result: messages.AnyMessage) -> None:

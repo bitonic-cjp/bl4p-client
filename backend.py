@@ -16,7 +16,7 @@
 #    You should have received a copy of the GNU General Public License
 #    along with the BL4P Client. If not, see <http://www.gnu.org/licenses/>.
 
-from typing import Dict, List, Optional, Type, Union, TYPE_CHECKING
+from typing import Any, Dict, List, Optional, Type, Union, TYPE_CHECKING
 
 from bl4p_api import offer
 
@@ -151,10 +151,10 @@ class Backend(messages.Handler):
 
 
 	def handleListCommand(self, cmd: messages.ListCommand) -> None:
-		sell = [] #type: List[Dict[str, int]]
-		buy  = [] #type: List[Dict[str, int]]
-		for ID, task in self.orderTasks.items():
-			order = {'ID': ID, 'limitRate': task.order.limitRate, 'amount': task.order.amount} #type: Dict[str, int]
+		sell = [] #type: List[Dict[str, Any]]
+		buy  = [] #type: List[Dict[str, Any]]
+		for task in self.orderTasks.values():
+			order = task.getListInfo() #type: Dict[str, Any]
 			if isinstance(task.order, SellOrder):
 				sell.append(order)
 			elif isinstance(task.order, BuyOrder):

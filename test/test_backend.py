@@ -286,16 +286,19 @@ class TestBackend(unittest.TestCase):
 			pass
 
 		class Task:
-			def __init__(self, cls, amount, limitRate):
+			def __init__(self, cls, info):
 				self.order = cls()
-				self.order.amount = amount
-				self.order.limitRate = limitRate
+				self.info = info
+
+			def getListInfo(self):
+				return {'info': self.info}
+
 
 		self.backend.orderTasks = \
 		{
-		41: Task(BuyOrder, 123, 19000),
-		51: Task(SellOrder, 456, 20000),
-		52: Task(SellOrder, 789, 21000),
+		41: Task(BuyOrder, 'buy btc'),
+		51: Task(SellOrder, 'sell bcash'),
+		52: Task(SellOrder, 'sell pizza'),
 		}
 
 		cmd = Mock()
@@ -311,19 +314,19 @@ class TestBackend(unittest.TestCase):
 					{
 					'buy' :
 						[
-						{'ID': 41, 'amount': 123, 'limitRate': 19000},
+						{'info': 'buy btc'},
 						],
 					'sell':
 						[
-						{'ID': 51, 'amount': 456, 'limitRate': 20000},
-						{'ID': 52, 'amount': 789, 'limitRate': 21000},
+						{'info': 'sell bcash'},
+						{'info': 'sell pizza'},
 						],
 					}
 			)])
 
 		self.backend.orderTasks = \
 		{
-		41: Task(Mock, 123, 19000),
+		41: Task(Mock, 'foobar'),
 		}
 
 		with patch.object(backend, 'BuyOrder', BuyOrder):
