@@ -17,6 +17,7 @@
 
 import asyncio
 import json
+import signal
 import subprocess
 import sys
 import unittest
@@ -192,16 +193,16 @@ class TestPlugin(unittest.TestCase):
 			handleMessage.assert_called_once_with('foo')
 
 
-	def test_terminateSignalHandler(self):
-		loop = Mock()
-		with patch.object(asyncio, 'get_event_loop', Mock(return_value=loop)):
-			bl4p_plugin.terminateSignalHandler()
-		loop.stop.assert_called_once_with()
-
-
 	def test_main(self):
+		signalHandlers = {}
+		def add_signal_handler(sig, handler):
+			signalHandlers[sig] = handler
+
 		calledMethods = []
 		class DummyClient:
+			def __init__(self):
+				self.shutdownFuture = asyncio.Future()
+
 			async def startup(self):
 				asyncio.ensure_future(self.task())
 				calledMethods.append('startup')
@@ -209,20 +210,23 @@ class TestPlugin(unittest.TestCase):
 			async def task(self):
 				calledMethods.append('task')
 				await asyncio.sleep(0.1)
-				bl4p_plugin.terminateSignalHandler()
+				signalHandlers[signal.SIGTERM]()
 
 			async def shutdown(self):
 				calledMethods.append('shutdown')
-
-		signalHandlers = {}
-		def add_signal_handler(sig, handler):
-			signalHandlers[sig] = handler
+				self.shutdownFuture.set_result(True)
 
 		with patch.object(bl4p_plugin, 'BL4PClient', DummyClient) as client:
 			with patch.object(asyncio.get_event_loop(), 'add_signal_handler', add_signal_handler):
 				bl4p_plugin.main()
 
 		self.assertEqual(calledMethods, ['startup', 'task', 'shutdown'])
+		self.assertEqual(list(signalHandlers.keys()),
+			[
+			signal.SIGINT,
+			signal.SIGTERM,
+			])
+		self.assertEqual(len(set(signalHandlers.values())), 1) #all the same handler
 
 		self.assertTrue(asyncio.get_event_loop().is_closed())
 

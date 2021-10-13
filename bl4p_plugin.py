@@ -69,6 +69,7 @@ class BL4PClient:
 		self.backend = backend.Backend(self) #type: backend.Backend
 		self.messageRouter = messages.Router() #type: messages.Router
 		self.bl4pConnectedFuture = asyncio.Future() #type: asyncio.Future
+		self.shutdownFuture = asyncio.Future() #type: asyncio.Future
 
 
 	async def startup(self) -> None:
@@ -151,10 +152,16 @@ class BL4PClient:
 
 
 	async def shutdown(self) -> None:
+		log('Shutting down backend')
 		await self.backend.shutdown()
+		log('Shutting down BL4P interface')
 		await self.bl4pInterface.shutdown()
+		log('Shutting down RPC interface')
 		await self.rpcInterface.shutdown()
+		log('Shutting down plugin interface')
 		await self.pluginInterface.shutdown()
+		log('Shutting down is complete')
+		self.shutdownFuture.set_result(True)
 
 
 	def isBL4PConnected(self) -> bool:
@@ -178,22 +185,20 @@ class BL4PClient:
 
 
 
-def terminateSignalHandler() -> None:
-	loop = asyncio.get_event_loop() #type: asyncio.AbstractEventLoop
-	loop.stop()
-
-
 def main():
 	client = BL4PClient() #type: BL4PClient
 	loop = asyncio.get_event_loop() #type: asyncio.AbstractEventLoop
 
 	loop.run_until_complete(client.startup())
 
+	def terminateSignalHandler() -> None:
+		#Run shutdown in a new task:
+		asyncio.ensure_future(client.shutdown())
+
 	loop.add_signal_handler(signal.SIGINT , terminateSignalHandler)
 	loop.add_signal_handler(signal.SIGTERM, terminateSignalHandler)
-	loop.run_forever()
+	loop.run_until_complete(client.shutdownFuture)
 
-	loop.run_until_complete(client.shutdown())
 	loop.close()
 
 
