@@ -47,8 +47,8 @@ Currently, this client has the hard-coded expectation to find a BL4P server at
 localhost.
 
 * Start `dummy_lightning.py`
-* Start `bl4p_console.py node0` to have a console for one simulated node
-* Start `bl4p_console.py node1` to have a console for another simulated node
+* Start `bl4p_console.py node0-rpc` to have a console for one simulated node
+* Start `bl4p_console.py node1-rpc` to have a console for another simulated node
 
 For further instructions, consult the help command in bl4p_console.py.
 
