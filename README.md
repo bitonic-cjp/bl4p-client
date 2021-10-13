@@ -5,9 +5,7 @@ A client for the BL4P decentralized exchange.
 
 ### For actual usage:
 
-* C-Lightning. In fact, at the time of writing, bl4p-client has not been tested
-yet with any C-Lightning version, so it is not yet known to work outside of
-simulated environments.
+* C-Lightning (known to work with version 0.9.0)
 
 ### For actual usage, simulated usage or development and testing:
 
