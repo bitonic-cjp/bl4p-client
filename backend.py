@@ -177,6 +177,7 @@ class Backend(messages.Handler):
 				code = 2,
 				message = 'There is no active order with ID ' + str(cmd.orderID)
 				))
+			return
 
 		task.cancel()
 
