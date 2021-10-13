@@ -29,16 +29,14 @@ from .serialization import serialize, deserialize
 
 
 class Bl4pApi:
-	#This initialization is just to inform Mypy about data types.
-	receiveTask = None #type: asyncio.Future
-	sendTask    = None #type: asyncio.Future
-
 	def __init__(self, log: Callable[[str],None] = lambda s:None) -> None:
 		self.log = log #type: Callable[[str],None]
 		#TODO (bug 21): to stop replay attacks, maybe start at a random number?
 		self.lastRequestID = 0 #type: int
 
 		self.handleResultOverride = None #type: Optional[Callable[[Any], None]]
+		self.receiveTask = None #type: Optional[asyncio.Future]
+		self.sendTask    = None #type: Optional[asyncio.Future]
 
 
 	async def startup(self, url: str, apiKey: str, apiSecret: str) -> None:
@@ -53,14 +51,20 @@ class Bl4pApi:
 
 
 	async def shutdown(self) -> None:
-		self.receiveTask.cancel()
-		self.sendTask.cancel()
+		if self.receiveTask is not None:
+			self.receiveTask.cancel()
+		if self.sendTask is not None:
+			self.sendTask.cancel()
 		await self.waitFinished()
 
 
 	async def waitFinished(self) -> None:
-		await self.sendTask
-		await self.receiveTask
+		if self.sendTask is not None:
+			await self.sendTask
+		if self.receiveTask is not None:
+			await self.receiveTask
+		self.receiveTask = None
+		self.sendTask    = None
 
 
 	async def handleIncomingData(self) -> None:
