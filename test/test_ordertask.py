@@ -28,7 +28,7 @@ sys.path.append('..')
 
 from bl4p_api import offer
 import messages
-from order import Order
+from order import Order, STATUS_CANCEL_REQUESTED, STATUS_CANCELED
 import ordertask
 
 
@@ -219,6 +219,91 @@ class TestOrderTask(unittest.TestCase):
 		task.startup()
 		await task.waitFinished()
 		self.assertEqual(result, [1, 2, 3])
+
+
+	def test_cancel(self):
+		orderID = ordertask.BuyOrder.create(self.storage,
+			190000,   #mCent / BTC = 1.9 EUR/BTC
+			123400000 #mCent    = 1234 EUR
+			)
+		order = ordertask.BuyOrder(self.storage, orderID, 'lnAddress')
+		task = ordertask.OrderTask(self.client, self.storage, order)
+		task.task = Mock()
+		task.cancel()
+		self.assertEqual(order.status, STATUS_CANCELED)
+		task.task.cancel.assert_called_with()
+
+		task.transaction = Mock()
+		task.cancel()
+		self.assertEqual(order.status, STATUS_CANCEL_REQUESTED)
+
+
+	def test_getListInfo(self):
+		orderID = ordertask.BuyOrder.create(self.storage,
+			190000,   #mCent / BTC = 1.9 EUR/BTC
+			123400000 #mCent    = 1234 EUR
+			)
+		order = ordertask.BuyOrder(self.storage, orderID, 'lnAddress')
+		task = ordertask.OrderTask(self.client, self.storage, order)
+
+		self.assertEqual(task.getListInfo(),
+			{
+			'ID': orderID,
+			'status': 'active',
+			'limitRate': 190000,
+			'amount': 123400000,
+			})
+
+		txID = task.transaction = ordertask.BuyTransaction.create(
+			self.storage,
+			buyOrder = orderID,
+			fiatAmount = 12,
+			cryptoAmount = 34,
+			paymentHash = b'foobar'
+			)
+		task.transaction = ordertask.BuyTransaction(self.storage, txID)
+		self.assertEqual(task.getListInfo(),
+			{
+			'ID': orderID,
+			'status': 'active',
+			'limitRate': 190000,
+			'amount': 123400000,
+			'transaction':
+				{
+				'status': 'initial',
+				'fiatAmount': 12,
+				'cryptoAmount': 34,
+				}
+			})		
+
+		txID = task.transaction = ordertask.SellTransaction.create(
+			self.storage,
+			sellOrder = orderID,
+			counterOffer = 0,
+			buyerFiatAmount = 12,
+			buyerCryptoAmount = 56,
+			senderTimeoutDelta = 0,
+			lockedTimeoutDelta = 0,
+			CLTVExpiryDelta = 0,
+			)
+		task.transaction = ordertask.SellTransaction(self.storage, txID)
+		task.transaction.sellerFiatAmount = 34
+		task.transaction.sellerCryptoAmount = 78
+		self.assertEqual(task.getListInfo(),
+			{
+			'ID': orderID,
+			'status': 'active',
+			'limitRate': 190000,
+			'amount': 123400000,
+			'transaction':
+				{
+				'status': 'initial',
+				'buyerFiatAmount': 12,
+				'sellerFiatAmount': 34,
+				'buyerCryptoAmount': 56,
+				'sellerCryptoAmount': 78,
+				}
+			})		
 
 
 	@asynciotest
@@ -1141,6 +1226,24 @@ class TestOrderTask(unittest.TestCase):
 
 		value = await waitTask
 		self.assertEqual(value, 6)
+
+
+	@asynciotest
+	async def test_doTrading_canceledOrder(self):
+		orderID = ordertask.BuyOrder.create(self.storage, 2, 1234)
+		order = ordertask.BuyOrder(self.storage, orderID, 'lnAddress')
+		task = ordertask.OrderTask(Mock(), None, order)
+		order.status = STATUS_CANCEL_REQUESTED
+
+		async def dummy():
+			pass
+		task.continueBuyTransaction = dummy
+		task.publishOffer = dummy
+		task.waitForIncomingTransaction = dummy
+		task.unpublishOffer = dummy
+		await task.doTrading()
+
+		self.assertEqual(order.status, STATUS_CANCELED)
 
 
 	@asynciotest

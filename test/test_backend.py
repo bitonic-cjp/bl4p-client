@@ -335,6 +335,30 @@ class TestBackend(unittest.TestCase):
 					self.backend.handleListCommand(cmd)
 
 
+	def test_handleCancelCommand(self):
+		self.backend.orderTasks = {41: Mock()}
+		cmd = Mock()
+		cmd.commandID = 42
+		cmd.orderID = 41
+		self.backend.handleCancelCommand(cmd)
+		self.backend.orderTasks[41].cancel.assert_called_with()
+		self.assertEqual(self.outgoingMessages,
+			[messages.PluginCommandResult(
+				commandID=42,
+				result=None
+			)])
+
+		self.outgoingMessages = []
+		cmd.orderID = 40
+		self.backend.handleCancelCommand(cmd)
+		self.assertEqual(self.outgoingMessages,
+			[messages.PluginCommandError(
+				commandID=42,
+				code = 2,
+				message = 'There is no active order with ID 40'
+			)])
+
+
 	def test_handleSetConfigCommand(self):
 		self.backend.storage = MockStorage(test = self)
 		self.backend.BL4PAddress = 'BL4PAddress'
