@@ -344,17 +344,19 @@ class OrderTask:
 			else:
 				raise Exception('Unsupported order type - cannot use it in trade')
 
-			while self.order.amount > 0:
+			while True:
 				await tradeFunction()
 				log('Remaining in order: ' + \
 					str(self.order.amount))
+
 				if self.order.status == order.STATUS_CANCEL_REQUESTED:
 					log('Order cancelation was requested - canceling it now')
 					self.order.update(status=order.STATUS_CANCELED)
-					return
-
-			log('Finished with order')
-			self.order.update(status=order.STATUS_COMPLETED)
+					break
+				elif self.order.amount <= 0:
+					log('Finished with order')
+					self.order.update(status=order.STATUS_COMPLETED)
+					break
 
 		except asyncio.CancelledError:
 			log('Order task got canceled')
