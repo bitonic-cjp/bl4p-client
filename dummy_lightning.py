@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-#    Copyright (C) 2019-2020 by Bitonic B.V.
+#    Copyright (C) 2019-2021 by Bitonic B.V.
 #
 #    This file is part of the BL4P Client.
 #
@@ -18,6 +18,7 @@
 
 import asyncio
 import json
+import logging
 import os
 import signal
 import socket
@@ -26,7 +27,6 @@ import time
 import traceback
 
 from json_rpc import JSONRPC
-from log import log, logException
 from simplestruct import Struct
 
 
@@ -67,7 +67,7 @@ class RPCInterface(JSONRPC):
 
 
 	def handleRequest(self, ID, name, params):
-		log('%s RPC <== %d %s %s' % (self.node.nodeID, ID, name, params))
+		logging.info('%s RPC <== %d %s %s' % (self.node.nodeID, ID, name, params))
 		self.node.handleRPCCall(self, ID, name, params)
 
 
@@ -76,12 +76,12 @@ class RPCInterface(JSONRPC):
 
 
 	def sendResponse(self, ID, result):
-		log('%s RPC ==> %d %s' % (self.node.nodeID, ID, result))
+		logging.info('%s RPC ==> %d %s' % (self.node.nodeID, ID, result))
 		return JSONRPC.sendResponse(self, ID, result)
 
 
 	def sendErrorResponse(self, ID, code, message):
-		log('%s RPC ==> %d ERROR %d: %s' % (self.node.nodeID, ID, code, message))
+		logging.info('%s RPC ==> %d ERROR %d: %s' % (self.node.nodeID, ID, code, message))
 		return JSONRPC.sendErrorResponse(self, ID, code, message)
 
 
@@ -94,12 +94,12 @@ class PluginInterface(JSONRPC):
 
 
 	async def startup(self, options):
-		log('%s > PluginInterface startup' % self.node.nodeID)
+		logging.debug('%s > PluginInterface startup' % self.node.nodeID)
 		self.manifest = await self.synCall('getmanifest')
 		self.methods = [m['name'] for m in self.manifest['rpcmethods']]
 		self.hooks = self.manifest['hooks'][:]
 
-		log('%s Received manifest; calling init' % self.node.nodeID)
+		logging.debug('%s Received manifest; calling init' % self.node.nodeID)
 
 		await self.synCall('init',
 			{
@@ -111,20 +111,20 @@ class PluginInterface(JSONRPC):
 				}
 			})
 
-		log('%s < PluginInterface startup' % self.node.nodeID)
+		logging.debug('%s < PluginInterface startup' % self.node.nodeID)
 
 		return JSONRPC.startup(self)
 
 
 	def handleResult(self, ID, result):
-		log('%s plugin <== %d %s' % (self.node.nodeID, ID, result))
+		logging.info('%s plugin <== %d %s' % (self.node.nodeID, ID, result))
 		resultCB, errorCB = self.node.pluginResultCallbacks[ID]
 		del self.node.pluginResultCallbacks[ID]
 		resultCB(result)
 
 
 	def handleError(self, ID, code, message):
-		log('%s plugin <== %d ERROR %d: %s' % (self.node.nodeID, ID, code, message))
+		logging.info('%s plugin <== %d ERROR %d: %s' % (self.node.nodeID, ID, code, message))
 		resultCB, errorCB = self.node.pluginResultCallbacks[ID]
 		del self.node.pluginResultCallbacks[ID]
 		errorCB(code, message)
@@ -132,7 +132,7 @@ class PluginInterface(JSONRPC):
 
 	def sendRequest(self, name, params={}):
 		ID = JSONRPC.sendRequest(self, name, params)
-		log('%s plugin ==> %d %s %s' % (self.node.nodeID, ID, name, params))
+		logging.info('%s plugin ==> %d %s %s' % (self.node.nodeID, ID, name, params))
 		return ID
 
 
@@ -326,7 +326,7 @@ class Node:
 	def sendOnion(self, onion, first_hop, payment_hash, label, shared_secrets, msatoshi, **kwargs):
 		hops, payment_hash = json.JSONDecoder().raw_decode(bytes.fromhex(onion).decode('utf-8'))[0]
 
-		log('sendOnion: hops = ' + str(hops))
+		logging.debug('sendOnion: hops = ' + str(hops))
 
 		last_hop = decodeLegacyPayload(hops[-2]['payload']) #actually second-last in hops list
 
@@ -346,8 +346,7 @@ class Node:
 		try:
 			nodes[tx.destID].handleIncomingTransaction(tx)
 		except:
-			logException()
-			log('Failing the LN transaction because of the exception')
+			logging.exception('Failing the LN transaction because of this exception:')
 			self.finishOutgoingTransaction(tx.paymentHash, None)
 
 
@@ -457,6 +456,12 @@ def terminateSignalHandler():
 	loop = asyncio.get_event_loop()
 	loop.stop()
 
+
+
+logging.basicConfig(
+	format = '%(asctime)s %(levelname)s: %(message)s',
+	level = logging.INFO,
+	)
 
 loop = asyncio.get_event_loop()
 

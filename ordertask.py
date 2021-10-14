@@ -19,6 +19,7 @@
 import asyncio
 import copy
 import hashlib
+import logging
 from typing import TYPE_CHECKING, cast, Any, Awaitable, Callable, Dict, List, Optional, Type, Union
 
 from bl4p_api import offer
@@ -28,7 +29,6 @@ from bl4p_api.offer import Offer, Asset
 if TYPE_CHECKING:
 	import bl4p_plugin #pragma: nocover
 
-from log import log, logException
 import messages
 from order import BuyOrder, SellOrder, Order
 import order
@@ -327,9 +327,9 @@ class OrderTask:
 
 	async def waitForBL4PConnection(self) -> None:
 		if not self.client.isBL4PConnected():
-			log('Order task: waiting for BL4P connection')
+			logging.info('Order task: waiting for BL4P connection')
 			await self.client.waitForBL4PConnection()
-			log('Order task: BL4P connection is present; continuing')
+			logging.info('Order task: BL4P connection is present; continuing')
 
 
 	async def doTrading(self) -> None:
@@ -346,24 +346,23 @@ class OrderTask:
 
 			while True:
 				await tradeFunction()
-				log('Remaining in order: ' + \
+				logging.info('Remaining in order: ' + \
 					str(self.order.amount))
 
 				if self.order.status == order.ORDER_STATUS_CANCEL_REQUESTED:
-					log('Order cancelation was requested - canceling it now')
+					logging.info('Order cancelation was requested - canceling it now')
 					self.order.update(status=order.ORDER_STATUS_CANCELED)
 					break
 				elif self.order.amount <= 0:
-					log('Finished with order')
+					logging.info('Finished with order')
 					self.order.update(status=order.ORDER_STATUS_COMPLETED)
 					break
 
 		except asyncio.CancelledError:
-			log('Order task got canceled')
+			logging.info('Order task got canceled')
 			#We're cancelled, so just quit the function
 		except:
-			log('Exception in order task:')
-			logException()
+			logging.exception('Exception in order task:')
 
 		#These could have old values from something earlier that got
 		#interrupted.
@@ -372,7 +371,7 @@ class OrderTask:
 		self.callResult = None
 		self.expectedCallResultType = None
 
-		log('End of order task, so removing the order from the market:')
+		logging.info('End of order task, so removing the order from the market:')
 		await self.unpublishOffer()
 
 		self.client.backend.handleOrderTaskFinished(self.order.ID)
@@ -396,7 +395,7 @@ class OrderTask:
 						messages.BL4PFindOffersResult)
 					) #type: messages.BL4PFindOffersResult
 			except messages.NoMessageHandler:
-				log('BL4P is not connected, so we can\'t search for offers right now')
+				logging.warning('BL4P is not connected, so we can\'t search for offers right now')
 				await asyncio.sleep(1)
 				continue
 
@@ -405,21 +404,21 @@ class OrderTask:
 				return
 
 			if self.order.remoteOfferID is None:
-				log('Found no offers - making our own')
+				logging.info('Found no offers - making our own')
 				await self.publishOffer()
 
 			await asyncio.sleep(1)
 
 
 	async def doTransactionBasedOnOffers(self, offers):
-		log('Received offers from BL4P')
+		logging.info('Received offers from BL4P')
 		#TODO: filter on sensibility (e.g. max >= min for all conditions)
 
 		#Check if offers actually match
 		def matchesOurOrder(offer):
 			ret = offer.matches(self.order)
 			if not ret:
-				log('Received an offer from BL4P that does not match our order - ignoring it')
+				logging.debug('Received an offer from BL4P that does not match our order - ignoring it')
 			return ret
 		offers = filter(matchesOurOrder, offers)
 
@@ -430,7 +429,7 @@ class OrderTask:
 		offers = list(offers)
 
 		#Start trade on the first in the list
-		log('Starting a transaction based on one of the offers')
+		logging.info('Starting a transaction based on one of the offers')
 		self.counterOffer = offers[0]
 		await self.doTransaction()
 
@@ -439,7 +438,7 @@ class OrderTask:
 		await self.waitForBL4PConnection()
 
 		if self.order.remoteOfferID is not None:
-			log('The offer was already published - no need to re-publish it')
+			logging.info('The offer was already published - no need to re-publish it')
 			return
 
 		result = cast(messages.BL4PAddOfferResult,
@@ -453,14 +452,14 @@ class OrderTask:
 
 		remoteID = result.ID #type: int
 		self.order.remoteOfferID = remoteID
-		log('Local ID %d gets remote ID %s' % (self.order.ID, remoteID))
+		logging.info('Local ID %d gets remote ID %s' % (self.order.ID, remoteID))
 
 
 	async def unpublishOffer(self) -> None:
 		await self.waitForBL4PConnection()
 
 		if self.order.remoteOfferID is None:
-			log('The offer was not published - no need to un-publish it')
+			logging.info('The offer was not published - no need to un-publish it')
 			return
 
 		await self.call(messages.BL4PRemoveOffer(
@@ -490,7 +489,7 @@ class OrderTask:
 			return #no transaction needs to be continued
 		ID = IDs[0] #type: int
 
-		log('Found an unfinished transaction with ID %d - loading it' % ID)
+		logging.info('Found an unfinished transaction with ID %d - loading it' % ID)
 
 		self.transaction = SellTransaction(self.storage, ID)
 		storedCounterOffer = CounterOffer(self.storage, self.transaction.counterOffer) #type: CounterOffer
@@ -511,9 +510,9 @@ class OrderTask:
 		assert isinstance(self.order, SellOrder) #TODO (bug 13): enable buyer-initiated trade once supported
 		assert self.counterOffer is not None
 
-		log('Doing trade for local order ID' + str(self.order.ID))
-		log('  local order: ' + str(self.order))
-		log('  counter offer: ' + str(self.counterOffer))
+		logging.info('Doing trade for local order ID' + str(self.order.ID))
+		logging.info('  local order: ' + str(self.order))
+		logging.info('  counter offer: ' + str(self.counterOffer))
 
 		cryptoAmountDivisor = settings.cryptoDivisor #type: int
 		fiatAmountDivisor = settings.fiatDivisor #type: int
@@ -523,7 +522,7 @@ class OrderTask:
 			cryptoAmountDivisor * self.order.bid.max_amount // self.order.bid.max_amount_divisor,
 			cryptoAmountDivisor * self.counterOffer.ask.max_amount // self.counterOffer.ask.max_amount_divisor
 			) #type: int
-		log('buyerCryptoAmount = ' + str(buyerCryptoAmount))
+		logging.info('buyerCryptoAmount = ' + str(buyerCryptoAmount))
 		assert buyerCryptoAmount > 0
 
 		#The optimum fiat price for us is the highest:
@@ -539,7 +538,7 @@ class OrderTask:
 		maxBuyerFiatAmount = (buyerFiatAmount * self.counterOffer.bid.max_amount) // self.counterOffer.bid.max_amount_divisor #type: int
 		if buyerFiatAmount > maxBuyerFiatAmount:
 			buyerFiatAmount = maxBuyerFiatAmount
-		log('buyerFiatAmount = ' + str(buyerFiatAmount))
+		logging.info('buyerFiatAmount = ' + str(buyerFiatAmount))
 		assert buyerFiatAmount > 0
 
 		#Choose the sender timeout limit as small as possible
@@ -607,14 +606,14 @@ class OrderTask:
 		minSellerFiatAmount = \
 			(fiatAmountDivisor * buyerCryptoAmount   * self.order.ask.max_amount         * self.order.bid.max_amount_divisor) // \
 			(                    cryptoAmountDivisor * self.order.ask.max_amount_divisor * self.order.bid.max_amount) #type: int
-		log('minSellerFiatAmount = ' + str(minSellerFiatAmount))
+		logging.info('minSellerFiatAmount = ' + str(minSellerFiatAmount))
 		assert minSellerFiatAmount <= buyerFiatAmount
 
 		#Check that we're not receiving too little:
 		sellerFiatAmount = startResult.receiverAmount
-		log('sellerFiatAmount = ' + str(sellerFiatAmount))
+		logging.info('sellerFiatAmount = ' + str(sellerFiatAmount))
 		if sellerFiatAmount < minSellerFiatAmount:
-			log('We\'ll receive too little; canceling the transaction.')
+			logging.info('We\'ll receive too little; canceling the transaction.')
 			await self.cancelIncomingFiatFunds()
 			return
 
@@ -662,7 +661,7 @@ class OrderTask:
 			(1 + settings.maxLightningFee) *
 			self.transaction.buyerCryptoAmount
 			) #type: int
-		log('maxSellerCryptoAmount = ' + str(maxSellerCryptoAmount))
+		logging.info('maxSellerCryptoAmount = ' + str(maxSellerCryptoAmount))
 
 		#Send out over Lightning:
 		lightningResult = cast(messages.LNPayResult,
@@ -682,12 +681,12 @@ class OrderTask:
 
 		if lightningResult.paymentPreimage is None:
 			#LN transaction failed, so revert everything we got so far
-			log('Outgoing Lightning transaction failed; canceling the transaction')
+			logging.info('Outgoing Lightning transaction failed; canceling the transaction')
 			await self.cancelIncomingFiatFunds()
 			return
 
 		assert sha256(lightningResult.paymentPreimage) == self.transaction.paymentHash
-		log('We got the preimage from the LN payment')
+		logging.info('We got the preimage from the LN payment')
 
 		self.transaction.update(
 			sellerCryptoAmount = lightningResult.senderCryptoAmount,
@@ -697,7 +696,7 @@ class OrderTask:
 		newAmount = self.order.amount - self.transaction.sellerCryptoAmount
 		if newAmount < 0:
 			#This is possible due to Lightning fees
-			log('We\'ve exceeded the order amount by ' + str(-newAmount))
+			logging.info('We\'ve exceeded the order amount by ' + str(-newAmount))
 			newAmount = 0
 		self.order.setAmount(newAmount)
 
@@ -723,7 +722,7 @@ class OrderTask:
 			)
 		self.transaction = None
 
-		log('Sell transaction is finished')
+		logging.info('Sell transaction is finished')
 		await self.updateOrderAfterTransaction()
 
 
@@ -744,7 +743,7 @@ class OrderTask:
 			)
 		self.transaction = None
 
-		log('Sell transaction is canceled')
+		logging.info('Sell transaction is canceled')
 		#TODO: do we need to call updateOrderAfterTransaction()?
 
 
@@ -765,12 +764,12 @@ class OrderTask:
 			return #no transaction needs to be continued
 		ID = IDs[0] #type: int
 
-		log('Found an unfinished transaction with ID %d - loading it' % ID)
+		logging.info('Found an unfinished transaction with ID %d - loading it' % ID)
 
 		self.transaction = BuyTransaction(self.storage, ID)
 
 		if self.transaction.status == TX_STATUS_INITIAL:
-			log('For this unfinished transaction, we need to wait for lightningd to re-issue it to us')
+			logging.warning('For this unfinished transaction, we need to wait for lightningd to re-issue it to us')
 			await self.waitForIncomingTransaction()
 		else:
 			#TODO: properly report database inconsistency error
@@ -784,7 +783,7 @@ class OrderTask:
 			await self.waitForIncomingMessage(messages.LNIncoming)
 			) #type: messages.LNIncoming
 
-		log('Received incoming Lightning transaction')
+		logging.info('Received incoming Lightning transaction')
 		#TODO: log transaction characteristics
 		#TODO: maybe refuse tx if we're not connected to BL4P
 
@@ -795,20 +794,20 @@ class OrderTask:
 			) #type: Cursor
 		transactions = [BuyTransaction(self.storage, row[0]) for row in cursor]
 		if transactions:
-			log('A transaction with this payment hash already exists in our database')
+			logging.info('A transaction with this payment hash already exists in our database')
 			self.transaction = transactions[0]
 			if self.transaction.paymentPreimage is not None:
-				log('We already have the preimage, so we claim the Lightning funds')
+				logging.info('We already have the preimage, so we claim the Lightning funds')
 				await self.finishTransactionOnLightning()
 				return
 
 			#TODO (bug 19): maybe check if the incoming tx equals this tx?
 
 			if self.transaction.status == TX_STATUS_CANCELED:
-				log('The transaction was canceled, so we cancel the Lightning tx')
+				logging.info('The transaction was canceled, so we cancel the Lightning tx')
 				await self.cancelTransactionOnLightning()
 			elif self.transaction.status == TX_STATUS_INITIAL:
-				log('The transaction was not finished yet, so try again to finish it')
+				logging.info('The transaction was not finished yet, so try again to finish it')
 				await self.sendFundsOnBL4P()
 			else:
 				#TODO: properly report database inconsistency error
@@ -836,8 +835,8 @@ class OrderTask:
 		try:
 			counterOffer.verifyMatches(self.order)
 		except offer.MismatchError as error:
-			log('Received transaction did not match our order - refusing it.')
-			log('The mismatch is: ' + str(error))
+			logging.info('Received transaction did not match our order - refusing it.')
+			logging.info('The mismatch is: ' + str(error))
 			self.client.handleOutgoingMessage(messages.LNFail(
 				paymentHash=message.paymentHash,
 				))
@@ -889,7 +888,7 @@ class OrderTask:
 					messages.BL4PSendResult)
 				) #type: messages.BL4PSendResult
 		except BL4PError:
-			log('Error received from BL4P - transaction canceled')
+			logging.error('Error received from BL4P - transaction canceled')
 			self.order.setAmount(self.order.amount + self.transaction.fiatAmount)
 			self.transaction.update(
 				status = TX_STATUS_CANCELED,
@@ -899,7 +898,7 @@ class OrderTask:
 
 		#TODO: what if this asserion fails?
 		assert sha256(sendResult.paymentPreimage) == self.transaction.paymentHash
-		log('We got the preimage from BL4P')
+		logging.info('We got the preimage from BL4P')
 
 		self.transaction.update(
 			paymentPreimage = sendResult.paymentPreimage,
@@ -920,7 +919,7 @@ class OrderTask:
 			))
 		self.transaction = None
 
-		log('Buy transaction is finished')
+		logging.info('Buy transaction is finished')
 		await self.updateOrderAfterTransaction()
 
 
@@ -933,7 +932,7 @@ class OrderTask:
 			))
 		self.transaction = None
 
-		log('Buy transaction is canceled')
+		logging.info('Buy transaction is canceled')
 
 		#TODO: is this really needed?
 		await self.updateOrderAfterTransaction()
@@ -948,12 +947,12 @@ class OrderTask:
 			return
 
 		#Remove offer from the market
-		log('Removing old offer from the market')
+		logging.info('Removing old offer from the market')
 		await self.unpublishOffer()
 
 		#Re-add offer to the market
 		if self.order.amount > 0:
-			log('Re-adding the offer to the market')
+			logging.info('Re-adding the offer to the market')
 			await self.publishOffer()
 
 

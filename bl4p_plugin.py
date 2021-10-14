@@ -17,6 +17,7 @@
 #    along with the BL4P Client. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
+import logging
 import os
 import signal
 import sys
@@ -27,7 +28,6 @@ import secp256k1
 import backend
 import bl4p_interface
 import messages
-from log import log, logException, setLogFile
 import plugin_interface
 import rpc_interface
 
@@ -86,7 +86,12 @@ class BL4PClient:
 
 		#The log filename is a commandline parameter.
 		#Now that we know it, we can start logging to it:
-		setLogFile(self.pluginInterface.logFile)
+		logging.basicConfig(
+			filename=self.pluginInterface.logFile,
+			format = '%(asctime)s %(levelname)s: %(message)s',
+			level = logging.INFO,
+			)
+		logging.info('\n\n\n\nOpened the log file')
 
 		#The plugin interface start-up also informed us about the lightningd
 		#RPC path.
@@ -122,7 +127,7 @@ class BL4PClient:
 		await self.startupBL4PInterface()
 
 		#Only start messaging at the very end
-		log('Startup has finished; we can now start messaging.')
+		logging.info('Startup has finished; we can now start messaging.')
 		self.messageRouter.startMessaging()
 
 
@@ -142,8 +147,8 @@ class BL4PClient:
 				)
 		except:
 			#TODO (bug 20): handle BL4P server connection issues (e.g. notify user)
-			logException()
-			log('Due to the above exception, we continue without connection to BL4P')
+			logging.exception('Exception when starting BL4P interface:')
+			logging.error('Due to the above exception, we continue without connection to BL4P')
 			return
 
 		#If startup was successful, we can add this interface as a message handler.
@@ -152,15 +157,15 @@ class BL4PClient:
 
 
 	async def shutdown(self) -> None:
-		log('Shutting down backend')
+		logging.info('Shutting down backend')
 		await self.backend.shutdown()
-		log('Shutting down BL4P interface')
+		logging.info('Shutting down BL4P interface')
 		await self.bl4pInterface.shutdown()
-		log('Shutting down RPC interface')
+		logging.info('Shutting down RPC interface')
 		await self.rpcInterface.shutdown()
-		log('Shutting down plugin interface')
+		logging.info('Shutting down plugin interface')
 		await self.pluginInterface.shutdown()
-		log('Shutting down is complete')
+		logging.info('Shutting down is complete')
 		self.shutdownFuture.set_result(True)
 
 
@@ -174,13 +179,13 @@ class BL4PClient:
 
 	def handleIncomingMessage(self, message: messages.AnyMessage) -> None:
 		#Process a single incoming message:
-		log('<== ' + str(message))
+		logging.info('<== ' + str(message))
 		self.messageRouter.handleMessage(message)
 
 
 	def handleOutgoingMessage(self, message: messages.AnyMessage) -> None:
 		#Process a single outgoing message:
-		log('==> ' + str(message))
+		logging.info('==> ' + str(message))
 		self.messageRouter.handleMessage(message)
 
 

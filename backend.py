@@ -16,6 +16,7 @@
 #    You should have received a copy of the GNU General Public License
 #    along with the BL4P Client. If not, see <http://www.gnu.org/licenses/>.
 
+import logging
 from typing import Any, Dict, List, Optional, Type, Union, TYPE_CHECKING
 
 from bl4p_api import offer
@@ -24,7 +25,6 @@ if TYPE_CHECKING:
 	import bl4p_plugin #pragma: nocover
 
 import configuration
-from log import log, logException
 import messages
 import order
 from order import BuyOrder, SellOrder
@@ -216,9 +216,8 @@ class Backend(messages.Handler):
 		try:
 			self.orderTasks[localID].setCallResult(message)
 		except:
-			log('Exception on trying to handle an incoming Lightning transaction for local ID ' + str(localID))
-			logException()
-			log('Apparently we can\'t handle the transaction right now, so we are refusing the incoming transaction.')
+			logging.exception('Exception on trying to handle an incoming Lightning transaction for local ID ' + str(localID))
+			logging.error('Apparently we can\'t handle the transaction right now, so we are refusing the incoming transaction.')
 			self.client.handleOutgoingMessage(messages.LNFail(
 				paymentHash=message.paymentHash
 				))
@@ -230,6 +229,6 @@ class Backend(messages.Handler):
 
 
 	def handleOrderTaskFinished(self, ID: int) -> None:
-		log('Order task %d is finished, de-registering it' % ID)
+		logging.info('Order task %d is finished, de-registering it' % ID)
 		del self.orderTasks[ID]
 

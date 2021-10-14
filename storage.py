@@ -15,10 +15,9 @@
 #    You should have received a copy of the GNU General Public License
 #    along with BL4P Client. If not, see <http://www.gnu.org/licenses/>.
 
+import logging
 import sqlite3
 from typing import Any, Iterable, List
-
-from log import log
 
 
 
@@ -162,7 +161,7 @@ class Storage:
 
 
 	def execute(self, query: str, values: Iterable[Any] = []) -> Cursor:
-		log('SQL query %s; values %s' % (query, values))
+		logging.debug('SQL query %s; values %s' % (query, values))
 		cursor = self.connection.cursor() #type: Cursor
 		cursor.execute(query, values)
 		self.connection.commit()

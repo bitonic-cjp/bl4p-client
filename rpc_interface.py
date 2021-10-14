@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-#    Copyright (C) 2019-2020 by Bitonic B.V.
+#    Copyright (C) 2019-2021 by Bitonic B.V.
 #
 #    This file is part of the BL4P Client.
 #
@@ -17,6 +17,7 @@
 #    along with the BL4P Client. If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
+import logging
 from typing import Any, Dict, List, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -24,7 +25,6 @@ if TYPE_CHECKING:
 
 from json_rpc import JSONRPC
 from ln_payload import Payload
-from log import log
 import messages
 import onion_utils
 import settings
@@ -67,9 +67,9 @@ class RPCInterface(JSONRPC, messages.Handler):
 
 	def handleError(self, ID: int, code: int, message: str) -> None:
 		name, storedMessage = self.ongoingRequests[ID] #type: Tuple[str, messages.AnyMessage]
-		log('Received an error for call ID = %d, name = %s, message = %s' % \
+		logging.error('Received an error for call ID = %d, name = %s, message = %s' % \
 			(ID, name, str(storedMessage)))
-		log('Error code = %d, message = %s' % (code, message))
+		logging.error('Error code = %d, message = %s' % (code, message))
 		del self.ongoingRequests[ID]
 		self.handleStoredRequestError(storedMessage, name, code)
 
@@ -202,5 +202,5 @@ class RPCInterface(JSONRPC, messages.Handler):
 				paymentPreimage = None, #indicates error
 				))
 		else:
-			log('Received an unhandled error from a Lightning RPC call!!!')
+			logging.error('Received an unhandled error from a Lightning RPC call!!!')
 

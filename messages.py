@@ -16,9 +16,9 @@
 #    You should have received a copy of the GNU General Public License
 #    along with the BL4P Client. If not, see <http://www.gnu.org/licenses/>.
 
+import logging
 from typing import Callable, Dict, List, Optional, Type, Union, cast
 
-from log import log
 from simplestruct import Struct
 
 from bl4p_api import offer as _offer
@@ -282,7 +282,7 @@ class Router(Handler):
 		if self.messagingStarted:
 			return Handler.handleMessage(self, message)
 
-		log('Storing message because we haven\'t finished startup yet: ' + str(message.__class__))
+		logging.info('Storing message because we haven\'t finished startup yet: ' + str(message.__class__))
 		self.storedMessages.append(message)
 
 
@@ -290,6 +290,6 @@ class Router(Handler):
 		self.messagingStarted = True
 		
 		for message in self.storedMessages:
-			log('Handling stored message: ' + str(message.__class__))
+			logging.info('Handling stored message: ' + str(message.__class__))
 			Handler.handleMessage(self, message)
 

@@ -19,6 +19,7 @@
 import asyncio
 from enum import Enum
 import inspect
+import logging
 import os
 import re
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union, TYPE_CHECKING
@@ -28,7 +29,6 @@ if TYPE_CHECKING:
 
 from json_rpc import JSONRPC
 from ln_payload import Payload
-from log import log, logException
 import messages
 import onion_utils
 import settings
@@ -124,7 +124,7 @@ class PluginInterface(JSONRPC, messages.Handler):
 				return
 			self.sendResponse(ID, result)
 		except Exception as e:
-			logException()
+			logging.exception('Exception when trying to handle a plugin request:')
 			self.sendErrorResponse(ID,
 				1, #TODO: define error numbers
 				"Error while processing {}: {}".format(
@@ -177,7 +177,7 @@ class PluginInterface(JSONRPC, messages.Handler):
 
 			doc = inspect.getdoc(func)
 			if not doc:
-				log(
+				logging.warning(
 				'RPC method \'{}\' does not have a docstring.'.format(name)
 				)
 				doc = "Undocumented RPC method from a plugin."
@@ -198,16 +198,11 @@ class PluginInterface(JSONRPC, messages.Handler):
 
 	def init(self, options: Dict[str, str], configuration: Dict[str, str], **kwargs) -> None:
 		#We depend on C-Lightning to pass the expected types in options, configuration
-
-		#self.log('Plugin init got called')
-
 		filename = configuration['rpc-file'] #type: str
 		lndir = configuration['lightning-dir'] #type: str
-
 		self.RPCPath = os.path.join(lndir, filename) #type: str
 		self.logFile = options['bl4p.logfile'] #type: str
 		self.DBFile = options['bl4p.dbfile'] #type: str
-		#self.log('RPC path is ' + self.RPCPath)
 
 
 	def getFiatCurrency(self, **kwargs) -> Dict[str, Any]:
@@ -325,8 +320,7 @@ class PluginInterface(JSONRPC, messages.Handler):
 		try:
 			payloadData = onion_utils.readCustomPayloadData(onionPayload) #type: bytes
 		except:
-			log('We failed to deserialize the payload data, so we won\'t handle this transaction:')
-			logException()
+			logging.exception('We failed to deserialize the payload data, so we won\'t handle this transaction:')
 			return {'result': 'continue'} #it's not handled by us
 
 		try:
@@ -338,8 +332,7 @@ class PluginInterface(JSONRPC, messages.Handler):
 			cryptoAmount = int(amount_str) #type: int
 			CLTVExpiryDelta = htlc['cltv_expiry'] #type: int #TODO: check if this is a relative or absolute value. For now, relative is used everywhere.
 		except:
-			log('Refused incoming transaction because there is something wrong with it:')
-			logException()
+			logging.exception('Refused incoming transaction because there is something wrong with it:')
 			return {'result': 'fail'}
 
 		#We will have to send a response later, possibly after finishing this function
@@ -366,9 +359,9 @@ class PluginInterface(JSONRPC, messages.Handler):
 			ID = self.findOngoingRequest('htlc_accepted',
 				lambda x: x.paymentHash == message.paymentHash) #type: int
 		except IndexError:
-			log('Cannot finish the Lightning transaction right now, because lightningd didn\'t give it to us.')
-			log('This may be caused by a restart during an ongoing transaction.')
-			log('Now we have to wait until lightningd gives it to us again.')
+			logging.error('Cannot finish the Lightning transaction right now, because lightningd didn\'t give it to us.')
+			logging.error('This may be caused by a restart during an ongoing transaction.')
+			logging.error('Now we have to wait until lightningd gives it to us again.')
 			return
 
 		self.sendOngoingRequestResponse(ID, {
@@ -382,9 +375,9 @@ class PluginInterface(JSONRPC, messages.Handler):
 			ID = self.findOngoingRequest('htlc_accepted',
 				lambda x: x.paymentHash == message.paymentHash) #type: int
 		except IndexError:
-			log('Cannot fail the Lightning transaction right now, because lightningd didn\'t give it to us.')
-			log('This may be caused by a restart during an ongoing transaction.')
-			log('Now we have to wait until lightningd gives it to us again.')
+			logging.error('Cannot fail the Lightning transaction right now, because lightningd didn\'t give it to us.')
+			logging.error('This may be caused by a restart during an ongoing transaction.')
+			logging.error('Now we have to wait until lightningd gives it to us again.')
 			return
 
 		self.sendOngoingRequestResponse(ID, {

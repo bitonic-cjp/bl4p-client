@@ -16,6 +16,7 @@
 #    along with the BL4P Client. If not, see <http://www.gnu.org/licenses/>.
 
 import functools
+import logging
 import sys
 import unittest
 from unittest.mock import patch, Mock
@@ -436,15 +437,15 @@ class TestBackend(unittest.TestCase):
 		self.backend.orderTasks[42].setCallResult.assert_called_with(msg)
 
 		self.backend.orderTasks = {41: Mock()}
-		with patch.object(backend, 'logException', Mock()) as logException:
+		with patch.object(logging, 'exception', Mock()) as logException:
 			self.backend.handleLNIncoming(msg)
-			logException.assert_called_with()
+			logException.assert_called()
 
 		self.backend.orderTasks = {42: Mock()}
 		self.backend.orderTasks[42].setCallResult = Mock(side_effect=Exception())
-		with patch.object(backend, 'logException', Mock()) as logException:
+		with patch.object(logging, 'exception', Mock()) as logException:
 			self.backend.handleLNIncoming(msg)
-			logException.assert_called_with()
+			logException.assert_called()
 
 
 	def test_handleLNPayResult(self):

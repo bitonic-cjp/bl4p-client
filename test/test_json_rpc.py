@@ -1,4 +1,4 @@
-#    Copyright (C) 2019 by Bitonic B.V.
+#    Copyright (C) 2019-2021 by Bitonic B.V.
 #
 #    This file is part of BL4P Client.
 #
@@ -17,6 +17,7 @@
 
 import asyncio
 import json
+import logging
 import sys
 import unittest
 from unittest.mock import Mock, patch
@@ -78,18 +79,18 @@ class TestJSONRPC(unittest.TestCase):
 			self.input.read = read
 
 			m = Mock(return_value=None)
-			with patch.object(json_rpc, 'logException', m):
+			with patch.object(logging, 'exception', m):
 				await self.rpc.handleIncomingData()
 
 			if eType == Exception: #only in this case
-				m.assert_called_once_with()
+				m.assert_called_once()
 
 
 	@asynciotest
 	async def test_incomingDataEOF(self):
 		#It must finish without exceptions
 		m = Mock(return_value=None)
-		with patch.object(json_rpc, 'logException', m):
+		with patch.object(logging, 'exception', m):
 			await self.rpc.handleIncomingData()
 		m.assert_not_called()
 
@@ -122,22 +123,22 @@ class TestJSONRPC(unittest.TestCase):
 
 		self.input.buffer = b'{"info": "Dummy JSON data"}'
 		m = Mock(return_value=None)
-		with patch.object(json_rpc, 'logException', m):
+		with patch.object(logging, 'exception', m):
 			await self.rpc.handleIncomingData()
-			m.assert_called_once_with()
+			m.assert_called_once()
 
 		self.input.buffer = b'{' * (1024*1024+1)
 		m = Mock(return_value=None)
-		with patch.object(json_rpc, 'logException', m):
+		with patch.object(logging, 'exception', m):
 			await self.rpc.handleIncomingData()
-			m.assert_called_once_with()
+			m.assert_called_once()
 
 
 	@asynciotest
 	async def test_defaultHandlerMethods(self):
 		#No assertions, just do code coverage and check there are no exceptions
 		m = Mock(return_value=None)
-		with patch.object(json_rpc, 'logException', m):
+		with patch.object(logging, 'exception', m):
 			self.input.buffer = b'{"method": "foo", "params": {}}{"id": 3, "method": "foo", "params": {}}{"id": 3, "result": {}}{"id": 3, "error": {"code": 42, "message": "bar"}}'
 			await self.rpc.handleIncomingData()
 		m.assert_not_called()

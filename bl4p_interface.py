@@ -16,6 +16,7 @@
 #    You should have received a copy of the GNU General Public License
 #    along with the BL4P Client. If not, see <http://www.gnu.org/licenses/>.
 
+import logging
 from typing import Any, Dict, Optional, TYPE_CHECKING
 
 import secp256k1
@@ -28,14 +29,13 @@ from bl4p_api import selfreport
 if TYPE_CHECKING:
 	import bl4p_plugin #pragma: nocover
 
-from log import log
 import messages
 
 
 
 class BL4PInterface(bl4p.Bl4pApi, messages.Handler):
 	def __init__(self, client: 'bl4p_plugin.BL4PClient') -> None:
-		bl4p.Bl4pApi.__init__(self, log=log)
+		bl4p.Bl4pApi.__init__(self)
 		messages.Handler.__init__(self, {
 			messages.BL4PStart      : self.sendStart,
 			messages.BL4PSelfReport : self.sendSelfReport,
@@ -61,7 +61,7 @@ class BL4PInterface(bl4p.Bl4pApi, messages.Handler):
 		#Remove them one by one.
 		#When appropriate, they will be re-added later.
 		for item in result.offers:
-			log('Removing offer that existed before startup with ID ' + str(item.offerID))
+			logging.warning('Removing offer that existed before startup with ID ' + str(item.offerID))
 			request = bl4p_pb2.BL4P_RemoveOffer() #type: bl4p_pb2.BL4P_RemoveOffer
 			request.offerID = item.offerID
 			await self.synCall(request)
@@ -140,8 +140,6 @@ class BL4PInterface(bl4p.Bl4pApi, messages.Handler):
 
 
 	def handleResult(self, result: Any) -> None:
-		#log('BL4PInterface: Received result: ' + str(result))
-
 		request = self.activeRequests[result.request] #type: messages.BL4PRequest
 		message = None #type: Optional[messages.AnyMessage]
 
@@ -188,13 +186,13 @@ class BL4PInterface(bl4p.Bl4pApi, messages.Handler):
 				])
 
 		elif isinstance(result, bl4p_pb2.Error):
-			log('Got BL4P error (reason = %d)' % result.reason)
+			logging.error('Got BL4P error (reason = %d)' % result.reason)
 			message = messages.BL4PError(
 				request = request,
 				)
 
 		if message is None:
-			log('Ignoring unrecognized message type from BL4P: ' + \
+			logging.warning('Ignoring unrecognized message type from BL4P: ' + \
 				str(result.__class__))
 			return
 

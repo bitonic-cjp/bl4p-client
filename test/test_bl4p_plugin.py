@@ -17,6 +17,7 @@
 
 import asyncio
 import json
+import logging
 import signal
 import subprocess
 import sys
@@ -95,7 +96,7 @@ class TestPlugin(unittest.TestCase):
 		def addHandler(h):
 			handlers.append(h)
 
-		setLogFile = Mock()
+		basicConfig = Mock()
 
 		DBFiles = []
 		def backendStartup(DBFile):
@@ -106,7 +107,7 @@ class TestPlugin(unittest.TestCase):
 		with patch.object(bl4p_plugin, 'stdio', stdio):
 			with patch.object(asyncio, 'open_unix_connection', open_unix_connection):
 				with patch.object(bl4p_interface, 'BL4PInterface', BL4PInterface):
-					with patch.object(bl4p_plugin, 'setLogFile', setLogFile):
+					with patch.object(logging, 'basicConfig', basicConfig):
 						with patch.object(client.backend, 'startup', backendStartup):
 							await client.startup()
 
@@ -119,7 +120,10 @@ class TestPlugin(unittest.TestCase):
 		self.assertEqual(set(call1['result'].keys()), set(['hooks', 'options', 'rpcmethods', 'subscriptions']))
 		self.assertEqual(call2['result'], None)
 
-		setLogFile.assert_called_once_with('foo')
+		basicConfig.assert_called_once_with(
+			filename='foo',
+			format='%(asctime)s %(levelname)s: %(message)s', level=20,
+			)
 
 		call, length = json.JSONDecoder().raw_decode(RPCWriter.buffer.decode('UTF-8'))
 		self.assertEqual(length, len(RPCWriter.buffer) - 2)

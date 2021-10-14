@@ -19,7 +19,7 @@ import asyncio
 import base64
 import hashlib
 import hmac
-import traceback
+import logging
 from typing import Any, Callable, Dict, Optional
 import websockets
 
@@ -29,8 +29,7 @@ from .serialization import serialize, deserialize
 
 
 class Bl4pApi:
-	def __init__(self, log: Callable[[str],None] = lambda s:None) -> None:
-		self.log = log #type: Callable[[str],None]
+	def __init__(self) -> None:
 		#TODO (bug 21): to stop replay attacks, maybe start at a random number?
 		self.lastRequestID = 0 #type: int
 
@@ -81,7 +80,7 @@ class Bl4pApi:
 						else:
 							self.handleResultOverride(result)
 					except:
-						self.log(traceback.format_exc())
+						logging.exception('Exception when handing incoming data:')
 			except asyncio.CancelledError:
 				await self.websocket.close()
 				#We're cancelled, so just quit the function
@@ -89,7 +88,7 @@ class Bl4pApi:
 				#TODO: maybe complain in case there are ongoing calls?
 				pass #Connection closed, so just quit the function
 		except:
-			self.log(traceback.format_exc())
+			logging.exception('Exception in the receive task:')
 
 
 	async def sendOutgoingData(self) -> None:
@@ -103,7 +102,7 @@ class Bl4pApi:
 			except websockets.exceptions.ConnectionClosed:
 				pass #Connection closed, so just quit the function
 		except:
-			self.log(traceback.format_exc())
+			logging.exception('Exception in the send task:')
 
 
 	def handleResult(self, result: Any) -> None:

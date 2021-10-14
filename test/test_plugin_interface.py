@@ -17,6 +17,7 @@
 
 import asyncio
 import json
+import logging
 import sys
 import unittest
 from unittest.mock import Mock, patch
@@ -375,7 +376,7 @@ class TestPluginInterface(unittest.TestCase):
 
 	def test_handleHTLCAccepted_notOurPayload(self):
 		m = Mock(return_value=None)
-		with patch.object(plugin_interface, 'logException', m):
+		with patch.object(logging, 'exception', m):
 			self.interface.handleRequest(
 				6,
 				'htlc_accepted',
@@ -391,7 +392,7 @@ class TestPluginInterface(unittest.TestCase):
 					'payment_hash': 'cafecafe',
 					},
 				})
-		m.assert_called_once_with()
+		m.assert_called_once()
 		self.checkJSONOutput(
 			{
 			'jsonrpc': '2.0',
@@ -405,7 +406,7 @@ class TestPluginInterface(unittest.TestCase):
 
 	def test_handleHTLCAccepted_wrongFormatPayload(self):
 		m = Mock(return_value=None)
-		with patch.object(plugin_interface, 'logException', m):
+		with patch.object(logging, 'exception', m):
 			self.interface.handleRequest(
 				6,
 				'htlc_accepted',
@@ -421,7 +422,7 @@ class TestPluginInterface(unittest.TestCase):
 					'payment_hash': 'cafecafe',
 					},
 				})
-		m.assert_called_once_with()
+		m.assert_called_once()
 		self.checkJSONOutput(
 			{
 			'jsonrpc': '2.0',
@@ -452,9 +453,9 @@ class TestPluginInterface(unittest.TestCase):
 
 	def test_invalidRequest(self):
 		m = Mock(return_value=None)
-		with patch.object(plugin_interface, 'logException', m):
+		with patch.object(logging, 'exception', m):
 			self.interface.handleRequest(6, 'does_not_exist', {})
-		m.assert_called_once_with()
+		m.assert_called_once()
 		self.checkJSONOutput(
 			{
 			'jsonrpc': '2.0',

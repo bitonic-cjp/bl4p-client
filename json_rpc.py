@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-#    Copyright (C) 2019-2020 by Bitonic B.V.
+#    Copyright (C) 2019-2021 by Bitonic B.V.
 #
 #    This file is part of the BL4P Client.
 #
@@ -18,10 +18,10 @@
 
 import asyncio
 import json
+import logging
 from typing import Any, Dict, Optional, Tuple
 
 import decodedbuffer
-from log import log, logException
 
 
 
@@ -57,7 +57,6 @@ class JSONRPC:
 
 
 	async def handleIncomingData(self) -> None:
-		#log('Started JSON RPC')
 		try:
 			try:
 				while True:
@@ -70,15 +69,12 @@ class JSONRPC:
 			except BrokenPipeError:
 				pass #Pipe closed, so just quit the function
 		except:
-			log('Exception in JSON RPC:')
-			logException()
-		#log('Stopped JSON RPC')
+			logging.exception('Exception in JSON RPC:')
 
 
 	async def getNextJSON(self) -> Optional[Dict[str, Any]]:
 		while True:
 			try:
-				#log('Input buffer: ' + self.inputBuffer.get())
 				request, length = self.decoder.raw_decode(self.inputBuffer.get()) #Tuple[Dict, int]
 				assert type(request) == dict #TODO: unit test
 			except ValueError:
@@ -88,14 +84,13 @@ class JSONRPC:
 					return None
 				self.inputBuffer.append(newData)
 				if len(self.inputBuffer.get()) > MAX_BUFFER_LENGTH:
-					log('JSON RPC error: maximum buffer length exceeded. We\'re probably not receiving valid JSON.')
+					logging.error('JSON RPC error: maximum buffer length exceeded. We\'re probably not receiving valid JSON.')
 					self.inputBuffer = decodedbuffer.DecodedBuffer('UTF-8') #replace with empty buffer
 					raise Exception('Maximum receive buffer length exceeded - throwing away data')
 				continue
 
 			self.inputBuffer.set(self.inputBuffer.get()[length:].lstrip())
 
-			#log('<-- ' + str(request))
 			return request
 
 
@@ -131,11 +126,10 @@ class JSONRPC:
 				assert type(not_params) == dict #TODO: unit test
 				self.handleNotification(not_method, not_params)
 		except Exception: #TODO: remove (let the main task terminate)
-			logException()
+			logging.exception('Exception when trying to handle JSON data:')
 
 
 	def writeJSON(self, msg: Dict[str, Any]) -> None:
-		#log('--> ' + str(msg))
 		JSONMessage = json.dumps(msg) #type: str
 		self.outputStream.write(JSONMessage.encode('UTF-8') + b'\n\n')
 

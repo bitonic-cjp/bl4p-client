@@ -1,4 +1,4 @@
-#    Copyright (C) 2020 by Bitonic B.V.
+#    Copyright (C) 2020-2021 by Bitonic B.V.
 #
 #    This file is part of the BL4P Client.
 #
@@ -15,10 +15,9 @@
 #    You should have received a copy of the GNU General Public License
 #    along with the BL4P Client. If not, see <http://www.gnu.org/licenses/>.
 
+import logging
 import struct
 from typing import Any, Dict, List, Tuple
-
-from log import log, logException
 
 
 
@@ -129,7 +128,7 @@ def serializeStandardPayload(route_data: Dict[str, Any], blockHeight: int) -> by
 			6: short_channel_id,
 			})
 
-	log('Got unrecognized route data: ' + str(route_data))
+	logging.error('Got unrecognized route data: ' + str(route_data))
 	raise Exception('Style not supported: ' + style)
 
 
@@ -154,12 +153,11 @@ def readCustomPayloadData(payload: bytes) -> bytes:
 	try:
 		TLVData = deserializeTLVPayload(payload) #type: Dict[int, bytes]
 	except:
-		log('Exception when trying to deserialize the onion payload:')
-		logException()
+		logging.exception('Exception when trying to deserialize the onion payload:')
 		raise
 
 	if list(TLVData.keys()) != [BL4P_TLV_TYPE]:
-		log('Received an incoming transaction with unrecognized payload format')
+		logging.warning('Received an incoming transaction with unrecognized payload format')
 		raise Exception('Not our onion data format')
 	return TLVData[BL4P_TLV_TYPE]
 

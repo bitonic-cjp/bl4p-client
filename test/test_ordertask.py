@@ -17,6 +17,7 @@
 
 import asyncio
 import hashlib
+import logging
 import sys
 import time
 import unittest
@@ -1250,10 +1251,10 @@ class TestOrderTask(unittest.TestCase):
 	async def test_doTrading_exceptions(self):
 		#Unsupported order type:
 		task = ordertask.OrderTask(None, None, None)
-		with patch.object(ordertask, 'logException', Mock()) as logException:
+		with patch.object(logging, 'exception', Mock()) as logException:
 			with self.assertRaises(Exception):
 				await task.doTrading()
-			logException.assert_called_once_with()
+			logException.assert_called_once()
 
 		#Canceled exception:
 		orderID = ordertask.BuyOrder.create(self.storage, 2, 1234)
