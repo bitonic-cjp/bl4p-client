@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-#    Copyright (C) 2019 by Bitonic B.V.
+#    Copyright (C) 2019-2021 by Bitonic B.V.
 #
 #    This file is part of the BL4P Client.
 #
@@ -16,28 +16,23 @@
 #    You should have received a copy of the GNU General Public License
 #    along with the BL4P Client. If not, see <http://www.gnu.org/licenses/>.
 
-import datetime
-import sys
-import traceback
-from typing import IO
+import logging
 
-
-
-logFile = sys.stderr #type: IO
 
 
 def setLogFile(filename: str) -> None:
-	global logFile
-	logFile = open(filename, 'a')
+	logging.basicConfig(
+		filename=filename,
+		format='%(asctime)s %(levelname)s: %(message)s',
+		level=logging.INFO
+		)
 	log('\n\n\n\nOpened the log file')
 
 
-def log(s: str):
-	dt = datetime.datetime.now() #type: datetime.datetime
-	logFile.write('%s  %s\n' % (str(dt), s))
-	logFile.flush()
+def log(s: str) -> None:
+	logging.info(s)
 
 
-def logException():
-	log(traceback.format_exc())
+def logException() -> None:
+	logging.exception('')
 

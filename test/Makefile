@@ -41,7 +41,6 @@ unittest:
 	python3-coverage run -p test_decodedbuffer.py
 	python3-coverage run -p test_json_rpc.py
 	python3-coverage run -p test_ln_payload.py
-	python3-coverage run -p test_log.py
 	python3-coverage run -p test_messages.py
 	python3-coverage run -p test_onion_utils.py
 	python3-coverage run -p test_order.py
