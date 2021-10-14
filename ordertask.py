@@ -78,21 +78,21 @@ Buyer market maker:
 initial -> finished
         -> canceled
 '''
-STATUS_INITIAL           = 0 #type: int
-STATUS_STARTED           = 1 #type: int
-STATUS_LOCKED            = 2 #type: int
-STATUS_RECEIVED_PREIMAGE = 3 #type: int
-STATUS_FINISHED          = 4 #type: int
-STATUS_CANCELED          = 5 #type: int
+TX_STATUS_INITIAL           = 0 #type: int
+TX_STATUS_STARTED           = 1 #type: int
+TX_STATUS_LOCKED            = 2 #type: int
+TX_STATUS_RECEIVED_PREIMAGE = 3 #type: int
+TX_STATUS_FINISHED          = 4 #type: int
+TX_STATUS_CANCELED          = 5 #type: int
 
 TxStatus2str = \
 {
-STATUS_INITIAL           : 'initial',
-STATUS_STARTED           : 'started',
-STATUS_LOCKED            : 'locked',
-STATUS_RECEIVED_PREIMAGE : 'received preimage',
-STATUS_FINISHED          : 'finished',
-STATUS_CANCELED          : 'canceled',
+TX_STATUS_INITIAL           : 'initial',
+TX_STATUS_STARTED           : 'started',
+TX_STATUS_LOCKED            : 'locked',
+TX_STATUS_RECEIVED_PREIMAGE : 'received preimage',
+TX_STATUS_FINISHED          : 'finished',
+TX_STATUS_CANCELED          : 'canceled',
 }
 
 
@@ -117,7 +117,7 @@ class BuyTransaction(StoredObject):
 
 			buyOrder = buyOrder,
 
-			status = STATUS_INITIAL,
+			status = TX_STATUS_INITIAL,
 
 			fiatAmount   = fiatAmount,
 			cryptoAmount = cryptoAmount,
@@ -170,7 +170,7 @@ class SellTransaction(StoredObject):
 			sellOrder  = sellOrder,
 			counterOffer = counterOffer,
 
-			status = STATUS_INITIAL,
+			status = TX_STATUS_INITIAL,
 
 			buyerFiatAmount  = buyerFiatAmount, #buyer-side fiat amount
 			sellerFiatAmount = None,            #seller-side fiat amount
@@ -277,13 +277,13 @@ class OrderTask:
 
 	def cancel(self) -> None:
 		if self.transaction is None:
-			self.order.update(status=order.STATUS_CANCELED)
+			self.order.update(status=order.ORDER_STATUS_CANCELED)
 			self.task.cancel()
 		else:
 			#TODO: cancel ongoing transaction if possible.
 			#For now, just let an ongoing transaction complete, and then cancel
 			#the order.
-			self.order.update(status=order.STATUS_CANCEL_REQUESTED)
+			self.order.update(status=order.ORDER_STATUS_CANCEL_REQUESTED)
 
 
 	def getListInfo(self)-> Dict[str, Any]:
@@ -291,10 +291,10 @@ class OrderTask:
 
 		orderStatus = \
 		{
-		order.STATUS_ACTIVE          : 'active',
-		order.STATUS_COMPLETED       : 'completed',
-		order.STATUS_CANCEL_REQUESTED: 'cancel requested',
-		order.STATUS_CANCELED        : 'canceled',
+		order.ORDER_STATUS_ACTIVE          : 'active',
+		order.ORDER_STATUS_COMPLETED       : 'completed',
+		order.ORDER_STATUS_CANCEL_REQUESTED: 'cancel requested',
+		order.ORDER_STATUS_CANCELED        : 'canceled',
 		}[self.order.status]
 
 		ret = \
@@ -349,13 +349,13 @@ class OrderTask:
 				log('Remaining in order: ' + \
 					str(self.order.amount))
 
-				if self.order.status == order.STATUS_CANCEL_REQUESTED:
+				if self.order.status == order.ORDER_STATUS_CANCEL_REQUESTED:
 					log('Order cancelation was requested - canceling it now')
-					self.order.update(status=order.STATUS_CANCELED)
+					self.order.update(status=order.ORDER_STATUS_CANCELED)
 					break
 				elif self.order.amount <= 0:
 					log('Finished with order')
-					self.order.update(status=order.STATUS_COMPLETED)
+					self.order.update(status=order.ORDER_STATUS_COMPLETED)
 					break
 
 		except asyncio.CancelledError:
@@ -482,7 +482,7 @@ class OrderTask:
 
 		cursor = self.storage.execute(
 			'SELECT ID from sellTransactions WHERE sellOrder = ? AND status != ? AND status != ?',
-			[self.order.ID, STATUS_FINISHED, STATUS_CANCELED]
+			[self.order.ID, TX_STATUS_FINISHED, TX_STATUS_CANCELED]
 			) #type: Cursor
 		IDs = [row[0] for row in cursor] #type: List[int]
 		assert len(IDs) < 2 #TODO: properly report database inconsistency error
@@ -499,10 +499,10 @@ class OrderTask:
 		#TODO: properly report database inconsistency error in case of KeyError
 		method = \
 		{
-		STATUS_INITIAL          : self.startTransactionOnBL4P,
-		STATUS_STARTED          : self.doSelfReportingOnBL4P,
-		STATUS_LOCKED           : self.doTransactionOnLightning,
-		STATUS_RECEIVED_PREIMAGE: self.receiveFiatFunds,
+		TX_STATUS_INITIAL          : self.startTransactionOnBL4P,
+		TX_STATUS_STARTED          : self.doSelfReportingOnBL4P,
+		TX_STATUS_LOCKED           : self.doTransactionOnLightning,
+		TX_STATUS_RECEIVED_PREIMAGE: self.receiveFiatFunds,
 		}[self.transaction.status] #type: Callable[[], Awaitable[None]]
 		await method()
 
@@ -621,7 +621,7 @@ class OrderTask:
 		self.transaction.update(
 			sellerFiatAmount = sellerFiatAmount,
 			paymentHash = startResult.paymentHash,
-			status = STATUS_STARTED,
+			status = TX_STATUS_STARTED,
 			)
 
 		await self.doSelfReportingOnBL4P()
@@ -647,7 +647,7 @@ class OrderTask:
 			messages.BL4PSelfReportResult)
 
 		self.transaction.update(
-			status = STATUS_LOCKED,
+			status = TX_STATUS_LOCKED,
 			)
 
 		await self.doTransactionOnLightning()
@@ -692,7 +692,7 @@ class OrderTask:
 		self.transaction.update(
 			sellerCryptoAmount = lightningResult.senderCryptoAmount,
 			paymentPreimage = lightningResult.paymentPreimage,
-			status = STATUS_RECEIVED_PREIMAGE,
+			status = TX_STATUS_RECEIVED_PREIMAGE,
 			)
 		newAmount = self.order.amount - self.transaction.sellerCryptoAmount
 		if newAmount < 0:
@@ -719,7 +719,7 @@ class OrderTask:
 			) #type: messages.BL4PReceiveResult
 
 		self.transaction.update(
-			status = STATUS_FINISHED,
+			status = TX_STATUS_FINISHED,
 			)
 		self.transaction = None
 
@@ -740,7 +740,7 @@ class OrderTask:
 			messages.BL4PCancelStartResult)
 
 		self.transaction.update(
-			status = STATUS_CANCELED,
+			status = TX_STATUS_CANCELED,
 			)
 		self.transaction = None
 
@@ -757,7 +757,7 @@ class OrderTask:
 
 		cursor = self.storage.execute(
 			'SELECT ID from buyTransactions WHERE buyOrder = ? AND status != ? AND status != ?',
-			[self.order.ID, STATUS_FINISHED, STATUS_CANCELED]
+			[self.order.ID, TX_STATUS_FINISHED, TX_STATUS_CANCELED]
 			) #type: Cursor
 		IDs = [row[0] for row in cursor] #type: List[int]
 		assert len(IDs) < 2 #TODO: properly report database inconsistency error
@@ -769,7 +769,7 @@ class OrderTask:
 
 		self.transaction = BuyTransaction(self.storage, ID)
 
-		if self.transaction.status == STATUS_INITIAL:
+		if self.transaction.status == TX_STATUS_INITIAL:
 			log('For this unfinished transaction, we need to wait for lightningd to re-issue it to us')
 			await self.waitForIncomingTransaction()
 		else:
@@ -804,10 +804,10 @@ class OrderTask:
 
 			#TODO (bug 19): maybe check if the incoming tx equals this tx?
 
-			if self.transaction.status == STATUS_CANCELED:
+			if self.transaction.status == TX_STATUS_CANCELED:
 				log('The transaction was canceled, so we cancel the Lightning tx')
 				await self.cancelTransactionOnLightning()
-			elif self.transaction.status == STATUS_INITIAL:
+			elif self.transaction.status == TX_STATUS_INITIAL:
 				log('The transaction was not finished yet, so try again to finish it')
 				await self.sendFundsOnBL4P()
 			else:
@@ -892,7 +892,7 @@ class OrderTask:
 			log('Error received from BL4P - transaction canceled')
 			self.order.setAmount(self.order.amount + self.transaction.fiatAmount)
 			self.transaction.update(
-				status = STATUS_CANCELED,
+				status = TX_STATUS_CANCELED,
 				)
 			await self.cancelTransactionOnLightning()
 			return
@@ -903,7 +903,7 @@ class OrderTask:
 
 		self.transaction.update(
 			paymentPreimage = sendResult.paymentPreimage,
-			status = STATUS_FINISHED,
+			status = TX_STATUS_FINISHED,
 			)
 
 		await self.finishTransactionOnLightning()

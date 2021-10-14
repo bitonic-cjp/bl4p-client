@@ -28,7 +28,7 @@ sys.path.append('..')
 
 from bl4p_api import offer
 import messages
-from order import Order, STATUS_CANCEL_REQUESTED, STATUS_CANCELED
+from order import Order, ORDER_STATUS_CANCEL_REQUESTED, ORDER_STATUS_CANCELED
 import ordertask
 
 
@@ -230,12 +230,12 @@ class TestOrderTask(unittest.TestCase):
 		task = ordertask.OrderTask(self.client, self.storage, order)
 		task.task = Mock()
 		task.cancel()
-		self.assertEqual(order.status, STATUS_CANCELED)
+		self.assertEqual(order.status, ORDER_STATUS_CANCELED)
 		task.task.cancel.assert_called_with()
 
 		task.transaction = Mock()
 		task.cancel()
-		self.assertEqual(order.status, STATUS_CANCEL_REQUESTED)
+		self.assertEqual(order.status, ORDER_STATUS_CANCEL_REQUESTED)
 
 
 	def test_getListInfo(self):
@@ -356,7 +356,7 @@ class TestOrderTask(unittest.TestCase):
 			order.amount = remainingAmount
 			self.assertEqual(self.storage.buyTransactions, {43: {
 				'ID': 43,
-				'status': ordertask.STATUS_INITIAL,
+				'status': ordertask.TX_STATUS_INITIAL,
 				'buyOrder': 42,
 				'fiatAmount': txAmount,
 				'cryptoAmount': 100000000000000,
@@ -388,7 +388,7 @@ class TestOrderTask(unittest.TestCase):
 
 			self.assertEqual(self.storage.buyTransactions, {43: {
 				'ID': 43,
-				'status': ordertask.STATUS_FINISHED,
+				'status': ordertask.TX_STATUS_FINISHED,
 				'buyOrder': 42,
 				'fiatAmount': txAmount,
 				'cryptoAmount': 100000000000000,
@@ -599,7 +599,7 @@ class TestOrderTask(unittest.TestCase):
 		order.setAmount.assert_called_once_with(223400000)
 		self.assertEqual(self.storage.buyTransactions, {41: {
 			'ID': 41,
-			'status': ordertask.STATUS_CANCELED,
+			'status': ordertask.TX_STATUS_CANCELED,
 			'buyOrder': orderID,
 			'fiatAmount': 100000000,
 			'cryptoAmount': 200000000,
@@ -870,7 +870,7 @@ class TestOrderTask(unittest.TestCase):
 				'ID': 44,
 				'sellOrder': 42,
 				'counterOffer': 43,
-				'status': ordertask.STATUS_STARTED,
+				'status': ordertask.TX_STATUS_STARTED,
 				'senderTimeoutDelta': 2000,
 				'lockedTimeoutDelta': 53,
 				'CLTVExpiryDelta':    23,
@@ -905,7 +905,7 @@ class TestOrderTask(unittest.TestCase):
 				'ID': 44,
 				'sellOrder': 42,
 				'counterOffer': 43,
-				'status': ordertask.STATUS_LOCKED,
+				'status': ordertask.TX_STATUS_LOCKED,
 				'senderTimeoutDelta': 2000,
 				'lockedTimeoutDelta': 53,
 				'CLTVExpiryDelta':    23,
@@ -943,7 +943,7 @@ class TestOrderTask(unittest.TestCase):
 				'ID': 44,
 				'sellOrder': 42,
 				'counterOffer': 43,
-				'status': ordertask.STATUS_RECEIVED_PREIMAGE,
+				'status': ordertask.TX_STATUS_RECEIVED_PREIMAGE,
 				'senderTimeoutDelta': 2000,
 				'lockedTimeoutDelta': 53,
 				'CLTVExpiryDelta':    23,
@@ -978,7 +978,7 @@ class TestOrderTask(unittest.TestCase):
 				'ID': 44,
 				'sellOrder': 42,
 				'counterOffer': 43,
-				'status': ordertask.STATUS_FINISHED,
+				'status': ordertask.TX_STATUS_FINISHED,
 				'senderTimeoutDelta': 2000,
 				'lockedTimeoutDelta': 53,
 				'CLTVExpiryDelta':    23,
@@ -1021,7 +1021,7 @@ class TestOrderTask(unittest.TestCase):
 		#status -> message:
 		expectedMessages = \
 		{
-		ordertask.STATUS_INITIAL: messages.BL4PStart(
+		ordertask.TX_STATUS_INITIAL: messages.BL4PStart(
 				localOrderID=42,
 
 				amount = 1200,
@@ -1029,7 +1029,7 @@ class TestOrderTask(unittest.TestCase):
 				locked_timeout_delta_s = 56,
 				receiver_pays_fee = True,
 				),
-		ordertask.STATUS_STARTED: messages.BL4PSelfReport(
+		ordertask.TX_STATUS_STARTED: messages.BL4PSelfReport(
 				localOrderID=42,
 
 				selfReport = \
@@ -1040,7 +1040,7 @@ class TestOrderTask(unittest.TestCase):
 					'cryptoCurrency'      : 'btc',
 					},
 				),
-		ordertask.STATUS_LOCKED: messages.LNPay(
+		ordertask.TX_STATUS_LOCKED: messages.LNPay(
 				localOrderID=42,
 
 		                destinationNodeID     = 'buyerAddress',
@@ -1054,7 +1054,7 @@ class TestOrderTask(unittest.TestCase):
 
 		                paymentHash           = b'foo',
 				),
-		ordertask.STATUS_RECEIVED_PREIMAGE: messages.BL4PReceive(
+		ordertask.TX_STATUS_RECEIVED_PREIMAGE: messages.BL4PReceive(
 				localOrderID=42,
 
 				paymentPreimage = b'bar',
@@ -1138,7 +1138,7 @@ class TestOrderTask(unittest.TestCase):
 			'ID': 41,
 			'sellOrder': orderID,
 			'counterOffer': 40,
-			'status': ordertask.STATUS_LOCKED,
+			'status': ordertask.TX_STATUS_LOCKED,
 
 			'buyerFiatAmount': 1200,
 			'buyerCryptoAmount': 10000,
@@ -1197,7 +1197,7 @@ class TestOrderTask(unittest.TestCase):
 			'ID': 41,
 			'sellOrder': orderID,
 			'counterOffer': 40,
-			'status': ordertask.STATUS_CANCELED,
+			'status': ordertask.TX_STATUS_CANCELED,
 			'senderTimeoutDelta': 34,
 			'lockedTimeoutDelta': 56,
 			'CLTVExpiryDelta':    78,
@@ -1233,7 +1233,7 @@ class TestOrderTask(unittest.TestCase):
 		orderID = ordertask.BuyOrder.create(self.storage, 2, 1234)
 		order = ordertask.BuyOrder(self.storage, orderID, 'lnAddress')
 		task = ordertask.OrderTask(Mock(), None, order)
-		order.status = STATUS_CANCEL_REQUESTED
+		order.status = ORDER_STATUS_CANCEL_REQUESTED
 
 		async def dummy():
 			pass
@@ -1243,7 +1243,7 @@ class TestOrderTask(unittest.TestCase):
 		task.unpublishOffer = dummy
 		await task.doTrading()
 
-		self.assertEqual(order.status, STATUS_CANCELED)
+		self.assertEqual(order.status, ORDER_STATUS_CANCELED)
 
 
 	@asynciotest

@@ -29,10 +29,10 @@ Active -> Completed
 Active -> CancelRequested -> Canceled
 Active -> Canceled
 '''
-STATUS_ACTIVE           = 0 #type: int
-STATUS_COMPLETED        = 1 #type: int
-STATUS_CANCEL_REQUESTED = 2 #type: int
-STATUS_CANCELED         = 3 #type: int
+ORDER_STATUS_ACTIVE           = 0 #type: int
+ORDER_STATUS_COMPLETED        = 1 #type: int
+ORDER_STATUS_CANCEL_REQUESTED = 2 #type: int
+ORDER_STATUS_CANCELED         = 3 #type: int
 
 
 
@@ -124,7 +124,7 @@ class BuyOrder(Order):
 		return StoredObject.createStoredObject(storage, 'buyOrders',
 			limitRate = limitRate,
 			amount = amount,
-			status = STATUS_ACTIVE,
+			status = ORDER_STATUS_ACTIVE,
 			)
 
 
@@ -163,7 +163,7 @@ class SellOrder(Order):
 		return StoredObject.createStoredObject(storage, 'sellOrders',
 			limitRate = limitRate,
 			amount = amount,
-			status = STATUS_ACTIVE,
+			status = ORDER_STATUS_ACTIVE,
 			)
 
 	def __init__(self, storage: storage.Storage, ID: int, Bl4PAddress: str) -> None:

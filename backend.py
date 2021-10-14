@@ -85,7 +85,7 @@ class Backend(messages.Handler):
 		#Loading existing orders and initializing order tasks:
 		def loadOrders(tableName: str, orderClass: Type[Union[SellOrder, BuyOrder]], address: str) -> None:
 			query = 'SELECT `ID` FROM `%s` WHERE `status` = %d OR `status` = %d' % \
-				(tableName, order.STATUS_ACTIVE, order.STATUS_CANCEL_REQUESTED) #type: str
+				(tableName, order.ORDER_STATUS_ACTIVE, order.ORDER_STATUS_CANCEL_REQUESTED) #type: str
 			cursor = self.storage.execute(query) #type: storage.Cursor
 			for row in cursor:
 				ID = row[0] #type: int
