@@ -190,6 +190,9 @@ class BL4PClient:
 
 
 
+shuttingDown = False
+
+
 def main():
 	client = BL4PClient() #type: BL4PClient
 	loop = asyncio.get_event_loop() #type: asyncio.AbstractEventLoop
@@ -197,6 +200,13 @@ def main():
 	loop.run_until_complete(client.startup())
 
 	def terminateSignalHandler() -> None:
+		global shuttingDown
+
+		logging.info('Plugin process received a terminate signal')
+		if shuttingDown:
+			logging.warning('Ignoring terminate signal: we\'re already shutting down')
+			return
+		shuttingDown = True
 		#Run shutdown in a new task:
 		asyncio.ensure_future(client.shutdown())
 
