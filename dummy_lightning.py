@@ -205,7 +205,7 @@ class Node:
 
 	async def shutdown(self):
 		await self.pluginInterface.shutdown()
-		self.pluginProcess.kill()
+		self.pluginProcess.terminate()
 		await self.pluginProcess.wait()
 
 
